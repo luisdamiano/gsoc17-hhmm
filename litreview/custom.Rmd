@@ -1,0 +1,4 @@
+\renewcommand{\mat}[1]{\boldsymbol{#1}}
+
+% Math symbols
+\renewcommand{\RR}{\mathbb{R}}
