@@ -5,18 +5,20 @@ author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: '`r Sys.Date()`'
 output:
   pdf_document:
-    citation_package: biblatex
     fig_caption: yes
     fig_height: 6
     fig_width: 7
     highlight: default
     includes:
-      in_header: custom.sty
+      in_header: ../Rmd/preamble-latex.Rmd
     keep_tex: no
     latex_engine: pdflatex
     number_sections: yes
     toc: no
   html_document:
+    includes:
+      in_header: ../Rmd/preamble-html.Rmd
+    keep_md: no
     number_sections: yes
     toc: no
 bibliography: ../references.bib
@@ -34,14 +36,17 @@ abstract: This is the abstract. Lorem ipsum dolor sit amet, consectetur adipisci
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r child = 'src/intro.Rmd'}
+```{r child = 'Rmd/intro.Rmd'}
 ```
 
-```{r child = 'custom.Rmd'}
+```{r child = 'Rmd/mc.Rmd'}
 ```
 
-```{r child = 'src/mc.Rmd'}
+```{r child = 'Rmd/hmm.Rmd'}
 ```
 
-```{r child = 'src/hmm.Rmd'}
+```{r child = 'Rmd/iohmm.Rmd'}
+```
+
+```{r child = 'Rmd/references.Rmd'}
 ```

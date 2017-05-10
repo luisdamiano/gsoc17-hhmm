@@ -1,0 +1,15 @@
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{bm} % True bold symbols
+
+% Math operators
+\DeclareMathOperator*{\argmax}{\operatorname*{arg\,max}}
+\DeclareMathOperator{\evsym}{E}
+\newcommand\ev[1]{\evsym\left\langle#1\right\rangle}
+\DeclareMathOperator{\vsym}{V}
+\newcommand\vv[1]{\vsym\left\langle#1\right\rangle}
+
+% Math commands
+\newcommand{\mat}[1]{\bm{#1}}
+
+% Math symbols
+\newcommand{\RR}{\mathbb{R}}

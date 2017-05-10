@@ -33,23 +33,16 @@ The final reports will be located in the [to be completed] folder.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](...) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-[to be completed]
+Reach us at #r-finance (freenode.net).
 
 ## Authors
 
 * **Luis Damiano** - *Main researcher* - [luisdamiano](https://github.com/luisdamiano)
 * **Brian Peterson** - *Co-Mentor* - [braverock](https://github.com/braverock)
-* **Michael Weylandt** - *Co-Mentor* - [??](https://github.com/??)
+* **Michael Weylandt** - *Co-Mentor* - [michaelweylandt](https://github.com/michaelweylandt)
 
 ## License
-_A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under the ??. See the [LICENSE](...) file for details.
-
-For each paper:
-This project is licensed under the ?? - see the [LICENSE.md](LICENSE.md) file for details.
+_A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under CC-BY-SA 4.0. See the [LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 * The Google Summer Of Code (GSOC) program for funding.

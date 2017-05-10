@@ -1,0 +1,12 @@
+\(
+% Math operators
+\newcommand{\argmax}{\arg\!\max}
+
+% Math commands
+\newcommand{\mat}[1]{\mathbf{#1}}
+
+% Math symbols
+\renewcommand{\RR}{\mathbb{R}}
+\)
+
+

@@ -301,8 +301,9 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 ### 20170508 Mo 21 to 01+1 ###
 * Bonding time! A kick-off email to the mentors (means of contact, time schedules, recap, planification).
 
-### 20170509 Tu 21 to WIP ###
+### 20170509 Tu 21 to 01+1 ###
 * Added CC-BY-SA 4.0 License.
+* Fixed a few problems with bibliography and formats.
 * Finally pushing to GitHub: https://github.com/luisdamiano/gsoc17-hhmm
 
 ---
@@ -345,5 +346,9 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Citing policy: should be cite papers we don't read, but are cited in the work we did read, in order to leave a reference is the reader is interested? Consider this practical example:
     * We read Bengio & Frasconi (1995) on IOHMM. I'm stating other related or equivalent models, and he mentions "This model can also be seen as a recurrent version of the Mixture of Experts architecture (Jacobs et al., 1991)". Should we only mention the equivalence to Mixture of Expects or should be also cite Jacobs in case somebody is interested in this model, even if we've not read the paper?
 * Referring to $t$: the subindex can represent time, space, or even any other sequencial index. Is there any generic word that would comprise both time and space? I'd used *point* (and sometimes step) so far. Alternatively, I could state at the beginning of the work that we'll use time but this works with space too?
+
+## TODO
+
+* When using equations inside a table, find a better way to escape the pipes.
 
 
