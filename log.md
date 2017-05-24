@@ -306,6 +306,17 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Fixed a few problems with bibliography and formats.
 * Finally pushing to GitHub: https://github.com/luisdamiano/gsoc17-hhmm
 
+### 20170522 Mo 13 to 22 ###
+* Starting coding for a plain vanilla HMM in R (simulation) and Stan (estimation). Goal: instead of shooting for IOHMM as first implementation, I broke it down into two steps a) HMM, and b) then I add the needed modifications.
+* Update: flight delayed for about two/three hours, extra coding time woohoo!
+* Update 2: Coding in the sky is cool!
+* Ok landing. I think the FF in matrix form works, which is a good thing since it's pretty speedy. Still have to see if I can avoid refactoring the transition matrix. Was only able to check it with a small example, should try with something larger but it's landing time.
+
+### 20170523 Tu 21 to 23 ###
+* Testing my hmm code.
+* Should check the likelihood specification of the model.
+* Should write the Forward algo in terms of log_sum_exp for better numerical stability.
+
 ---
 
 # Notes
