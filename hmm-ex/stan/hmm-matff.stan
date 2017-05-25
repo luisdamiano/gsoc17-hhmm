@@ -37,7 +37,7 @@ transformed parameters {
   // init evidence phi_t
   for(t in 1:T) {
     for(j in 1:K) {
-      phi_t[t][j] = normal_lpdf(x[t] | mu[j], sigma[j]);
+      phi_t[t][j] = exp(normal_lpdf(x[t] | mu[j], sigma[j]));
     }
   }
 
@@ -54,7 +54,7 @@ transformed parameters {
 model {
   for(t in 1:T) {
     for(j in 1:K) {
-      target += log(alpha_t[t][j]) + phi_t[t][j];
+      target += alpha_t[t][j] * log(phi_t[t][j]);
     }
   }
 }

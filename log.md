@@ -317,6 +317,10 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Should check the likelihood specification of the model.
 * Should write the Forward algo in terms of log_sum_exp for better numerical stability.
 
+### 20170524 We 15 to 18 ###
+* Found a few typos, can't recover the parameters from the simulation yet.
+* Working on log scale made this super slow.
+
 ---
 
 # Notes

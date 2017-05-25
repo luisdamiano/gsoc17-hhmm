@@ -46,7 +46,7 @@ transformed parameters {
 
   for(t in 2:T) {
     for(j in 1:K) {
-      alpha_t[t] = normalize(exp(phi_t[t] + (log(transmat') * alpha_t[t-1])));
+      alpha_t[t] = normalize(exp(phi_t[t] + (log(transmat' * alpha_t[t-1]))));
     }
   }
 }
@@ -54,7 +54,7 @@ transformed parameters {
 model {
   for(t in 1:T) {
     for(j in 1:K) {
-      target += log(alpha_t[t][j]) + phi_t[t][j];
+      target += log_sum_exp(log(alpha_t[t][j]), phi_t[t][j]);
     }
   }
 }

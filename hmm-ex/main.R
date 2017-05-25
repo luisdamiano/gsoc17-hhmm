@@ -17,7 +17,7 @@ dataset <- hmm.sim(T.length, K, A, p.init, obs.model)
 rstan_options(auto_write = TRUE)  # Writes down the compiled sampler
 options(mc.cores = parallel::detectCores()) # Use all available cores
 
-bmodel = 'hmm-ex/stan/hmm-matffexp.stan'
+bmodel = 'hmm-ex/stan/hmm-matff.stan'
 standata = list(
   T = T.length,
   K = K,
