@@ -321,6 +321,10 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Found a few typos, can't recover the parameters from the simulation yet.
 * Working on log scale made this super slow.
 
+### 20170525 Th 20 to 01+1 ###
+* hmm.stan has divergences in some chains. In those mixing well, forward filter and viterbi can recover the parameters from the simulations YAY! Still very unstable (I get convergence in approx 1 out of 4 chains - others get stuck)
+* The matrix implementation for the forward filter doesn't work. I'll leave this to focus on hmm.stan.
+
 ---
 
 # Notes

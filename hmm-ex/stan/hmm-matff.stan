@@ -1,6 +1,7 @@
 functions {
   vector normalize(vector x) {
-    return x / sum(x);
+    // return x / sum(x);
+    return x;
   }
 }
 
@@ -17,44 +18,38 @@ parameters {
                                     // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
 
   // Continuous observation model
-  ordered[K] mu;                    // mean
-  real<lower=0.0001> sigma[K];      // standard deviation
+  ordered[K] mu;                    // observation means
+  real<lower=0.0001> sigma[K];      // observation standard deviations
 }
 
 transformed parameters {
   // elementwise a.*b, a./b
-  vector[K] alpha_t[T]; // belief states_t
-  vector[K] phi_t[T]; // evidence_t(j)
-  matrix[K, K] transmat; // transition matrix Psi
+  vector[K] alpha[T];               // belief states_t
+  vector[K] psi[T];                 // evidence_t(j)
+  matrix[K, K] transmat;            // transition matrix transmat
 
   // refactoring the transition matrix
   for(j in 1:K) {
     for(i in 1:K) {
-      transmat[i, j] = A_ij[i][j];
+      transmat[i, j] = A_ij[i, j];
     }
   }
 
-  // init evidence phi_t
+  // init evidence psi
   for(t in 1:T) {
     for(j in 1:K) {
-      phi_t[t][j] = exp(normal_lpdf(x[t] | mu[j], sigma[j]));
+      psi[t][j] = normal_lpdf(x[t] | mu[j], sigma[j]);
     }
   }
 
-  // compute filtered blief state alpha_t
-  alpha_t[1] = normalize(phi_t[1] .* p_init);
+  // compute filtered blief state alpha
+  alpha[1] = normalize(log(p_init) + psi[1]);
 
   for(t in 2:T) {
-    for(j in 1:K) {
-      alpha_t[t] = normalize(phi_t[t] .* (transmat' * alpha_t[t-1]));
-    }
+    alpha[t] = normalize(psi[t] .* (log(transmat)' * alpha[t-1]));
   }
 }
 
 model {
-  for(t in 1:T) {
-    for(j in 1:K) {
-      target += alpha_t[t][j] * log(phi_t[t][j]);
-    }
-  }
+  target += log_sum_exp(alpha[T]); // Note we update based only on last alpha
 }

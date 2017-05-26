@@ -17,7 +17,7 @@ dataset <- hmm.sim(T.length, K, A, p.init, obs.model)
 rstan_options(auto_write = TRUE)  # Writes down the compiled sampler
 options(mc.cores = parallel::detectCores()) # Use all available cores
 
-bmodel = 'hmm-ex/stan/hmm-matff.stan'
+bmodel = 'hmm-ex/stan/hmm.stan'
 standata = list(
   T = T.length,
   K = K,
@@ -27,11 +27,15 @@ standata = list(
 stan.fit <- stan(file = bmodel,
                  model_name = "HMM",
                  data = standata, verbose = T,
-                 iter = 400, warmup = 200, thin = 1, chains = 4, cores = 4,
+                 iter = 400, warmup = 200, thin = 1, chains = 8, cores = 4,
                  control = list(adapt_delta = 0.80))
 
 # Diagnosis ---------------------------------------------------------------
 summary(stan.fit, pars = c('A_ij', 'mu', 'sigma'), probs = c(0.50))
+
+summary(stan.fit, pars = c('alpha'), probs = c(0.50))
+
+summary(stan.fit, pars = c('alpha', 'z_star'), probs = c(0.50))
 
 summary(stan.fit, probs = c(0.50))
 
