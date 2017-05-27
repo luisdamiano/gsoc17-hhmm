@@ -1,4 +1,4 @@
-hmm.sim <- function(T, K, A, p.init, obs.sim) {
+hmm_sim <- function(T, K, A, p.init, obs.sim) {
   if(!is.matrix(A) || any(dim(A) != K))
     stop("A must be a KxK matrix.")
   

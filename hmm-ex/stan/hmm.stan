@@ -6,44 +6,44 @@ data {
 
 parameters {
   // Discrete state model
-  simplex[K] p_init;                // initial state probabilities
+  simplex[K] p_1k;                  // initial state probabilities
   simplex[K] A_ij[K];               // transition probabilities
                                     // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
 
   // Continuous observation model
-  ordered[K] mu;                    // observation means
-  real<lower=0.0001> sigma[K];      // observation standard deviations
+  ordered[K] mu_k;                  // observation means
+  real<lower=0.0001> sigma_k[K];    // observation standard deviations
 }
 
 transformed parameters {
-  real alpha[T, K];
+  real alpha_tk[T, K];
 
   { // Forward algorithm log p(z_t = j | x_{1:t-1})
     real accumulator[K];
 
     for (j in 1:K)
-      alpha[1, j] = log(p_init[j]) + normal_lpdf(x[1] | mu[j], sigma[j]); // norm?
+      alpha_tk[1, j] = log(p_1k[j]) + normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
                          // belief state + transition prob + local evidence at t
-          accumulator[i] = alpha[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu[j], sigma[j]);
+          accumulator[i] = alpha_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
         }
-        alpha[t, j] = log_sum_exp(accumulator);
+        alpha_tk[t, j] = log_sum_exp(accumulator);
       }
     }
   }
 }
 
 model {
-  target += log_sum_exp(alpha[T]); // Note we update based only on last alpha
+  target += log_sum_exp(alpha_tk[T]); // Note we update based only on last alpha_tk
 }
 
 generated quantities {
-  int<lower=1, upper=K> z_star[T];
-  real logp_z_star;
+  int<lower=1, upper=K> zstar_t[T];
+  real logp_zstar;
   
   {
     int back_ptr[T, K];             // backpointer to the source of the link
@@ -52,14 +52,14 @@ generated quantities {
                                     // with final output from state k for time t
 
     for (j in 1:K)
-      best_logp[1, K] = normal_lpdf(x[1] | mu[j], sigma[j]);
+      best_logp[1, K] = normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
 
     for (t in 2:T) {
       for (j in 1:K) {
         best_logp[t, j] = negative_infinity();
         for (i in 1:K) {
           real logp;
-          logp = best_logp[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu[j], sigma[j]);
+          logp = best_logp[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
           if (logp > best_logp[t, j]) {
             back_ptr[t, j] = i;
             best_logp[t, j] = logp;
@@ -68,14 +68,14 @@ generated quantities {
       }
     }
     
-    logp_z_star = max(best_logp[T]);
+    logp_zstar = max(best_logp[T]);
 
     for (j in 1:K)
-      if (best_logp[T, j] == logp_z_star)
-        z_star[T] = j;
+      if (best_logp[T, j] == logp_zstar)
+        zstar_t[T] = j;
 
     for (t in 1:(T - 1)) {
-      z_star[T - t] = back_ptr[T - t + 1, z_star[T - t + 1]];
+      zstar_t[T - t] = back_ptr[T - t + 1, zstar_t[T - t + 1]];
     }
 
   }

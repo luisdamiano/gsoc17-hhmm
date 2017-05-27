@@ -325,6 +325,9 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * hmm.stan has divergences in some chains. In those mixing well, forward filter and viterbi can recover the parameters from the simulations YAY! Still very unstable (I get convergence in approx 1 out of 4 chains - others get stuck)
 * The matrix implementation for the forward filter doesn't work. I'll leave this to focus on hmm.stan.
 
+### 20170526 Fr 21 to 02+1 ###
+* The maximization problem is very sensitive to initial values, especially since chains may get stuck in local maxima. Initializing the observation means with the estimates from k-means makes the hmm estimation more efficient.
+
 ---
 
 # Notes
