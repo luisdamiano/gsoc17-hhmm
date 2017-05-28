@@ -16,29 +16,78 @@ parameters {
 }
 
 transformed parameters {
-  real alpha_tk[T, K];
+  vector[K] unalpha_tk[T];
+  vector[K] unbeta_tk[T];
+  vector[K] ungamma_tk[T];
 
-  { // Forward algorithm log p(z_t = j | x_{1:t-1})
+  vector[K] alpha_tk[T];
+  vector[K] beta_tk[T];
+  vector[K] gamma_tk[T];
+
+  { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
-
+    // vector[K] unalpha_tk[T];
+    
     for (j in 1:K)
-      alpha_tk[1, j] = log(p_1k[j]) + normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
+      unalpha_tk[1, j] = log(p_1k[j]) + normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
                          // belief state + transition prob + local evidence at t
-          accumulator[i] = alpha_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
+          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
         }
-        alpha_tk[t, j] = log_sum_exp(accumulator);
+        unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
     }
-  }
+    
+    for (t in 1:T)
+      alpha_tk[t] = softmax(unalpha_tk[t]);
+  } // Forward
+
+  { // Backward algorithm log p(x_{t+1:T} | z_t = j)
+    real accumulator[K];
+
+    for (j in 1:K)
+      unbeta_tk[T, j] = 1;
+
+    for (tforward in 0:(T-2)) {
+      int t;
+      t = T - tforward;
+
+      for (j in 1:K) { // j = previous (t-1)
+        for (i in 1:K) { // i = next (t)
+                         // Murphy (2012) Eq. 17.58
+                         // backwards t  + transition prob + local evidence at t
+          accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + normal_lpdf(x[t] | mu_k[i], sigma_k[i]);
+          }
+        unbeta_tk[t-1, j] = log_sum_exp(accumulator);
+      }
+    }
+    
+    for (t in 1:T)
+      beta_tk[t] = softmax(unbeta_tk[t]);
+  } // Backward
+
+  { // Forwards-backwards algorithm log p(z_t = j | x_{1:T})
+    for(t in 1:T) {
+      for (j in 1:K) {
+        ungamma_tk[t, j] = alpha_tk[t, j] * beta_tk[t, j];
+      }
+    }
+    
+    for(t in 1:T) {
+      real denom = sum(ungamma_tk[t]);
+      for (j in 1:K) {
+        gamma_tk[t, j] = ungamma_tk[t, j] / denom;
+      }
+    }
+  } // Forwards-backwards
 }
 
 model {
-  target += log_sum_exp(alpha_tk[T]); // Note we update based only on last alpha_tk
+  target += log_sum_exp(unalpha_tk[T]); // Note: update based only on last unalpha_tk
 }
 
 generated quantities {

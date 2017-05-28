@@ -325,9 +325,30 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * hmm.stan has divergences in some chains. In those mixing well, forward filter and viterbi can recover the parameters from the simulations YAY! Still very unstable (I get convergence in approx 1 out of 4 chains - others get stuck)
 * The matrix implementation for the forward filter doesn't work. I'll leave this to focus on hmm.stan.
 
-### 20170526 Fr 21 to 02+1 ###
+### 20170526 Fr 21 to 03+1 ###
 * The maximization problem is very sensitive to initial values, especially since chains may get stuck in local maxima. Initializing the observation means with the estimates from k-means makes the hmm estimation more efficient.
 
+### 20170527 Sa 04 to 07 ###
+* Can't sleep, but can (break) code tho! Made coffee to help me write two types of inferences still missing in my code: smoothing and prediction.
+* Just learnt the hard way that Stan doesn't allow for decreasing loops, say T:1. The trick is to setup t = 1:T and then use T-t as a decreasing index.
+
+### 20170527 Sa 18 to 19 ###
+* Had to downgrade to RStan 2.14 since v2.15 introduced a bug in print() that wouldn't let me debug my code.
+
+### 20170527 Sa 21 to 02+1 ###
+* The smoothed probs look funny, I'm reviewing my code equation by equation.
+* Ok, finally got my code working.
+    * Stan implementation currently does:
+        * Estimate the parameters (initial prob, transition prob, mu/sigma for each state)
+        * Make inference on filtered and smoothed probs
+    * R script currently does:
+        * Simulate HMM from given parameters values
+        * Print summary and plot dynamics of current Stan implementation
+    * Future steps:
+        * Trim/clean code
+        * Optimize speed (prefer vectorization, there are some redundant loops)
+        * Document
+        * Move into IOHMM
 ---
 
 # Notes

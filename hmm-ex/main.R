@@ -1,8 +1,7 @@
 library(rstan)
 library(shinystan)
 source('hmm-ex/R/hmm-sim.R')
-source('hmm-ex/R/plot-addons.R')
-source('hmm-ex/R/math.R')
+source('hmm-ex/R/plots.R')
 
 # Set up ------------------------------------------------------------------
 T.length = 500
@@ -11,9 +10,10 @@ A = matrix(c(0.80, 0.35, 0.20, 0.65), K, K)
 p1 = c(0.90, 0.10)
 obs.model <- function(z) { rnorm(length(z), z*10, 5)}
 
-n.iter = 1000
-n.warmup = 500
+n.iter = 500
+n.warmup = 250
 n.chains = 4
+n.cores = 4
 n.thin = 1
 
 set.seed(9000)
@@ -50,69 +50,91 @@ stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
                  iter = n.iter, warmup = n.warmup,
                  thin = n.thin, chains = n.chains,
-                 init = init_fun)
+                 cores = n.cores, init = init_fun)
 
-# Diagnostics -------------------------------------------------------------
+n.samples = (n.iter - n.warmup) * n.chains
+
+
+# MCMC Diagnostics --------------------------------------------------------
 summary(stan.fit, 
         pars = c('p_1k', 'A_ij', 'mu_k', 'sigma_k'), 
-        probs = c(0.50))
+        probs = c(0.50))$summary
 launch_shinystan(stan.fit)
 
 # Estimates ---------------------------------------------------------------
-# Let's see if the Stan implementation can recover well the parameters
 
-# Filtered probability (forward algorithm)
-alpha <- apply(
-  extract(stan.fit, pars = 'alpha_tk')[[1]], c(1, 2),
-  function(x) {softmax(x)})
+# Extraction
+alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 
-plot(NULL, xlim = c(0, T.length), ylim = c(0, 1), type = 'l',
-     xlab = bquote(t),
-     ylab = bquote(p(z[t] == 1 ~ "|" ~ x[" " ~ 1:t])),
-     main = "Filtered probability for Belief State 1")
-interval_ribbons(x = 1:T.length,
-                 y = t(apply(alpha, c(1, 3),
-                             function(x) { 
-                               quantile(x, c(0.10, 0.90)) })[, 1, ]),
-                 col = 'lightgray')
-lines(x = 1:T.length,
-      y = apply(alpha, c(1, 3), median)[1, ],
-      col = 'black')
+# Summary -----------------------------------------------------------------
+options(digits = 2)
 
-boxplot(
-  alpha ~ state, 
-  data.frame(
-    alpha = apply(alpha, c(1, 3), median)[1, ],
-    state = dataset$z),
-  # xlab = bquote(z[t]),
-  # ylab = bquote(p(z[t] == 1 ~ "|" ~ x[" " ~ 1:t])),
-  xlab = "Actual state",
-  ylab = "Filtered probability for Belief State 1",
-  main = "Filtered probability for Belief State 1",
-  pch = 21, cex.pch = 0.7,
-  outpch = 21, outcex = 0.8,
-  outbg = "lightgray", outcol = "gray")
-abline(h = 0.5, col = "lightgray")
+print("Estimated initial state probabilities")
+summary(stan.fit, 
+        pars = c('p_1k'), 
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
-hist(
-  alpha[1, , dataset$z == 1],
-  prob = TRUE, breaks = "FD", col = 2,
-  main = "Filtered probability for Belief States",
-  xlab = "Filtered probability")
-hist(
-  alpha[1, , ],
-  prob = TRUE, breaks = "FD", col = 1, add = TRUE)
-hist(
-  alpha[1, , dataset$z == 2],
-  prob = TRUE, breaks = "FD", col = 3, add = TRUE)
-legend(x = "top", 
-       legend = c(
-         'All observations', 
-         'Obs. in State 1', 
-         'Obs. in State 2'),
-       bty = 'n', cex = 0.7,
-       col = 1:3, lwd = 5)
+print("Estimated probabilities in the transition matrix")
+summary(stan.fit, 
+        pars = c('A_ij'), 
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
-# Most likely path (joint states, Viterbi decoding)
+print("Estimated mean and standard deviation of observations in each state")
+summary(stan.fit, 
+        pars = c('mu_k', 'sigma_k'), 
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+# Inference plots
+layout(matrix(c(1, 2, 3, 4, 5, 6, 7, 7, 7), ncol = 3, nrow = 3, byrow = TRUE))
+
+for(k in 1:K) {
+  # Filtered probabilities (forward algoritm) - Belief states
+  plot_intervals(
+    x = 1:T.length,
+    y = apply(alpha, c(2, 3),
+              function(x) { 
+                quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
+    xlab = bquote(t),
+    ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
+    main = bquote("Filtered probability for Hidden State" ~ .(k))
+  )
+  
+  # Smoothed probability (forwards-backwards algorithm)
+  plot_intervals(
+    x = 1:T.length,
+    y = apply(gamma, c(2, 3),
+              function(x) { 
+                quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
+    xlab = bquote(t),
+    ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
+    main = bquote("Smoothed probability for Hidden State" ~ .(k))
+  )
+  
+  # Filtered vs smoothed
+  plot(
+    x = apply(alpha, c(2, 3),
+              function(x) { 
+                quantile(x, c(0.50)) })[, k],
+    y = apply(gamma, c(2, 3),
+              function(x) { 
+                quantile(x, c(0.50)) })[, k],
+    xlab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
+    ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
+    main = bquote("Filtered vs smoothed probability for Hidden State" ~ .(k)),
+    pch = 21, col = 'lightgray', bg = 'lightgray', cex = 0.8
+  )
+  abline(0, 1)
+}
+
+# Most likely hidden path (Viterbi decoding) - joint states
 zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
-round(table(rep(dataset$z, each = 2000), zstar) / 2000, 0)
+round(table(rep(dataset$z, each = n.samples), zstar) / n.samples, 0)
+
+plot(
+  x = 1:T.length,
+  y = apply(zstar, 2, median),
+  xlab = bquote(t),
+  ylab = bquote(z^~"*"),
+  main = bquote("Most probable sequence of states"),
+  type = 'l', col = 'gray')
