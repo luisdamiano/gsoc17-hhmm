@@ -349,6 +349,11 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
         * Optimize speed (prefer vectorization, there are some redundant loops)
         * Document
         * Move into IOHMM
+
+### 20170528 Su 22 to 01+ ###
+* Run a few more tests on the hmm-ex code.
+* Go on with the lit review for the IOHMM, we'll start writing Stan code soon.
+
 ---
 
 # Notes

@@ -8,13 +8,14 @@ T.length = 500
 K = 2
 A = matrix(c(0.80, 0.35, 0.20, 0.65), K, K)
 p1 = c(0.90, 0.10)
-obs.model <- function(z) { rnorm(length(z), z*10, 5)}
+obs.model <- function(z) { rnorm(length(z), z*10, 10)}
 
 n.iter = 500
 n.warmup = 250
 n.chains = 4
 n.cores = 4
 n.thin = 1
+n.seed = 9000
 
 set.seed(9000)
 
@@ -50,10 +51,9 @@ stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
                  iter = n.iter, warmup = n.warmup,
                  thin = n.thin, chains = n.chains,
-                 cores = n.cores, init = init_fun)
+                 cores = n.cores, seed = n.seed, init = init_fun)
 
 n.samples = (n.iter - n.warmup) * n.chains
-
 
 # MCMC Diagnostics --------------------------------------------------------
 summary(stan.fit, 
@@ -138,3 +138,4 @@ plot(
   ylab = bquote(z^~"*"),
   main = bquote("Most probable sequence of states"),
   type = 'l', col = 'gray')
+

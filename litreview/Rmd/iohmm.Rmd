@@ -17,17 +17,38 @@ z_{t} = f(z_{t-1}, \mat{u}_{t}) \\
 \mat{y}_{t} = g(z_{t  }, \mat{u}_{t})
 \]
 
-The first line corresponds to the state model, which consists of a discrete-time, discrete-state Markov chain with hidden states $z_t \in \{1, \dots, K\}$ that transition according to $f(z_t | z_{t-1}, \mat{u}_{t})$. Additionally, the observation model is governed by $g(z_{t  }, \mat{u}_{t})$, where $\mat{u}_{t} \in \RR^m$ is the input vector and $\mat{x}_t \in \RR^r$ is the vector of observations, emissions or output. The corresponding joint distribution is
+The first line corresponds to the state model, which consists of a discrete-time, discrete-state Markov chain with hidden states $z_t \in \{1, \dots, K\}$ that transition according to $f(z_t | z_{t-1}, \mat{u}_{t})$. Additionally, the observation model is governed by $g(z_{t  }, \mat{u}_{t})$, where $\mat{u}_{t} \in \RR^m$ is the input vector and $\mat{x}_t \in \RR^r$ is the vector of observations, emissions or output. The corresponding joint distribution, 
 
-To make this model probabilistic, state variables are assumed to follow a multinomial distribution. The belief states now becomes
+\[
+p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
+\]
+
+  <!-- = p(\mat{z}_{1:T}) p(\mat{x}_{1:T} | \mat{z}_{1:T}) -->
+  <!-- = \left[ p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})} \right] \left[ \prod_{t=1}^{T}{p(\mat{x}_t | z_{t})} \right]. -->
+
+depend on the parametrization. A possible parametrization for continuous inputs and outputs models the transition matrix by means of a logistic regression model whose parameters depend on the previos hidden state
+
+\[
+p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{logit}^{-1}(\mat{\beta}_i \mat{u}_{t})),
+\]
+
+and the observations with a Gaussian density with parameters depending on the current state
+
+\[
+p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{W}_j \mat{u}_t, \mat{\Sigma}_j.
+\]
+
+Given this new probabilistic model, state variables are assumed to follow a multinomial distribution depending on the input variable. The belief states now becomes
 
 \begin{align*}
 \alpha_t(j) 
-  & \triangleq  p(z_t = j | \mat{u}_{1:t}). \\
+  & \triangleq  p(\mat{x}_{1:t}, z_t = j | \mat{u}_{1:t}). \\
 \end{align*}
 
 The transition probabilities $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$ govern the state dynamics. The output $\mat{eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}$_{t}, conditional on the input $\mat{u}_t$ and the hidden state $\mat{z}_t$. The actual form of the emission density $f_{\mat{x}}(\mat{x}_t, \mat{eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, a multinomial distribution can be achieved by application the softmax function to the outputs. If the chosen density is Gaussian, then the target is a linear combination of the output.
 
 Following a probabilistic logic, the inputs and state distributions at a given point are used to estimate the state distribution and the output distribution for the next step.
 
-  
+END
+
+Add forward and fb algos.

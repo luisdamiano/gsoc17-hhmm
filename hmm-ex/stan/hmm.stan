@@ -1,3 +1,9 @@
+functions {
+  vector normalize(vector x) {
+    return x / sum(x);
+  }
+}
+
 data {
   int<lower=1> T;                   // number of observations (length)
   int<lower=1> K;                   // number of hidden states
@@ -26,10 +32,8 @@ transformed parameters {
 
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
-    // vector[K] unalpha_tk[T];
-    
-    for (j in 1:K)
-      unalpha_tk[1, j] = log(p_1k[j]) + normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
+
+    unalpha_tk[1] = log(p_1k) + normal_lpdf(x[1] | mu_k, sigma_k);
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
@@ -72,17 +76,11 @@ transformed parameters {
 
   { // Forwards-backwards algorithm log p(z_t = j | x_{1:T})
     for(t in 1:T) {
-      for (j in 1:K) {
-        ungamma_tk[t, j] = alpha_tk[t, j] * beta_tk[t, j];
-      }
+        ungamma_tk[t] = alpha_tk[t] .* beta_tk[t];
     }
-    
-    for(t in 1:T) {
-      real denom = sum(ungamma_tk[t]);
-      for (j in 1:K) {
-        gamma_tk[t, j] = ungamma_tk[t, j] / denom;
-      }
-    }
+
+    for(t in 1:T)
+      gamma_tk[t] = normalize(ungamma_tk[t]);
   } // Forwards-backwards
 }
 
