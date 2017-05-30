@@ -8,7 +8,7 @@ T.length = 500
 K = 2
 A = matrix(c(0.80, 0.35, 0.20, 0.65), K, K)
 p1 = c(0.90, 0.10)
-obs.model <- function(z) { rnorm(length(z), z*10, 10)}
+obs.model <- function(z) { rnorm(length(z), z*10, 3)}
 
 n.iter = 500
 n.warmup = 250
@@ -95,6 +95,7 @@ for(k in 1:K) {
     y = apply(alpha, c(2, 3),
               function(x) { 
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
+    z = dataset$zstd,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
     main = bquote("Filtered probability for Hidden State" ~ .(k))
@@ -106,12 +107,14 @@ for(k in 1:K) {
     y = apply(gamma, c(2, 3),
               function(x) { 
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
+    z = dataset$zstd,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
     main = bquote("Smoothed probability for Hidden State" ~ .(k))
   )
   
   # Filtered vs smoothed
+  cols <- ifelse(dataset$z == 1, 'green', 'red')
   plot(
     x = apply(alpha, c(2, 3),
               function(x) { 
@@ -122,20 +125,23 @@ for(k in 1:K) {
     xlab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
     main = bquote("Filtered vs smoothed probability for Hidden State" ~ .(k)),
-    pch = 21, col = 'lightgray', bg = 'lightgray', cex = 0.8
+    type = 'p', pch = 21, col = cols, bg = cols, cex = 0.7
   )
-  abline(0, 1)
+  abline(0, 1, col = 'lightgray', lwd = 0.25)
 }
 
 # Most likely hidden path (Viterbi decoding) - joint states
-zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
-round(table(rep(dataset$z, each = n.samples), zstar) / n.samples, 0)
+zstar <- apply(extract(stan.fit, pars = 'zstar_t')[[1]], 2, bin_std)
+round(table(rep(dataset$z - 1, each = n.samples), zstar) / n.samples, 0)
 
 plot(
   x = 1:T.length,
-  y = apply(zstar, 2, median),
+  y = bin_std(apply(zstar, 2, median)),
   xlab = bquote(t),
   ylab = bquote(z^~"*"),
   main = bquote("Most probable sequence of states"),
   type = 'l', col = 'gray')
 
+cols <- ifelse(dataset$z == 1, 'green', 'red')
+points(x = 1:T.length, y = dataset$zstd,
+       pch = 21, bg = cols, col = cols, cex = 0.7)

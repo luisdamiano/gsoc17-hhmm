@@ -42,7 +42,7 @@ Reach us at #r-finance (freenode.net).
 * **Michael Weylandt** - *Co-Mentor* - [michaelweylandt](https://github.com/michaelweylandt)
 
 ## License
-_A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under CC-BY-SA 4.0. See the [LICENSE.md](LICENSE.md) file for details.
+_A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under CC-BY-SA 4.0. See the [LICENSE](LICENSE.md) file for details.
 
 ## Acknowledgments
 * The Google Summer Of Code (GSOC) program for funding.

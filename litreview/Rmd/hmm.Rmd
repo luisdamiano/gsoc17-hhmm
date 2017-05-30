@@ -84,6 +84,7 @@ Acting as prior information, this quantity is updated with observed data at the 
   &= p(z_t = j | \mat{x}_{t}, \mat{x}_{1:t-1}) \\
   &= Z_t^{-1} \psi_t(j) p(z_t = j | \mat{x}_{1:t-1}) \\
   &= Z_t^{-1} \psi_t(j) \alpha_{t-1}(j),
+  &= \psi_t(j) \sum_{l}{\Psi(i, l) \alpha_{t-1}(l)}
 \end{align*}
 
 where the normalization constant is given by

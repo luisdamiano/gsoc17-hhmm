@@ -42,13 +42,31 @@ Given this new probabilistic model, state variables are assumed to follow a mult
 
 \begin{align*}
 \alpha_t(j) 
-  & \triangleq  p(\mat{x}_{1:t}, z_t = j | \mat{u}_{1:t}). \\
+  & \triangleq  p(z_t = j | \mat{x}_{1:t}, \mat{u}_{1:t}). \\
 \end{align*}
 
-The transition probabilities $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$ govern the state dynamics. The output $\mat{eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}$_{t}, conditional on the input $\mat{u}_t$ and the hidden state $\mat{z}_t$. The actual form of the emission density $f_{\mat{x}}(\mat{x}_t, \mat{eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, a multinomial distribution can be achieved by application the softmax function to the outputs. If the chosen density is Gaussian, then the target is a linear combination of the output.
+The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{1:t-1})$, which govern the state dynamics, now depend on the input sequence. The output $\mat{eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}$_{t}, conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$. The actual form of the emission density $f_{\mat{x}}(\mat{x}_t, \mat{eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, a multinomial distribution can be achieved by application the softmax function to the outputs. If the chosen density is Gaussian, then the target is a linear combination of the output.
 
 Following a probabilistic logic, the inputs and state distributions at a given point are used to estimate the state distribution and the output distribution for the next step.
 
-END
+In this context, the local evidence at time $t$ becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{eta}_t)$, where $\mat{eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}$_{t}, conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$. Similarly, the transition probability becomes $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$.
 
-Add forward and fb algos.
+### Filtering
+Filtered maginals can be computed recursively by adjusting the forward algorithm to consider the input sequence
+
+\begin{align*}
+\alpha_t(j) 
+  & \triangleq  p(z_t = j | \mat{x}_{1:t}, \mat{u}_{1:t}) \\
+  & = \sum_{l = 1}^{K}{p(z_t = j | z_{t-1} = i, \mat{u}_{t}) p(z_{t-1} = i | \mat{u}_{1:t-1})} \\
+  & = \sum_{l = 1}^{K}{\Psi_t(i, j) p(z_{t-1} = i | \mat{u}_{1:t-1})} \\
+  & = \psi_t(j) \sum_{l}{\Psi_t(i, j) \alpha_{t-1}(l)}.
+\end{align*}
+
+### Smoothing
+Similarly, inference about the smoothed posterior marginal can be computed adjusting the forwards-backwards algorithm to consider the input sequence in both components $\alpha_t(j)$ and $\beta_t(j)$. The future component becomes
+
+\begin{align*}
+\beta_{t-1}(i)
+  &= \psi_t(j) \sum_{l}{\Psi_{t}(i, j) \beta_t(l)}
+\end{align*}
+

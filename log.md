@@ -350,9 +350,16 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
         * Document
         * Move into IOHMM
 
-### 20170528 Su 22 to 01+ ###
+### 20170528 Su 22 to 01+1 ###
 * Run a few more tests on the hmm-ex code.
-* Go on with the lit review for the IOHMM, we'll start writing Stan code soon.
+* Went on with the lit review for the IOHMM, we'll start writing Stan code soon.
+
+### 20170529 Mo 19 to 20 ###
+* Run some extra tests on the hmm-ex code, namely linear normalization versus softmax on the forward probability (alpha).
+
+### 20170529 Tu 22 to 02+1 ###
+* Run some extra tests on the hmm-ex code, namely linear normalization versus softmax on the forward probability (alpha).
+* Went on with lit review about IOHMM, especially the filtering and smoothing problems.
 
 ---
 
@@ -363,9 +370,6 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 +---------------+---------------+--------------------+
 | Paper         | This work     | Bengio             |
 +===============+===============+====================+
-| Output or     | $x_t$         | $y_t$              |
-| emission      |               |                    |
-+---------------+---------------+--------------------+
 | Input         | $u_t$         | $u_t$              |
 |               |               |                    |
 +---------------+---------------+--------------------+
@@ -381,11 +385,14 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 | Transition p. | $\Psi(j, i)$  | $\phi_{ij, t}$     |
 | from j to i   |               |                    |
 +---------------+---------------+--------------------+
-| Prediction at | $x_t | z_t =j$| $\eta_{jt}         |
+| State prob    | $\alpha_t(j)$ | $\zeta_{j,t}$      |
 | at t state j  |               |                    |
 +---------------+---------------+--------------------+
-| State prob    | $\alpha_t(j)$ | $\zeta_{j,t}       |
+| Prediction at | $x_t | z_t =j$| $\eta_{jt}$        |
 | at t state j  |               |                    |
++---------------+---------------+--------------------+
+| Output density| $\psi_t(j)$   | f_{\mat{x}}(\mat{x}_t, \mat{eta}_t)$  |
+| or evidence   |               |                    |
 +---------------+---------------+--------------------+
 
 ## Questions - Stuff to discuss with Brian and Michael

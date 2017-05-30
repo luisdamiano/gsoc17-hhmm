@@ -1,3 +1,7 @@
+bin_std <- function(z, base = min(z)) {
+  as.numeric(!(z - base))
+}
+
 hmm_sim <- function(T, K, A, p.init, obs.sim) {
   if(!is.matrix(A) || any(dim(A) != K))
     stop("A must be a KxK matrix.")
@@ -18,6 +22,7 @@ hmm_sim <- function(T, K, A, p.init, obs.sim) {
   
   list(
     z = z,
+    zstd = bin_std(z),
     x = x
   )
 }
