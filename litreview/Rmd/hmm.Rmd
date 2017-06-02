@@ -298,7 +298,7 @@ p(\mat{x}_{t+h} | \mat{x}_{1:t}) = \sum_{z_{t+h}}{p(\mat{x}_{t+h} | z_{t+h}) p(z
 
 Since the influence of all available observations $\mat{x}_{1:t}$ is summarised in the $K$-sized vector $\mat{\alpha}_t$, prediction can be carried forward indefinitely with only a fixed amount of storage.
 
-# Parameter estimation
+## Parameter estimation
 The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{A}, \mat{B})$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{A}$ is the transition matrix and $\mat{B}$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j)$. The form of $\mat{B}$ depends on the specification of the observation model. Discrete observations may be characterized with an $L$-sized multinoulli distribution with parameters $B_{jl} = p(x_t = l, z_t = j)$ where $l \in \{1, \dots, L\}$, while continuous emissions may be modelled with a Gaussian distribution with parameters $\mat{\mu}_k$ and $\mat{\Sigma}_k$ where $k \in \{1, \dots, K\}$.
 
 Estimation can be run under both the maximum likelihood and bayesian frameworks. The former may be easily extended to regularized maximum likelihood with the introduction of the corresponding priors over the parameters. Although it is a straightforward procedure when the data is fully observed, in practice the latent states $\mat{z}_{1:T}$ are hidden. In principle, this is just another optimization problem that can be solved via standard numerical optimization methods. Analogous to fitting a mixture model, the most common approach is the application of the Expectation-Maximization (EM) algorithm @dempster1977maximum to find either the maximum likelihood or the maximum a posteriori estimates. In the context of HMM, this is also known as the Baum-Welch algorithm @baum1970maximization.
@@ -309,10 +309,10 @@ The algorithm considers the unobserved internal state trajectory as missing data
 
 Additionally, estimation can be done in a fully bayesian fashion. In terms of variational Bayes EM, @mackay1997ensemble proposes a method based on the optimization of an ensemble which approximates the entire posterior probability distribution. In turns, @beal2003variational presents a unified variational Bayesian framework which approximates these computations in models with latent variables using a lower bound on the marginal likelihood. As for Markov Chain Monte Carlo methods, block Gibbs sampling can be applied as shown in @fruehwirth-schnatter2006finite. Briefly, samples are drawn from the density $p(\mat{z}_{1:T} | \mat{x}_{1:T}, \mat{\theta})$ by means of forwards-filtering, backwards-sampling, and then the parameters are sampled from their posteriors conditional on the sampled latent paths.
 
-## Implementation in Stan
+### Implementation in Stan
 > While we're implementing the code during the following months, we'll probably have to work out a few implementation details like marginalization, vectorizatin and other speed-up tricks, limitations by stan data structures, priors and tricks to improve convergence, etc. These adaptations for the inference and/or estimation steps should be noted and explained in here. This would be a great contribution, since there's little written about that apart from a few pages in stan man.
 
-## Variations
+### Variations
 There are numerous variants of the HMM. Some of them impose constraints on the form of the transition matrix.
 
 In the left-to-right or Barkis model, where $A_{ij} = 0 \ \forall \ j < i$, the underlying state sequence stays the same or increases as time increases.

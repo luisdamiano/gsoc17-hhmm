@@ -357,9 +357,21 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 ### 20170529 Mo 19 to 20 ###
 * Run some extra tests on the hmm-ex code, namely linear normalization versus softmax on the forward probability (alpha).
 
-### 20170529 Tu 22 to 02+1 ###
+### 20170529 Mo 22 to 02+1 ###
 * Run some extra tests on the hmm-ex code, namely linear normalization versus softmax on the forward probability (alpha).
 * Went on with lit review about IOHMM, especially the filtering and smoothing problems.
+
+### 20170530 Tu 15 to 19 ###
+* Went on with lit review about IOHMM. Got all the equations summarized in my paper notebook, haven't typesetted them yet.
+* Started working in iohmm_sim, an R function to generate data from a IOHMM model given the set of parameters. Implementing the data generation steps helped me grasp the details about how the model works.
+
+### 20170530 Tu 22 to 05+1 ###
+* Adapted the hmm.stan code for iohmm. It compiles. Little divergences, horrible fit. Possible problems: underidentification.
+* For a first trial, I'm running the sampler with the real parameters as initial values to assess if the stan code works as intended.
+
+### 20170531 We 08 to 10 ###
+* Went on with lit review about IOHMM, typesetting.
+
 
 ---
 
