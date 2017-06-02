@@ -372,6 +372,8 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 ### 20170531 We 08 to 10 ###
 * Went on with lit review about IOHMM, typesetting.
 
+### 20170601 Th 21 to 23 ###
+* Went on with lit review about IOHMM: re-read the whole document looking out for typos, format and notation issues.
 
 ---
 

@@ -5,7 +5,7 @@ Real-world processes produce observable outputs characterized as signals. These 
 Autocorrelation, a key feature in most signals, can be modelled in countless forms. While certainly pertinent to this purpose, high order Markov chains can prove inconvenient when the range of the correlation amongst the observations is long. A more parsimonious approach assumes that the observed sequence is a noisy observation of an underlying hidden process represented as a first-order Markov chain. In other terms, long-range dependencies between observations are mediated via latent variables. It is important to note that the Markov property is only assumed for the hidden states and not for the observations themselves.
 
 ## Model specification
-HMM involves two interconnected models. The state model consists of a discrete-time, discrete-state Markov chain with hidden states $z_t \in \{1, \dots, K\}$ that transition according to $p(z_t | z_{t-1})$. Additionally, the observation model is governed by $p(\mat{x}_t | z_t)$, where $\mat{x}_t$ are the observations, emissions or output. The corresponding joint distribution is
+HMM involves two interconnected models. The state model consists of a discrete-time, discrete-state, first order hidden Markov chain $z_t \in \{1, \dots, K\}$ that transitions according to $p(z_t | z_{t-1})$. Additionally, the observation model is governed by $p(\mat{x}_t | z_t)$, where $\mat{x}_t$ are the observations, emissions or output. The corresponding joint distribution is
 
 \[
 p(\mat{z}_{1:T}, \mat{x}_{1:T})
@@ -13,7 +13,7 @@ p(\mat{z}_{1:T}, \mat{x}_{1:T})
   = \left[ p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})} \right] \left[ \prod_{t=1}^{T}{p(\mat{x}_t | z_{t})} \right].
 \]
 
-It is a specific instance of the state space model family in which the latent variables are discrete. Each single time slice corresponds to a mixture distribution with component densities given by $p(\mat{x}_t | z_t)$, thus HMM may be interpreted as an extension of a mixture model in which the choice of component for each observation is not selected independently but depends on the choice of component for the previous observation. In the case of a simple mixture model for an identically independently distributed sample, the parameters of the transition matrix inside the $i$-th column are the same, so that the conditional distribution $p(z_t | z_{t-1})$ is independent of $z_{t-1}$.
+It is a specific instance of the state space model family in which the latent variables are discrete. Each single time slice corresponds to a mixture distribution with component densities given by $p(\mat{x}_t | z_t)$, thus HMM may be interpreted as an extension of a mixture model in which the choice of component for each observation is not selected independently but depends on the choice of component for the previous observation. In the case of a simple mixture model for an independent and identically distributed sample, the parameters of the transition matrix inside the $i$-th column are the same, so that the conditional distribution $p(z_t | z_{t-1})$ is independent of $z_{t-1}$.
 
 When the output is discrete, the observation model commonly takes the form of an observation matrix
 
@@ -29,26 +29,24 @@ p(\mat{x}_t | z_t = k, \mat{\theta}) = \mathcal{N}(\mat{x}_t | \mat{\mu}_k, \mat
 The latter is equivalent to a Gaussian mixture model with cluster membership ruled by Markovian dynamics, also known as Markov Switching Models (MSM). In this context, multiple sequential observations tend to share the same location until they suddenly jump into a new cluster.
 
 ## Characteristics
-By specification of the latent model, the density function of duration $\tau$ in state $i$ is given by
+By specification of the latent model, the density function of the duration $\tau$ in state $i$ is given by
 
 \[
 p_i(\tau) = (A_{ii})^{\tau} (1 - A_{ii}) \propto \exp (-\tau \ln A_{ii}),
 \]
 
-which represents the probabily that a sequence spends precisely $\tau$ steps in state $i$. The expected duration in a stating conditional on starting in that state is
+which represents the probabily that a sequence spends precisely $\tau$ steps in state $i$. The expected duration conditional on starting in that state is
 
 \[
 \bar{\tau}_i = \sum_{\tau = 1}^{\infty}{\tau p_i(\tau)} = \frac{1}{1 - A_{ii}}.
 \]
 
-The density is an exponentially decaying function of $\tau$, thus longer durations are more probable than shorter ones. 
-
-In applications where this dynamic is unrealistic, the diagonal coefficients of the transition matrix $A_{ii} \ \forall i$ may be set to zero and each state $i$ is explicitely associated with a probability distribution of possible duration times $p(\tau | i)$ @rabiner1990tutorial
+The density is an exponentially decaying function of $\tau$, thus longer durations are more probable than shorter ones. In applications where this proves unrealistic, the diagonal coefficients of the transition matrix $A_{ii} \ \forall \ i$ may be set to zero and each state $i$ is explicitely associated with a probability distribution of possible duration times $p(\tau | i)$ [@rabiner1990tutorial].
 
 One of the most powerful properties of HMM is the ability to exhibit some degree of invariance to local warping of the time axis. Allowing for compression or stretching of the time, the model accommodates for variations in speed.
 
 ## Inference
-There are several quantities of interest to be inferred by means of different algorithms. So far, the discussion assumes that model parameters $\mat{\theta}$ are known.
+There are several quantities of interest to be inferred from different algorithms. So far, the discussion assumes that model parameters $\mat{\theta}$ are known.
 
 Name            | Quantity                                | Availability at     | Algorithm | Complexity
 ----------------|-----------------------------------------|---------------------|-----------|------------
