@@ -46,11 +46,11 @@ The density is an exponentially decaying function of $\tau$, thus longer duratio
 One of the most powerful properties of HMM is the ability to exhibit some degree of invariance to local warping of the time axis. Allowing for compression or stretching of the time, the model accommodates for variations in speed.
 
 ## Inference
-There are several quantities of interest to be inferred from different algorithms. So far, the discussion assumes that model parameters $\mat{\theta}$ are known.
+There are several quantities of interest to be inferred from different algorithms. These are summarized in the following table. In this section, the discussion assumes that model parameters $\mat{\theta}$ are known.
 
 Name            | Quantity                                | Availability at     | Algorithm | Complexity
 ----------------|-----------------------------------------|---------------------|-----------|------------
-Filtering       | $p(z_t `|` \mat{x}_{1:t})$ Belief state | $t$ (online)        | Forward         | ?
+Filtering       | $p(z_t `|` \mat{x}_{1:t})$              | $t$ (online)        | Forward         | ?
 Smoothing       | $p(z_t `|` \mat{x}_{1:T})$              | $T$ (offline)       | Forwards-backwards         | $O(K^2T)$ \ $O(KT)$ if left-to-right
 Fixed lag smoothing | $p(z_{t-\ell} `|` \mat{x}_{1:t})$, $\ell>0$| $t+\ell$ (lagged)    | ?         | ?
 State prediction| $p(z_{t+h} `|` \mat{x}_{1:t})$, $h>0$   | $t$                 | ?         | ?
@@ -59,44 +59,38 @@ MAP Estimation  | $ 1+2 $                                 | $T$                 
 Probability of the evidence | $p(\mat{x}_{1:T})$          | $T$                 | ?         | ?
 Table: Summary of the quantities that can be inferred and their corresponding algorithms.
 
-<!-- \argmax_{\mat{z}_{1:T}} p(\mat{z}_{1:T} `|` \mat{x}_{1:T}) -->
-
-> Add an extra column "Numerical issues"?
-
-> Do you think is it OK to put the table here, before everything is explained? I could otherwise put this to the end of the chapter, but that would force me to add a "summary" section.
-
 ### Filtering
-A filter infers the belief state based on all the available information up to that point $p(z_t | \mat{x}_{1:t})$. It achieves better noise reduction than simply estimating the hidden state based on the current estimate. The filtering process can be run online, or recursively, as new data streams in.
+A filter infers the belief state at a given step based on all the information available up to that point $p(z_t | \mat{x}_{1:t})$. It achieves better noise reduction than simply estimating the hidden state based on the current estimate $p(z_t | \mat{x}_{t})$. The filtering process can be run online, or recursively, as new data streams in.
 
-Filtered maginals can be computed recursively by means of the forward algorithm @baum1967inequality. Let $\psi_t(j) = p(\mat{x}_t | z_t = j)$ be the local evidence at time $t$ and $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$ be the transition probability. First, the one-step-ahead predictive density is computed
+Filtered maginals can be computed recursively by means of the forward algorithm [@baum1967inequality]. Let $\psi_t(j) = p(\mat{x}_t | z_t = j)$ be the local evidence at step $t$ and $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$ be the transition probability. First, the one-step-ahead predictive density is computed
 
 \[
 p(z_t = j | \mat{x}_{1:t-1}) = \sum_{i}{\Psi(i, j) p(z_{t-1} = i | \mat{x}_{1:t-1})}.
 \]
 
-Acting as prior information, this quantity is updated with observed data at the point $t$ using Bayes rule,
+Acting as prior information, this quantity is updated with observed data at the step $t$ using Bayes rule,
 \begin{align*}
-\label{eq:filtered-belief_state}
+\label{eq:filtered-beliefstate}
 \alpha_t(j) 
   & \triangleq  p(z_t = j | \mat{x}_{1:t}) \\
   &= p(z_t = j | \mat{x}_{t}, \mat{x}_{1:t-1}) \\
   &= Z_t^{-1} \psi_t(j) p(z_t = j | \mat{x}_{1:t-1}) \\
-  &= Z_t^{-1} \psi_t(j) \alpha_{t-1}(j),
-  &= \psi_t(j) \sum_{l}{\Psi(i, l) \alpha_{t-1}(l)}
 \end{align*}
-
+  <!-- &= Z_t^{-1} \psi_t(j) \alpha_{t-1}(j), -->
+  <!-- &= \psi_t(j) \sum_{l}{\Psi(i, l) \alpha_{t-1}(l)} -->
+  
 where the normalization constant is given by
 
 \[
 Z_t
   \triangleq  p(\mat{x}_t | \mat{x}_{1:t-1})
-  = \sum_{l}{p(\mat{x}_{t} | z_t = l) p(z_t = l | \mat{x}_{1:t-1})},
-  = \sum_{l}{p(\mat{x}_{t} | z_t = l) \alpha_{t-1}(l)}.
+  = \sum_{l}{p(\mat{x}_{t} | z_t = l) p(z_t = l | \mat{x}_{1:t-1})}
+  = \sum_{l}{\psi_t(l) p(z_t = l | \mat{x}_{1:t-1})}.
 \]
 
-This predict-update cycle results in the filtered belief states at point $t$. As this algorithm only requires the evaluation of the quantities $\psi_t(j)$ for each value of $z_t$ for every $t$ and fixed $\mat{x}_t$, the posterior distribution of the latent states is independent of the form of the observation density or indeed of whether the observed variables are continuous or discrete @jordan2003introduction.
+This predict-update cycle results in the filtered belief states at step $t$. As this algorithm only requires the evaluation of the quantities $\psi_t(j)$ for each value of $z_t$ for every $t$ and fixed $\mat{x}_t$, the posterior distribution of the latent states is independent of the form of the observation density or indeed of whether the observed variables are continuous or discrete [@jordan2003introduction].
 
-Let $\mat{\alpha}_t$ be a $K$-sized vector with the filtered belief states at point $t$, $\mat{\psi}_t(j)$ be the $K$-sized vector of local evidence at point $t$, $\mat{\Psi}$ be the transition matrix and $\mat{u} \odot \mat{v}$ is the Hadamard product, representing elementwise vector multiplication. Then, the bayesian updating procedure can be expressed in matrix notitation as
+Let $\mat{\alpha}_t$ be a $K$-sized vector with the filtered belief states at step $t$, $\mat{\psi}_t(j)$ be the $K$-sized vector of local evidence at step $t$, $\mat{\Psi}$ be the transition matrix and $\mat{u} \odot \mat{v}$ is the Hadamard product, representing elementwise vector multiplication. Then, the bayesian updating procedure can be expressed in matrix notitation as
 
 \[
 \mat{\alpha}_t \propto \mat{\psi}_t \odot (\mat{\Psi}^T \mat{\alpha}_{t-1}).
@@ -105,10 +99,10 @@ Let $\mat{\alpha}_t$ be a $K$-sized vector with the filtered belief states at po
 In addition to computing the hidden states, the algorithm yields the log probability of the evidence
 
 \[
-\log p(\mat{x}_{1:T} | \mat{\theta}) = \sum_{t=1}^{T}{p(\mat{x}_{1:t} | \mat{x}_{1:t-1})} = \sum_{t=1}^{T}{\log Z_t}.
+\log p(\mat{x}_{1:T} | \mat{\theta}) = \sum_{t=1}^{T}{\log p(\mat{x}_{t} | \mat{x}_{1:t-1})} = \sum_{t=1}^{T}{\log Z_t}.
 \]
 
-Log domain should be preferred to avoid numerical underflow. *ENLARGE*, see bishop and jordan.
+Log domain should be preferred to avoid numerical underflow^[[@bishop2006pattern, @jordan2003introduction] have more detail if we want to enlarge on potential numerical issues].
 
 \begin{algorithm}[H]
   \DontPrintSemicolon
@@ -140,16 +134,16 @@ Log domain should be preferred to avoid numerical underflow. *ENLARGE*, see bish
 \end{algorithm}
 
 ### Smoothing
-A smoother infers the belief state at a given point based on all the observations or evidence $p(z_t | \mat{x}_{1:T})$. Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline.
+A smoother infers the belief state at a given state based on all the observations or evidence $p(z_t | \mat{x}_{1:T})$. Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline.
 
-Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm @baum1972inequality. Let $\gamma_t(j)$ be the desired smoothed posterior marginal,
+Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1972inequality]. Let $\gamma_t(j)$ be the desired smoothed posterior marginal,
 
 \[
 \gamma_t(j)
   \triangleq p(z_t = j | \mat{x}_{1:T}),
 \]
 
-$\alpha_t(j)$ be the filtered belief state at the point $t$ as defined by equation $\ref{eq:filtered-belief_state}$ and $\beta_t(j)$ be the conditional likelihood of future evidence given that the hidden state at time $t$ is $j$,
+$\alpha_t(j)$ be the filtered belief state at the step $t$ as defined by equation $\ref{eq:filtered-beliefstate}$ and $\beta_t(j)$ be the conditional likelihood of future evidence given that the hidden state at step $t$ is $j$,
 
 \[
 \beta_t(j) 
@@ -177,19 +171,19 @@ The future component can be computed recusively from right to left:
   &= \sum_{j}{\beta_t(j) \psi_t(j) \psi(i, j)}
 \end{align*}
 
-Let $\mat{\beta}_t$ be a $K$-sized vector with the conditional likelihood of future evidence given the hidden state at time $t$. Then, the backwards procedure can be expressed in matrix notitation as
+Let $\mat{\beta}_t$ be a $K$-sized vector with the conditional likelihood of future evidence given the hidden state at step $t$. Then, the backwards procedure can be expressed in matrix notitation as
 
 \[
 \mat{\beta}_{t-1} \propto \mat{\Psi} (\mat{\psi}_t \odot \mat{\beta}_{t}).
 \]
 
-At the last point, the base case is given by
+At the last step, the base case is given by
 \[
 \beta_{T}(i)
   = p(\mat{x}_{T+1:T} | z_{T} = i) = p(\varnothing | z_T = i) = 1.
 \]
 
-Intuitively, the forwards-backwards algorithm passes information from left to right and the from right to left, combining them at each node. A straightforward implementation of the algorithm runs in $O(K^2 T)$ time because of the $K \times K$ matrix multiplication at each step. There is a significant reduction if the transition matrix is sparse, for example a left-to-right transition matrix runs in $O(TK)$ time. Additional assumptions about the form of the transition matrix may ease the complexity further, for example reducing the time to $O(TK\log K)$ if $\psi(i, j) \propto \exp(-\sigma^2 |\mat{z}_i - \mat{z}_j|)$.
+Intuitively, the forwards-backwards algorithm passes information from left to right and then from right to left, combining them at each node. A straightforward implementation of the algorithm runs in $O(K^2 T)$ time because of the $K \times K$ matrix multiplication at each step. There is a significant reduction if the transition matrix is sparse, for example a left-to-right transition matrix runs in $O(TK)$ time. Additional assumptions about the form of the transition matrix may ease the complexity further, for example reducing the time to $O(TK\log K)$ if $\psi(i, j) \propto \exp(-\sigma^2 |\mat{z}_i - \mat{z}_j|)$.
 
 ### Fixed lag smoothing
 A compromise between filtering and smoothing, it infers the belief state at a given point based on the information available up to that moment plus a fixed lag $\ell$, that is $p(z_{t-\ell} | \mat{x}_{1:t})$. This approach yields better performance than filtering at the price of a delay, whose size can be tuned to  trade off accuracy versus delay.
@@ -244,14 +238,14 @@ which maximizes the expected number of correct individual states.
 
 The MAP estimate is always globally consistent: while locally a state may be most probable at a given point, the Viterbi or max-sum algorithm decodes the most likely single plausible path @viterbi1967error. Furthermore, the MPM sequence may have zero probability, if it includes two successive states that are individually the most probable and yet their transition matrix element connecting them is zero. On the other hand, MPM is more robust since each node is estimated by averaging over its neighbours, rather than conditioning on a specific value of them.
 
-The Viterbi algorithm is an adaptation of the forwards-backwards algorithm where the forward pass becomes a max-product and the backwards pass relies on a traceback procedure to recover the most probable path. Let $\delta_t(j)$ be the probability of arriving to the state $j$ at point $t$ given the most probable path was taken,
+The Viterbi algorithm is an adaptation of the forwards-backwards algorithm where the forward pass becomes a max-product and the backwards pass relies on a traceback procedure to recover the most probable path. Let $\delta_t(j)$ be the probability of arriving to the state $j$ at step $t$ given the most probable path was taken,
 
 \[
 \delta_t(j)
   \triangleq \max_{z_1, \dots, z_{t-1}} p(\mat{z}_{1:t-1}, z_t = j | \mat{x}_{1:t}),
 \]
 
-The most probable path to state $j$ at point $t$ consists of the most probable path to some other state $i$ at point $t-1$, followed by a transition from $i$ to $j$,
+The most probable path to state $j$ at step $t$ consists of the most probable path to some other state $i$ at point $t-1$, followed by a transition from $i$ to $j$,
 
 \[
 \delta_t(j)
@@ -260,7 +254,7 @@ The most probable path to state $j$ at point $t$ consists of the most probable p
 
 where $\phi_t(j) = p(\mat{x}_{t} | z_{t} = j)$ is the ... ?
 
-Additionally, the most likely previous state on the most probable path to $j$ at point $t$ is given by
+Additionally, the most likely previous state on the most probable path to $j$ at step $t$ is given by
 \[
 a_t(j)
   = \argmax_{i} \delta_{t-1}(i) \psi(i, j) \phi_t(j).
