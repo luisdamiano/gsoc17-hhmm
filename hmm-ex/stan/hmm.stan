@@ -39,13 +39,13 @@ transformed parameters {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
-                         // belief state + transition prob + local evidence at t
+                         // belief state      + transition prob + local evidence at t
           accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
     }
-    
+
     for (t in 1:T)
       alpha_tk[t] = softmax(unalpha_tk[t]);
   } // Forward
@@ -63,13 +63,13 @@ transformed parameters {
       for (j in 1:K) { // j = previous (t-1)
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
-                         // backwards t  + transition prob + local evidence at t
+                         // backwards t    + transition prob + local evidence at t
           accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + normal_lpdf(x[t] | mu_k[i], sigma_k[i]);
           }
         unbeta_tk[t-1, j] = log_sum_exp(accumulator);
       }
     }
-    
+
     for (t in 1:T)
       beta_tk[t] = softmax(unbeta_tk[t]);
   } // Backward
@@ -90,39 +90,38 @@ model {
 
 generated quantities {
   int<lower=1, upper=K> zstar_t[T];
-  real logp_zstar;
-  
+  real logp_zstar_t;
+
   {
-    int back_ptr[T, K];             // backpointer to the source of the link
-    real best_total_logp;           // best probability for the whole chain
-    real best_logp[T, K];           // max prob for the seq up to t
+    int a_tk[T, K];                 // backpointer to the most likely previous state on the most probable path
+    real delta_tk[T, K];            // max prob for the seq up to t
                                     // with final output from state k for time t
 
     for (j in 1:K)
-      best_logp[1, K] = normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
+      delta_tk[1, K] = normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
 
     for (t in 2:T) {
-      for (j in 1:K) {
-        best_logp[t, j] = negative_infinity();
-        for (i in 1:K) {
+      for (j in 1:K) { // j = current (t)
+        delta_tk[t, j] = negative_infinity();
+        for (i in 1:K) { // i = previous (t-1)
           real logp;
-          logp = best_logp[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
-          if (logp > best_logp[t, j]) {
-            back_ptr[t, j] = i;
-            best_logp[t, j] = logp;
+          logp = delta_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
+          if (logp > delta_tk[t, j]) {
+            a_tk[t, j] = i;
+            delta_tk[t, j] = logp;
           }
         }
       }
     }
-    
-    logp_zstar = max(best_logp[T]);
+
+    logp_zstar_t = max(delta_tk[T]);
 
     for (j in 1:K)
-      if (best_logp[T, j] == logp_zstar)
+      if (delta_tk[T, j] == logp_zstar_t)
         zstar_t[T] = j;
 
     for (t in 1:(T - 1)) {
-      zstar_t[T - t] = back_ptr[T - t + 1, zstar_t[T - t + 1]];
+      zstar_t[T - t] = a_tk[T - t + 1, zstar_t[T - t + 1]];
     }
 
   }

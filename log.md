@@ -375,8 +375,12 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 ### 20170601 Th 21 to 23 ###
 * Went on with lit review about IOHMM: re-read the whole document looking out for typos, format and notation issues.
 
-### 20170602 Th 23 to 02+1 ###
+### 20170602 Fr 23 to 02+1 ###
 * Went on with lit review about IOHMM: re-read the whole document looking out for typos, format and notation issues.
+
+### 20170603 Sa 11 to 19 ###
+* Went on with lit review about IOHMM: re-read the whole document looking out for typos, euqation references, format and notation issues.
+* Sent check-in email.
 
 ---
 

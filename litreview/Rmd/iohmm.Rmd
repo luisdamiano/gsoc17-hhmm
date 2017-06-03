@@ -1,16 +1,16 @@
 # Input-Output Hidden Markov Models
 
-The Input-Output Hidden Markov Model (IOHMM) is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. Similarly to HMM, the model is meant to be especially effective when it comes to learning long term memory, that is when input-output sequences span long points. On the other hand, it differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of just the output sequence distribution. IOHMM is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction.
+The Input-Output Hidden Markov Model (IOHMM) is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. Similarly to HMM, the model is meant to be especially effective to learn long term memory, that is when input-output sequences span long points. On the other hand, it differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of just the output sequence distribution. IOHMM is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction.
 
 ## Model specification
-As with HMM, IOHMM involves two interconnected models. 
+As with HMM, IOHMM involves two interconnected models,
 
 \begin{align*}
 z_{t} &= f(z_{t-1}, \mat{u}_{t}) \\
-\mat{x}_{t} &= g(z_{t  }, \mat{u}_{t}) \\
+\mat{x}_{t} &= g(z_{t  }, \mat{u}_{t}).
 \end{align*}
 
-The first line corresponds to the state model, which consists of a discrete-time, discrete-state hidden states $z_t \in \{1, \dots, K\}$ whose transition depends on the previous state $z_{t-1}$ and the input vector $\mat{u}_{t} \in \RR^M$. Additionally, the observation model is governed by $g(z_{t}, \mat{u}_{t})$, where $\mat{x}_t \in \RR^R$ is the vector of observations, emissions or output. The corresponding joint distribution,
+The first line corresponds to the state model, which consists of discrete-time, discrete-state hidden states $z_t \in \{1, \dots, K\}$ whose transition depends on the previous hidden state $z_{t-1}$ and the input vector $\mat{u}_{t} \in \RR^M$. Additionally, the observation model is governed by $g(z_{t}, \mat{u}_{t})$, where $\mat{x}_t \in \RR^R$ is the vector of observations, emissions or output. The corresponding joint distribution,
 
 \[
 p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
@@ -19,23 +19,21 @@ p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
   <!-- = p(\mat{z}_{1:T}) p(\mat{x}_{1:T} | \mat{z}_{1:T}) -->
   <!-- = \left[ p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})} \right] \left[ \prod_{t=1}^{T}{p(\mat{x}_t | z_{t})} \right]. -->
 
-can take many forms. In the most frequent parametrization when all the inputs and the outputs are continuous, the state model involves a logistic regression whose parameters depend on the previous hidden states
+can take many forms. In a simple parametrization for continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state $i$,
 
 \[
-p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{logit}^{-1}(\mat{w}_i \mat{u}_{t}),
+p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
 \]
 
-and the observation model is built upon the Gaussian density with parameters depending on the current state
+and the observation model is built upon the Gaussian density with parameters depending on the current state $j$,
 
 \[
 p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
 \]
 
-IOHMM is fully probabilistic. Hidden states are assumed to follow a multinomial distribution that depends on the input sequence. The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{1:t})$, which govern the state dynamics, are driven by the control signal as well.
+IOHMM adapts the logics of HMM to allow for input and output vectors, retaining its fully probabilistic quality. Hidden states are assumed to follow a multinomial distribution that depends on the input sequence. The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{t})$, which govern the state dynamics, are driven by the control signal as well.
 
-As for the output sequence, the local evidence at time $t$ now becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{\eta}_t)$, where $\mat{\eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}$_{t}, conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$.
-
-The actual form of the emission density $f_{\mat{x}}(\mat{x}_t, \mat{\eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, it is possible to set up the multinomial distribution by running the softmax function over the estimated outputs of all possible states. Alternatively, when approximating continuous observations with the Gaussian density, the target is estimated as a linear combination of these outputs.
+As for the output sequence, the local evidence at time $t$ now becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{\eta}_t)$, where $\mat{\eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}_{t}$ conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$. The actual form of the emission density $p(\mat{x}_t, \mat{\eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, it is possible to set up the multinomial distribution by running the softmax function over the estimated outputs of all possible states. Alternatively, when approximating continuous observations with the Gaussian density, the target is estimated as a linear combination of these outputs.
 
 <!-- Moreover, the belief states now becomes -->
 
@@ -49,13 +47,13 @@ The actual form of the emission density $f_{\mat{x}}(\mat{x}_t, \mat{\eta}_t)$ c
 ## Inference
 
 ### Filtering
-Filtered maginals can be computed recursively by adjusting the forward algorithm to consider the input sequence:
+Filtered maginals can be computed recursively by adjusting the forward algorithm to consider the input sequence,
 
 \begin{align*}
-\alpha_t(j) 
+\alpha_t(j)
   & \triangleq p(z_t = j | \mat{x}_{1:t}, \mat{u}_{1:t}) \\
-  & = \psi_t(j) \sum_{i = 1}^{K}{p(z_t = j | z_{t-1} = i, \mat{u}_{t}) p(z_{t-1} = i | \mat{u}_{1:t-1})} \\
-  & = \psi_t(j) \sum_{i = 1}^{K}{\Psi_t(i, j) p(z_{t-1} = i | \mat{u}_{1:t-1})} \\
+  & = \sum_{i = 1}^{K}{p(z_t = j | z_{t-1} = i, \mat{x}_{t}, \mat{u}_{t}) p(z_{t-1} = i | \mat{x}_{1:t-1}, \mat{u}_{1:t-1})} \\
+  & = \sum_{i = 1}^{K}{p(\mat{x}_{t} | z_t = j, \mat{u}_t) p(z_t = j | z_{t-1} = i, \mat{u}_{t}) p(z_{t-1} = i | \mat{x}_{1:t-1}, \mat{u}_{1:t-1})} \\
   & = \psi_t(j) \sum_{i = 1}^{K}{\Psi_t(i, j) \alpha_{t-1}(i)}.
 \end{align*}
 
@@ -63,9 +61,9 @@ Filtered maginals can be computed recursively by adjusting the forward algorithm
 Similarly, inference about the smoothed posterior marginal can be computed adjusting the forwards-backwards algorithm to consider the input sequence in both components $\alpha_t(j)$ and $\beta_t(j)$. The future component now becomes
 
 \begin{align*}
-\beta_{t-1}(j)
-  & \triangleq p(\mat{x}_{t:T} | z_{t-1} = j, \mat{u}_{t:T}) \\
-  & = \psi_t(j) \sum_{i = 1}^{K}{\Psi_t(i, j) \beta_{t}(i)}.
+\beta_{t-1}(i)
+  & \triangleq p(\mat{x}_{t:T} | z_{t-1} = i, \mat{u}_{t:T}) \\
+  & = \sum_{j = 1}^{K}{\psi_t(j) \Psi_t(i, j) \beta_{t}(j)}.
 \end{align*}
 
 ## Parameter estimation

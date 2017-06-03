@@ -1,5 +1,6 @@
 ---
-title: A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series.
+title: A literature review of Bayesian Hierarchical Hidden Markov Models applied to
+  financial time series.
 author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: '`r Sys.Date()`'
 output:
