@@ -16,9 +16,6 @@ The first line corresponds to the state model, which consists of discrete-time, 
 p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
 \]
 
-  <!-- = p(\mat{z}_{1:T}) p(\mat{x}_{1:T} | \mat{z}_{1:T}) -->
-  <!-- = \left[ p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})} \right] \left[ \prod_{t=1}^{T}{p(\mat{x}_t | z_{t})} \right]. -->
-
 can take many forms. In a simple parametrization for continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state $i$,
 
 \[
@@ -34,15 +31,6 @@ p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u
 IOHMM adapts the logics of HMM to allow for input and output vectors, retaining its fully probabilistic quality. Hidden states are assumed to follow a multinomial distribution that depends on the input sequence. The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{t})$, which govern the state dynamics, are driven by the control signal as well.
 
 As for the output sequence, the local evidence at time $t$ now becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{\eta}_t)$, where $\mat{\eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}_{t}$ conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$. The actual form of the emission density $p(\mat{x}_t, \mat{\eta}_t)$ can be discrete or continuous. In case of sequence classification or symbolic mutually exclusive emissions, it is possible to set up the multinomial distribution by running the softmax function over the estimated outputs of all possible states. Alternatively, when approximating continuous observations with the Gaussian density, the target is estimated as a linear combination of these outputs.
-
-<!-- Moreover, the belief states now becomes -->
-
-<!-- \begin{align*} -->
-<!-- \alpha_t(j)  -->
-<!--   & \triangleq  p(z_t = j | \mat{x}_{1:t}, \mat{u}_{1:t}). \\ -->
-<!-- \end{align*} -->
-
-<!-- Following a probabilistic logic, the inputs and state distributions at a given point are used to estimate the state distribution and the output distribution for the next step. -->
 
 ## Inference
 
@@ -67,7 +55,7 @@ Similarly, inference about the smoothed posterior marginal can be computed adjus
 \end{align*}
 
 ## Parameter estimation
-The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \mat{\theta}_o)$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{\theta}_h$ are the parameters of the hidden model and $\mat{\theta}_o$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j, \mat{u}_t)$. The form of $\mat{\theta}_h$ and $\mat{\theta}_o$ depend on the specification of the model. State transition may be characterized by a logistic regression with parameters $\mat{w}_k$ for $k \in \{1, \dots, K\}$, while emissions may be modelled with with a linear regression with Gaussian noise $\mat{B}_k$ and $\mat{\Sigma}_k$ for $k \in \{1, \dots, K\}$.
+The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \mat{\theta}_o)$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{\theta}_h$ are the parameters of the hidden model and $\mat{\theta}_o$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j, \mat{u}_t)$. The form of $\mat{\theta}_h$ and $\mat{\theta}_o$ depend on the specification of the model. State transition may be characterized by a logistic or multinomial regression with parameters $\mat{w}_k$ for $k \in \{1, \dots, K\}$, while emissions may be modelled with with a linear regression with Gaussian error with parameters $\mat{b}_k$ and $\mat{\Sigma}_k$ for $k \in \{1, \dots, K\}$.
 
-Estimation can be run under both the maximum likelihood and bayesian frameworks. Although it is a straightforward procedure when the data is fully observed, in practice the latent states $\mat{z}_{1:T}$ are hidden. The most common approach is the application of the EM algorithm to find either the maximum likelihood or the maximum a posteriori estimates. The application of sigmoidal functions, for example the logistic or softmax transforms for the hidden transition model, requires numeric optimization via gradient ascent or similar methods for the M step.
+Estimation can be run under both the maximum likelihood and bayesian frameworks. Although it is a straightforward procedure when the data is fully observed, in practice the latent states $\mat{z}_{1:T}$ are hidden. The most common approach is the application of the EM algorithm to find either the maximum likelihood or the maximum a posteriori estimates. @bengio1995input shows a straighforward modification of the EM algorithm. The application of sigmoidal functions, for example the logistic or softmax transforms for the hidden transition model, requires numeric optimization via gradient ascent or similar methods for the M step.
 

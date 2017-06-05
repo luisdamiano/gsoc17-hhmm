@@ -3,28 +3,28 @@ library(shinystan)
 source('iohmm-ex/R/iohmm-sim.R')
 
 # Set up ------------------------------------------------------------------
-T.length = 50
+T.length = 1000
 K = 3
 M = 2
 R = 1
 w = matrix(c(2, 0.80, 3, 0.50, 1.5, 0.80), nrow = K, ncol = M, byrow = TRUE)
 b = matrix(c(1, 5, 0.01, 0.01, -1, -5), nrow = K, ncol = M, byrow = TRUE)
-s = c(0.1, 1, 2)
+s = c(0.1, 0.1, 0.1)
 p1 = c(0.45, 0.10, 0.45)
 obs.model <- function(u, z, b, s) {
   T.length <- nrow(u)
 
   x <- vector("numeric", T.length)
-  for(t in 1:T.length) {
+  for (t in 1:T.length) {
     x[t] <- rnorm(1, u[t, ] %*% b[z[t], ], s[z[t]])
   }
   return(x)
 }
 
-n.iter = 1000
-n.warmup = 500
-n.chains = 4
-n.cores = 4
+n.iter = 400
+n.warmup = 200
+n.chains = 1
+n.cores = 1
 n.thin = 1
 n.seed = 9000
 
@@ -35,18 +35,27 @@ u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
 dataset <- iohmm_sim(T.length, K, u, w, p1, obs.model, b, s)
 
 # Data exploration --------------------------------------------------------
-par(mfrow = c(1, 2))
-mtext("Input-Output relationship", side = 3, outer = TRUE)
-for(m in 1:M) {
+layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE),
+       heights = c(0.95, 0.05))
+for (m in 1:M) {
   plot(x = u[, m], y = dataset$x,
        pch = 21, cex = 0.7,
        col = dataset$z, bg = dataset$z,
        ylab = bquote("Output" ~ x), xlab = bquote("Input" ~ u[.(m)]))
 }
+mtext("Input-Output relationship", side = 3, line = -2.5, outer = TRUE)
 
-par(mfrow = c(M, K))
-for(mm in 1:M) {
-  for(k in 1:K) {
+opar <- par(); par(mai = c(0,0,0,0))
+plot.new()
+legend(x = "center",
+       legend = bquote(.(paste("Hidden state", 1:K))),
+       lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
+par(opar)
+
+layout(rbind(matrix(c(1:(M*K)), nrow = M, ncol = K, byrow = TRUE), (M*K) + 1),
+       heights = c(rep((1 - 0.05) / M, M), 0.05))
+for (m in 1:M) {
+  for (k in 1:K) {
       plot(x = u[, m], y = dataset$p.mat[, k],
          ylim = c(0, 1),
          pch = 21, cex = 0.7,
@@ -54,6 +63,14 @@ for(mm in 1:M) {
          ylab = bquote("Prob of state" ~ .(k)), xlab = bquote("Input" ~ u[.(m)]))
   }
 }
+mtext("Input-State probability relationship", side = 3, line = -2.5, outer = TRUE)
+
+opar <- par(); par(mai = c(0,0,0,0))
+plot.new()
+legend(x = "center",
+       legend = bquote(.(paste("Hidden state", 1:K))),
+       lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
+par(opar)
 
 # Model estimation --------------------------------------------------------
 rstan_options(auto_write = TRUE)
@@ -64,28 +81,19 @@ stan.data = list(
   T = T.length,
   K = K,
   M = M,
-  u_t = as.array(u),
+  u_tm = as.array(u),
   x_t = dataset$x
 )
 
 # Chains are initialized close to k-means to speed up convergence
-init_fun <- function() {
-  # clasif <- kmeans(stan.data$x, stan.data$K)
-  # init.mu <- by(stan.data$x, clasif$cluster, mean)
-  # init.sigma <- by(stan.data$x, clasif$cluster, sd)
-  # init.order <- order(init.mu)
-  # 
-  # list(
-  #   mu_k = init.mu[init.order],
-  #   sigma_k = init.sigma[init.order]
-  # )
-  list(
-    w_k = w,
-    b_k = b,
-    s_k = s,
-    p_1k = 1,
-  )
-}
+# init_fun <- function() {
+#   list(
+#     w_km = w,
+#     b_km = b,
+#     s_k = s,
+#     p_1k = 1
+#   )
+# }
 
 stan.fit <- stan(file = stan.model,
                  model_name = stan.model,
@@ -98,12 +106,40 @@ stan.fit <- stan(file = stan.model,
 n.samples = (n.iter - n.warmup) * n.chains
 
 # MCMC Diagnostics --------------------------------------------------------
-summary(stan.fit, 
-        pars = c('p_1k', 'w_k', 'b_k', 's_k'), 
+summary(stan.fit,
+        pars = c('p_1k', 'w_km', 'b_km', 's_k'),
         probs = c(0.50))$summary
 launch_shinystan(stan.fit)
 
+# Parameters --------------------------------------------------------------
+w_km <- extract(stan.fit, pars = 'w_km')[[1]]
+mw_km <- apply(w_km, c(2, 3), median)
+
+mw <- apply(w, c(1, 3), median)
+
+plot(x = dataset$x, y = apply(extract(stan.fit, pars = 'hatx_t')[[1]], 2, median))
+
+# layout(rbind(matrix(c(1:(M*K)), nrow = M, ncol = K, byrow = TRUE), (M*K) + 1),
+#        heights = c(rep((1 - 0.05) / M, M), 0.05))
+# for (m in 1:M) {
+#   for (k in 1:K) {
+#     plot(x = rep(w[k, m], n.samples), y = w_km[, k, m],
+#          pch = 21, cex = 0.7,
+#          col = dataset$z, bg = dataset$z,
+#          ylab = bquote("Fitted prob of state" ~ hat(w)[.(k, m)]), xlab = bquote("Prob of state" ~ w[.(k, m)]))
+#   }
+# }
+# mtext("Input-State probability relationship", side = 3, line = -2.5, outer = TRUE)
+#
+# opar <- par(); par(mai = c(0,0,0,0))
+# plot.new()
+# legend(x = "center",
+#        legend = bquote(.(paste("Hidden state", 1:K))),
+#        lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
+# par(opar)
+
 # Estimates ---------------------------------------------------------------
+# alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 
 # Extraction
 alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
@@ -113,56 +149,56 @@ gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 options(digits = 2)
 
 print("Estimated initial state probabilities")
-summary(stan.fit, 
-        pars = c('p_1k'), 
+summary(stan.fit,
+        pars = c('p_1k'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 print("Estimated probabilities in the transition matrix")
-summary(stan.fit, 
-        pars = c('A_ij'), 
+summary(stan.fit,
+        pars = c('A_ij'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 print("Estimated mean and standard deviation of observations in each state")
-summary(stan.fit, 
-        pars = c('mu_k', 'sigma_k'), 
+summary(stan.fit,
+        pars = c('mu_k', 'sigma_k'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 # Inference plots
 layout(matrix(c(1, 2, 3, 4, 5, 6, 7, 7, 7), ncol = 3, nrow = 3, byrow = TRUE))
 
-for(k in 1:K) {
+for (k in 1:K) {
   # Filtered probabilities (forward algoritm) - Belief states
   plot_intervals(
     x = 1:T.length,
     y = apply(alpha, c(2, 3),
-              function(x) { 
+              function(x) {
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
     z = dataset$zstd,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
     main = bquote("Filtered probability for Hidden State" ~ .(k))
   )
-  
+
   # Smoothed probability (forwards-backwards algorithm)
   plot_intervals(
     x = 1:T.length,
     y = apply(gamma, c(2, 3),
-              function(x) { 
+              function(x) {
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
     z = dataset$zstd,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
     main = bquote("Smoothed probability for Hidden State" ~ .(k))
   )
-  
+
   # Filtered vs smoothed
   cols <- ifelse(dataset$z == 1, 'green', 'red')
   plot(
     x = apply(alpha, c(2, 3),
-              function(x) { 
+              function(x) {
                 quantile(x, c(0.50)) })[, k],
     y = apply(gamma, c(2, 3),
-              function(x) { 
+              function(x) {
                 quantile(x, c(0.50)) })[, k],
     xlab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),

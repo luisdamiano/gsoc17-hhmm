@@ -382,6 +382,13 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Went on with lit review about IOHMM: re-read the whole document looking out for typos, euqation references, format and notation issues.
 * Sent check-in email.
 
+### 20170604 Su 15 to 19 ###
+* Went on with lit review about IOHMM: re-read the whole document looking out for typos, euqation references, format and notation issues.
+* Went on with iohmm.stan
+
+### 20170604 Su 22 to 23 ###
+* Went on with iohmm.stan
+
 ---
 
 # Notes
