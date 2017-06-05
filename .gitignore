@@ -1,0 +1,13 @@
+# R and RStudio stuff
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+# Stan compiled samplers
+*.rds
+# Knitted files
+# *.html
+# *.pdf
+# JabRef
+*.bak
+*.sav
