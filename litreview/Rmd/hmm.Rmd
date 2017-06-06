@@ -220,7 +220,7 @@ At the last step, the base case is given by
 
 The forwards filtering, backwards sampling algorithm forms the basis of blocked-Gibbs sampling methods for parameter inference.
 
-### Maximum a posteriori estimation 
+### Maximum a posteriori estimation
 It is also of interest to compute the most probable state sequence or path,
 
 \[

@@ -1,0 +1,175 @@
+---
+title: "Input-Output Hidden Markov Model"
+author: "Luis Damiano, Brian Peterson, Michael Weylandt"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: ../references.bib
+---
+
+This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by Hassan (2005) to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) for a fully bayesian estimation of the model parameters and inferene on hidden quantities (including filtered state belief, smoothed state belief and jointly most likely state path). The model is introduced briefly, a deeper mathematical treatment can be found in our [literature review](../litreview/main.pdf).
+
+### Acknowledgements
+
+The authors acknowledge Google for financial support via the Google Summer of Code 2017.
+
+---
+
+# The Input-Output Hidden Markov Model
+
+The IOHMM is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. It differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of just the output sequence distribution. IOHMM is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction.
+
+## Definitions
+
+As with HMM, IOHMM involves two interconnected models,
+
+\begin{align*}
+z_{t} &= f(z_{t-1}, \mat{u}_{t}) \\
+\mat{x}_{t} &= g(z_{t  }, \mat{u}_{t}).
+\end{align*}
+
+The first line corresponds to the state model, which consists of discrete-time, discrete-state hidden states $z_t \in \{1, \dots, K\}$ whose transition depends on the previous hidden state $z_{t-1}$ and the input vector $\mat{u}_{t} \in \RR^M$. Additionally, the observation model is governed by $g(z_{t}, \mat{u}_{t})$, where $\mat{x}_t \in \RR^R$ is the vector of observations, emissions or output. The corresponding joint distribution,
+
+\[
+p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
+\]
+
+In this parametrization for continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state $i$,
+
+\[
+p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
+\]
+
+and the observation model is built upon the Gaussian density with parameters depending on the current state $j$,
+
+\[
+p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
+\]
+
+IOHMM adapts the logics of HMM to allow for input and output vectors, retaining its fully probabilistic quality. Hidden states are assumed to follow a multinomial distribution that depends on the input sequence. The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{t})$, which govern the state dynamics, are driven by the control signal as well.
+
+As for the output sequence, the local evidence at time $t$ now becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{\eta}_t)$, where $\mat{\eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}_{t}$ conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$.
+
+## Inference
+There are several quantities of interest to be inferred from different algorithms. In this section, the discussion assumes that model parameters $\mat{\theta}$ are known.
+
+### Filtering
+
+A filter infers the belief state at a given step based on all the information available up to that point,
+
+\begin{align*}
+\alpha_t(j)
+  & \triangleq p(z_t = j | \mat{x}_{1:t}, \mat{u}_{1:t}).
+\end{align*}
+
+It achieves better noise reduction than simply estimating the hidden state based on the current estimate $p(z_t | \mat{x}_{t})$. The filtering process can be run online, or recursively, as new data streams in. Filtered maginals can be computed recursively by means of the forward algorithm [@baum1967inequality].
+
+### Smoothing
+
+A smoother infers the belief state at a given state based on all the observations or evidence,
+
+\[
+\begin{align*}
+\gamma_t(j)
+  & \triangleq p(z_t = j | \mat{x}_{1:T}, \mat{u}_{1:T}) \\
+  & \propto \alpha_t(j) \beta_t(j),
+\end{align*}
+\]
+
+where
+
+\begin{align*}
+\beta_{t-1}(i)
+  & \triangleq p(\mat{x}_{t:T} | z_{t-1} = i, \mat{u}_{t:T}).
+\end{align*}
+
+Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline. Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization]. Let $\gamma_t(j)$ be the desired smoothed posterior marginal,
+
+It is also of interest to compute the most probable state sequence or path,
+
+\[
+\mat{z}^* = \argmax_{\mat{z}_{1:T}} p(\mat{z}_{1:T} | \mat{x}_{1:T}).
+\]
+
+The jointly most probable sequence of states can be inferred by means of maximum a posterior (MAP) estimation or Viterbi decoding.
+
+## Parameter estimation
+The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \mat{\theta}_o)$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{\theta}_h$ are the parameters of the hidden model and $\mat{\theta}_o$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j, \mat{u}_t)$. The form of $\mat{\theta}_h$ and $\mat{\theta}_o$ depend on the specification of the model. State transition may be characterized by a logistic or multinomial regression with parameters $\mat{w}_k$ for $k \in \{1, \dots, K\}$, while emissions may be modelled with with a linear regression with Gaussian error with parameters $\mat{b}_k$ and $\mat{\Sigma}_k$ for $k \in \{1, \dots, K\}$.
+
+---
+
+# Learning by simulation
+We approach the model with simulations before diving into real data. We first create a simulation routine to generate data that complies with the model assumptions and we then write a MCMC sampler to recover the parameters. After that, we finally move into analysing real data from actual stock markets as proposed in the original work.
+
+This approach has many benefits, including:
+
+* We can confirm that the sampler works as intended, i.e. it retrieves the parameters used in the data simulation stage.
+* The generated data meets all the assumptions and the estimates are free of the effects of data contamination, thus simplifying the interpretation of the results.
+* The user can gain insight into the model functioning by trying different combinations of the parameters and/or inputs.
+
+## Generative model
+
+We first write an R function for our generative model. The inputs are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution $\mat{\pi}_1$, the parameters from both the hidden state and the observation models $\mat{\theta}_h$ and $\mat{\theta}_o$ respectively.
+
+The hidden state for the first step is sampled according to the initial probability distribution. The transition probabilities for the following steps are computed from a multinomial linear regression with parameters $\mat{w}_k$, one set per possible hidden state, and covariates $\mat{u}_t$. The hidden states are subsequently drawn from the transition probabilities at each step.
+
+```{r}
+iohmm_sim <- function(T, K, u, p.init, w, obs.model, b, S) {
+  m <- ncol(u)
+  # r <- mcol(b)
+
+  if (dim(u)[1] != T)
+    stop("The input matrix must have T rows.")
+
+  if (any(dim(w) != c(K, m)))
+    stop("The transition weight matrix must be of size Kxm, where m is the size of the input vector.")
+
+  if (any(dim(b) != c(K, m)))
+    stop("The regressors matrix must be of size Kxm, where m is the size of the input vector.")
+
+  if (length(p.init) != K)
+    stop("The vector p.init must have length K.")
+
+  p.mat <- matrix(0, nrow = T, ncol = K)
+  p.mat[1, ] <- p.init
+
+  z <- vector("numeric", T)
+  z[1] <- sample(x = 1:K, size = 1, replace = FALSE, prob = p.init)
+  for (t in 2:T) {
+    p.mat[t, ] <- softmax(sapply(1:K, function(j) {u[t, ] %*% w[j, ]}))
+    z[t] <- sample(x = 1:K, size = 1, replace = FALSE, prob = p.mat[t, ])
+  }
+
+  x <- do.call(obs.model, list(u, z, b, S))
+
+  list(
+    u = u,
+    z = z,
+    x = x,
+    p.mat = p.mat
+  )
+}
+```
+
+The observations for each step are generated from a linear regressions with parameters $\mat{b}_k$, ...
+
+```{r}
+obs.model <- function(u, z, b, s) {
+  T.length <- nrow(u)
+
+  x <- vector("numeric", T.length)
+  for (t in 1:T.length) {
+    x[t] <- rnorm(1, u[t, ] %*% b[z[t], ], s[z[t]])
+  }
+  return(x)
+}
+```
+
+
+---
+
+# Stock Market Forecasting Using Hidden Markov Model
+(the replication with actual data)

@@ -389,6 +389,17 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 ### 20170604 Su 22 to 23 ###
 * Went on with iohmm.stan
 
+### 20170605 Mo 20 to 02+1 ###
+* Went on with iohmm.stan. After many tries, I learnt that the sampler suffer from divergences when computing the smoothed prob in this way:
+
+```stan
+    for(t in 1:T)
+      gamma_tk[t] = normalize(ungamma_tk[t]);
+```
+
+alpha_tk and beta_tk are both in log scale, but it's now clear to me that there must be an underflow somewhere. I would have never realised if it weren't for the divergences, so I'm now totally convinced that divergences are a *feature* of HMC.
+
+* Started working on the delivery.
 ---
 
 # Notes

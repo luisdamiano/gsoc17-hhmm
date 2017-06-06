@@ -19,17 +19,17 @@ parameters {
   vector[M] w_km[K];                // state regressors
 
   // Continuous observation model
-  vector[M] b_km[K];                // mean regressors
+  ordered[M] b_km[K];               // mean regressors
   real<lower=0.0001> s_k[K];        // residual standard deviations
 }
 
 transformed parameters {
   vector[K] unalpha_tk[T];
-  // vector[K] unbeta_tk[T];
-  // vector[K] ungamma_tk[T];
+  vector[K] unbeta_tk[T];
+  vector[K] ungamma_tk[T];
 
   vector[K] alpha_tk[T];
-  // vector[K] beta_tk[T];
+  vector[K] beta_tk[T];
   // vector[K] gamma_tk[T];
 
   vector[K] unA_ij[T];
@@ -67,38 +67,37 @@ transformed parameters {
       alpha_tk[t] = softmax(unalpha_tk[t]);
   } // Forward
 
-  // { // Backward algorithm log p(x_{t+1:T} | z_t = j)
-  //   real accumulator[K];
-  //
-  //   for (j in 1:K)
-  //     unbeta_tk[T, j] = 1;
-  //
-  //   for (tforward in 0:(T-2)) {
-  //     int t;
-  //     t = T - tforward;
-  //
-  //     for (j in 1:K) { // j = previous (t-1)
-  //       for (i in 1:K) { // i = next (t)
-  //                        // Murphy (2012) Eq. 17.58
-  //                        // backwards t  + transition prob + local evidence at t
-  //         accumulator[i] = unbeta_tk[t, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
-  //         }
-  //       unbeta_tk[t-1, j] = log_sum_exp(accumulator);
-  //     }
-  //   }
-  //
-  //   for (t in 1:T)
-  //     beta_tk[t] = softmax(unbeta_tk[t]);
-  // } // Backward
-  //
-  // { // Forwards-backwards algorithm log p(z_t = j | x_{1:T})
-  //   for(t in 1:T) {
-  //       ungamma_tk[t] = alpha_tk[t] .* beta_tk[t];
-  //   }
-  //
-  //   for(t in 1:T)
-  //     gamma_tk[t] = normalize(ungamma_tk[t]);
-  // } // Forwards-backwards
+  { // Backward algorithm log p(x_{t+1:T} | z_t = j)
+    real accumulator[K];
+
+    for (j in 1:K)
+      unbeta_tk[T, j] = 1;
+
+    for (tforward in 0:(T-2)) {
+      int t;
+      t = T - tforward;
+
+      for (j in 1:K) { // j = previous (t-1)
+        for (i in 1:K) { // i = next (t)
+                         // Murphy (2012) Eq. 17.58
+                         // backwards t  + transition prob + local evidence at t
+          accumulator[i] = unbeta_tk[t, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
+          }
+        unbeta_tk[t-1, j] = log_sum_exp(accumulator);
+      }
+    }
+
+    for (t in 1:T)
+      beta_tk[t] = softmax(unbeta_tk[t]);
+  } // Backward
+
+  { // Forwards-backwards algorithm log p(z_t = j | x_{1:T})
+    for(t in 1:T)
+      ungamma_tk[t] = alpha_tk[t] .* beta_tk[t];
+
+    // for(t in 1:T)
+    //   gamma_tk[t] = normalize(ungamma_tk[t]);
+  } // Forwards-backwards
 }
 
 model {
@@ -115,6 +114,9 @@ generated quantities {
   vector[K] hatpi_tk[T];
   int<lower=1, upper=K> hatz_t[T];
   real hatx_t[T];
+
+  int<lower=1, upper=K> zstar_t[T];
+  real logp_zstar;
 
   { // Fitted state
     vector[K] reg_tk[T];
@@ -135,41 +137,37 @@ generated quantities {
     }
   }
 
-  // int<lower=1, upper=K> zstar_t[T];
-  // real logp_zstar;
-  //
-  // {
-  //   int back_ptr[T, K];             // backpointer to the source of the link
-  //   real best_total_logp;           // best probability for the whole chain
-  //   real best_logp[T, K];           // max prob for the seq up to t
-  //                                   // with final output from state k for time t
-  //
-  //   for (j in 1:K)
-  //     best_logp[1, K] = normal_lpdf(x_t[1] | u_tm[1]'* b_km[j], s_k[j]);
-  //
-  //   for (t in 2:T) {
-  //     for (j in 1:K) {
-  //       best_logp[t, j] = negative_infinity();
-  //       for (i in 1:K) {
-  //         real logp;
-  //         logp = best_logp[t-1, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
-  //         if (logp > best_logp[t, j]) {
-  //           back_ptr[t, j] = i;
-  //           best_logp[t, j] = logp;
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  //   logp_zstar = max(best_logp[T]);
-  //
-  //   for (j in 1:K)
-  //     if (best_logp[T, j] == logp_zstar)
-  //       zstar_t[T] = j;
-  //
-  //   for (t in 1:(T - 1)) {
-  //     zstar_t[T - t] = back_ptr[T - t + 1, zstar_t[T - t + 1]];
-  //   }
-  //
-  // }
+  {
+    int a_tk[T, K];                 // backpointer to the source of the link
+    real delta_tk[T, K];            // max prob for the seq up to t
+                                    // with final output from state k for time t
+
+    for (j in 1:K)
+      delta_tk[1, K] = normal_lpdf(x_t[1] | u_tm[1]'* b_km[j], s_k[j]);
+
+    for (t in 2:T) {
+      for (j in 1:K) {
+        delta_tk[t, j] = negative_infinity();
+        for (i in 1:K) {
+          real logp;
+          logp = delta_tk[t-1, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
+          if (logp > delta_tk[t, j]) {
+            a_tk[t, j] = i;
+            delta_tk[t, j] = logp;
+          }
+        }
+      }
+    }
+
+    logp_zstar = max(delta_tk[T]);
+
+    for (j in 1:K)
+      if (delta_tk[T, j] == logp_zstar)
+        zstar_t[T] = j;
+
+    for (t in 1:(T - 1)) {
+      zstar_t[T - t] = a_tk[T - t + 1, zstar_t[T - t + 1]];
+    }
+
+  }
 }

@@ -3,7 +3,7 @@ library(shinystan)
 source('iohmm-ex/R/iohmm-sim.R')
 
 # Set up ------------------------------------------------------------------
-T.length = 1000
+T.length = 200
 K = 3
 M = 2
 R = 1
@@ -21,10 +21,10 @@ obs.model <- function(u, z, b, s) {
   return(x)
 }
 
-n.iter = 400
-n.warmup = 200
-n.chains = 1
-n.cores = 1
+n.iter = 200
+n.warmup = 100
+n.chains = 12
+n.cores = 3
 n.thin = 1
 n.seed = 9000
 
@@ -112,12 +112,28 @@ summary(stan.fit,
 launch_shinystan(stan.fit)
 
 # Parameters --------------------------------------------------------------
-w_km <- extract(stan.fit, pars = 'w_km')[[1]]
-mw_km <- apply(w_km, c(2, 3), median)
-
-mw <- apply(w, c(1, 3), median)
-
 plot(x = dataset$x, y = apply(extract(stan.fit, pars = 'hatx_t')[[1]], 2, median))
+
+tmp <- apply(extract(stan.fit, pars = 'hatx_t')[[1]], 2, function(x) {quantile(x, c(0.10, 0.50, 0.90))})
+plot(
+  x = dataset$x,
+  y = tmp[2, ],
+  xlim = c(-15, 15),
+  ylim = c(-15, 15),
+  xlab = bquote(t),
+  ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
+  main = bquote("Filtered probability for Hidden State" ~ .(k))
+)
+
+points(
+  x = dataset$x,
+  y = tmp[1, ]
+)
+
+points(
+  x = dataset$x,
+  y = tmp[3, ]
+)
 
 # layout(rbind(matrix(c(1:(M*K)), nrow = M, ncol = K, byrow = TRUE), (M*K) + 1),
 #        heights = c(rep((1 - 0.05) / M, M), 0.05))
@@ -158,13 +174,18 @@ summary(stan.fit,
         pars = c('A_ij'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
-print("Estimated mean and standard deviation of observations in each state")
+print("Estimated regressors of hidden states")
 summary(stan.fit,
-        pars = c('mu_k', 'sigma_k'),
+        pars = c('w_km'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated regressors and standard deviation of observations in each state")
+summary(stan.fit,
+        pars = c('b_km', 's_k'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 # Inference plots
-layout(matrix(c(1, 2, 3, 4, 5, 6, 7, 7, 7), ncol = 3, nrow = 3, byrow = TRUE))
+layout(matrix(1:(3*K), ncol = 3, nrow = K, byrow = TRUE))
 
 for (k in 1:K) {
   # Filtered probabilities (forward algoritm) - Belief states
@@ -173,7 +194,8 @@ for (k in 1:K) {
     y = apply(alpha, c(2, 3),
               function(x) {
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
-    z = dataset$zstd,
+    z = dataset$z,
+    k = k,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
     main = bquote("Filtered probability for Hidden State" ~ .(k))
@@ -185,14 +207,15 @@ for (k in 1:K) {
     y = apply(gamma, c(2, 3),
               function(x) {
                 quantile(x, c(0.10, 0.50, 0.90)) })[, , k],
-    z = dataset$zstd,
+    z = dataset$z,
+    k = k,
     xlab = bquote(t),
     ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
     main = bquote("Smoothed probability for Hidden State" ~ .(k))
   )
 
   # Filtered vs smoothed
-  cols <- ifelse(dataset$z == 1, 'green', 'red')
+  cols <- ifelse(dataset$z == k, 'green', 'red')
   plot(
     x = apply(alpha, c(2, 3),
               function(x) {
@@ -206,20 +229,39 @@ for (k in 1:K) {
     type = 'p', pch = 21, col = cols, bg = cols, cex = 0.7
   )
   abline(0, 1, col = 'lightgray', lwd = 0.25)
+
+  # Hard (naive) classification for hidden state
+  print("Estimated hidden states (hard naive classification using filtered prob)")
+  print(table(
+          estimated = round(apply(alpha, c(2, 3),
+                            function(x) {
+                              quantile(x, c(0.50)) })[, k]),
+          real = dataset$z))
 }
 
 # Most likely hidden path (Viterbi decoding) - joint states
-zstar <- apply(extract(stan.fit, pars = 'zstar_t')[[1]], 2, bin_std)
-round(table(rep(dataset$z - 1, each = n.samples), zstar) / n.samples, 0)
+# zstar <- apply(extract(stan.fit, pars = 'zstar_t')[[1]], 2, bin_std)
+zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
+round(table(
+  actual = rep(dataset$z, each = n.samples),
+  fit = zstar) / n.samples, 0)
 
 plot(
   x = 1:T.length,
-  y = bin_std(apply(zstar, 2, median)),
+  y = apply(zstar, 2, median),
   xlab = bquote(t),
-  ylab = bquote(z^~"*"),
-  main = bquote("Most probable sequence of states"),
+  ylab = bquote(z),
+  main = bquote("Sequence of states"),
   type = 'l', col = 'gray')
 
-cols <- ifelse(dataset$z == 1, 'green', 'red')
-points(x = 1:T.length, y = dataset$zstd,
-       pch = 21, bg = cols, col = cols, cex = 0.7)
+legend(x = 0.15 * T.length, y = K + 0.22,
+       legend = c('Fit', paste('Actual ', 1:K)),
+       pch = c(NA, rep(21, K)),
+       lwd = c(2, rep(NA, K)),
+       col = c('lightgray', 1:K),
+       pt.bg = c('lightgray', 1:K),
+       bty = 'n', cex = 0.7,
+       horiz = TRUE, xpd=TRUE)
+
+points(x = 1:T.length, y = dataset$z,
+       pch = 21, bg = dataset$z, col = dataset$z, cex = 0.7)

@@ -51,7 +51,6 @@ iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, S) {
   list(
     u = u,
     z = z,
-    # zstd = bin_std(z),
     x = x,
     p.mat = p.mat
   )
