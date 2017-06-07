@@ -1,14 +1,16 @@
 library(rstan)
 library(shinystan)
+source('iohmm-ex/R/plots.R')
 source('iohmm-ex/R/iohmm-sim.R')
 
 # Set up ------------------------------------------------------------------
-T.length = 200
+T.length = 500
 K = 3
-M = 2
+M = 3
 R = 1
-w = matrix(c(2, 0.80, 3, 0.50, 1.5, 0.80), nrow = K, ncol = M, byrow = TRUE)
-b = matrix(c(1, 5, 0.01, 0.01, -1, -5), nrow = K, ncol = M, byrow = TRUE)
+intercept = FALSE
+w = matrix(c(5, 6, 7, 2, 0.80, 3, 0.50, 1.5, 0.80), nrow = K, ncol = M, byrow = TRUE)
+b = matrix(c(5, 6, 7, 1, 5, 0.01, 0.01, -1, -5), nrow = K, ncol = M, byrow = TRUE)
 s = c(0.1, 0.1, 0.1)
 p1 = c(0.45, 0.10, 0.45)
 obs.model <- function(u, z, b, s) {
@@ -21,10 +23,10 @@ obs.model <- function(u, z, b, s) {
   return(x)
 }
 
-n.iter = 200
-n.warmup = 100
-n.chains = 12
-n.cores = 3
+n.iter = 400
+n.warmup = 200
+n.chains = 1
+n.cores = 1
 n.thin = 1
 n.seed = 9000
 
@@ -32,10 +34,13 @@ set.seed(9000)
 
 # Data simulation ---------------------------------------------------------
 u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
+if(intercept)
+  u[, 1] = 1
+
 dataset <- iohmm_sim(T.length, K, u, w, p1, obs.model, b, s)
 
 # Data exploration --------------------------------------------------------
-layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE),
+layout(matrix(c(1:M, rep(M + 1, M)), nrow = 2, ncol = M, byrow = TRUE),
        heights = c(0.95, 0.05))
 for (m in 1:M) {
   plot(x = u[, m], y = dataset$x,
@@ -52,8 +57,8 @@ legend(x = "center",
        lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
 par(opar)
 
-layout(rbind(matrix(c(1:(M*K)), nrow = M, ncol = K, byrow = TRUE), (M*K) + 1),
-       heights = c(rep((1 - 0.05) / M, M), 0.05))
+layout(matrix(c(1:(M*K), rep((M*K) + 1, M)), nrow = K + 1, ncol = M, byrow = TRUE),
+       heights = c(rep((1- 0.02)/K, K), 0.02))
 for (m in 1:M) {
   for (k in 1:K) {
       plot(x = u[, m], y = dataset$p.mat[, k],
@@ -63,7 +68,6 @@ for (m in 1:M) {
          ylab = bquote("Prob of state" ~ .(k)), xlab = bquote("Input" ~ u[.(m)]))
   }
 }
-mtext("Input-State probability relationship", side = 3, line = -2.5, outer = TRUE)
 
 opar <- par(); par(mai = c(0,0,0,0))
 plot.new()
@@ -71,6 +75,7 @@ legend(x = "center",
        legend = bquote(.(paste("Hidden state", 1:K))),
        lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
 par(opar)
+mtext("Input-State probability relationship", side = 3, line = -2.5, outer = TRUE)
 
 # Model estimation --------------------------------------------------------
 rstan_options(auto_write = TRUE)
@@ -84,16 +89,6 @@ stan.data = list(
   u_tm = as.array(u),
   x_t = dataset$x
 )
-
-# Chains are initialized close to k-means to speed up convergence
-# init_fun <- function() {
-#   list(
-#     w_km = w,
-#     b_km = b,
-#     s_k = s,
-#     p_1k = 1
-#   )
-# }
 
 stan.fit <- stan(file = stan.model,
                  model_name = stan.model,

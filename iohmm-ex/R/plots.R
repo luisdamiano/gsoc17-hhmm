@@ -13,7 +13,6 @@ plot_intervals <- function(x, y, z = NULL, k = NULL, ...) {
 
   if(!is.null(z) & !is.null(k)) {
     cols <- ifelse(dataset$z == k, 'green', 'red')
-    cols <- dataset$z
     points(x = x, y = as.numeric(dataset$z == k),
            pch = 21, bg = cols, col = cols, cex = 0.7)
   }

@@ -400,6 +400,37 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 alpha_tk and beta_tk are both in log scale, but it's now clear to me that there must be an underflow somewhere. I would have never realised if it weren't for the divergences, so I'm now totally convinced that divergences are a *feature* of HMC.
 
 * Started working on the delivery.
+
+### 20170606 Tu 20 to 01+1 ###
+* Remember the divergences from yesterday?
+
+```stan
+    for(t in 1:T)
+      gamma_tk[t] = normalize(ungamma_tk[t]);
+```
+
+The normalization routine would divide-underflow it seems:
+
+```stan
+functions {
+  vector normalize(vector x) {
+    return x / sum(x);
+  }
+}
+```
+
+So I just implemented this quick fix, which is an ugly hack but it works!
+
+```stan
+functions {
+  vector normalize(vector x) {
+    real denom = max([sum(x), 0.00000001]);
+    return x / denom;
+  }
+}
+```
+
+I'll have to see to a better implementation, of course.
 ---
 
 # Notes

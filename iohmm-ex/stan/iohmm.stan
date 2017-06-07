@@ -1,6 +1,6 @@
 functions {
   vector normalize(vector x) {
-    return x / sum(x);
+    return x / max([sum(x), 0.00000001]);
   }
 }
 
@@ -19,7 +19,7 @@ parameters {
   vector[M] w_km[K];                // state regressors
 
   // Continuous observation model
-  ordered[M] b_km[K];               // mean regressors
+  vector[M] b_km[K];               // mean regressors
   real<lower=0.0001> s_k[K];        // residual standard deviations
 }
 
@@ -30,7 +30,7 @@ transformed parameters {
 
   vector[K] alpha_tk[T];
   vector[K] beta_tk[T];
-  // vector[K] gamma_tk[T];
+  vector[K] gamma_tk[T];
 
   vector[K] unA_ij[T];
   vector[K] A_ij[T];
@@ -95,8 +95,8 @@ transformed parameters {
     for(t in 1:T)
       ungamma_tk[t] = alpha_tk[t] .* beta_tk[t];
 
-    // for(t in 1:T)
-    //   gamma_tk[t] = normalize(ungamma_tk[t]);
+    for(t in 1:T)
+      gamma_tk[t] = normalize(ungamma_tk[t]);
   } // Forwards-backwards
 }
 
