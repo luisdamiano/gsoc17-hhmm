@@ -435,6 +435,15 @@ I'll have to see to a better implementation, of course.
 ### 20170608 Th 20 to 22 ###
 * Adding observation log and other adhoc I'll need for paper replication.
 
+### 201706009 Fr 21 to 22 ###
+* Computed observation loglik, as will be required by the paper.
+
+### 201706010 Sa 11 to 19 ###
+* Fixed iohmm-ex.stan code.
+* Run extensive controls on the Stan results.
+* Worked on exploratory and diagnostic plots and their documentation.
+* The code is almost ready to plug in real data, very soon!
+
 ---
 
 # Notes

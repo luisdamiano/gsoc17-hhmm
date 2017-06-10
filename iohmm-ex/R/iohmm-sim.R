@@ -20,9 +20,8 @@ source('iohmm-ex/R/math.R')
 #' @export
 #'
 #' @examples
-iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, S) {
+iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, s) {
   m <- ncol(u)
-  # r <- mcol(b)
 
   if (dim(u)[1] != T)
     stop("The input matrix must have T rows.")
@@ -46,7 +45,7 @@ iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, S) {
     z[t] <- sample(x = 1:K, size = 1, replace = FALSE, prob = p.mat[t, ])
   }
 
-  x <- do.call(obs.model, list(u, z, b, S))
+  x <- do.call(obs.model, list(u, z, b, s))
 
   list(
     u = u,

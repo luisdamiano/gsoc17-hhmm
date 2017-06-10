@@ -112,9 +112,9 @@ This approach has many benefits, including:
 
 ## Generative model
 
-We first write an R function for our generative model. The inputs are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution $\mat{\pi}_1$, the parameters from both the hidden state and the observation models $\mat{\theta}_h$ and $\mat{\theta}_o$ respectively.
+We first write an R function for our generative model. The inputs are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, and finally the parameters from both the hidden states and the observation models $\mat{\theta}_h$ and $\mat{\theta}_o$ respectively.
 
-The hidden state for the first step is sampled according to the initial probability distribution. The transition probabilities for the following steps are computed from a multinomial linear regression with parameters $\mat{w}_k$, one set per possible hidden state, and covariates $\mat{u}_t$. The hidden states are subsequently drawn from the transition probabilities at each step.
+The hidden state for the first step is drawn from a multinomial according to the initial state probability vector. The transition probabilities for each of the following steps $t$ are computed from a multinomial linear regression with vector parameters $\mat{w}_k$, one set per possible hidden state $k = 1, \dots, K$, and covariates $\mat{u}_t$. The hidden states are subsequently drawn from the transition probabilities at each step.
 
 ```{r}
 iohmm_sim <- function(T, K, u, p.init, w, obs.model, b, S) {

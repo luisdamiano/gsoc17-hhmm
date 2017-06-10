@@ -79,21 +79,21 @@ transformed parameters {
 
   { // Backward algorithm log p(x_{t+1:T} | z_t = j)
     real accumulator[K];
+    int tbackwards;
 
     for (j in 1:K)
       unbeta_tk[T, j] = 1;
 
-    for (tforward in 0:(T-2)) {
-      int t;
-      t = T - tforward;
+    for (tforwards in 0:(T-2)) {
+      tbackwards = T - tforwards;
 
       for (j in 1:K) { // j = previous (t-1)
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
                          // backwards t  + transition prob + local evidence at t
-          accumulator[i] = unbeta_tk[t, i] + log(A_ij[t][i]) + oblik_tk[t][j];
+          accumulator[i] = unbeta_tk[tbackwards, i] + log(A_ij[tbackwards][i]) + oblik_tk[tbackwards][j];
           }
-        unbeta_tk[t-1, j] = log_sum_exp(accumulator);
+        unbeta_tk[tbackwards-1, j] = log_sum_exp(accumulator);
       }
     }
 
