@@ -1,6 +1,6 @@
 functions {
   vector normalize(vector x) {
-    return x / max([sum(x), 0.00000001]);
+    return x / max({sum(x), machine_precision()});
   }
 }
 
@@ -35,6 +35,8 @@ transformed parameters {
   vector[K] unA_ij[T];
   vector[K] A_ij[T];
 
+  vector[K] oblik_tk[T];
+
   { // Transition probability matrix p(z_t = j | z_{t-1} = i, u_tm)
     unA_ij[1] = p_1k; // Filler
     A_ij[1] = p_1k; // Filler
@@ -46,18 +48,26 @@ transformed parameters {
     }
   }
 
+  { // Observation likelihood
+    for(t in 1:T) {
+      for(j in 1:K) {
+        oblik_tk[t][j] = normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
+      }
+    }
+  }
+
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
 
     for(j in 1:K)
-      unalpha_tk[1][j] = log(p_1k[j]) + normal_lpdf(x_t[1] | u_tm[1]'* b_km[j], s_k[j]);
+      unalpha_tk[1][j] = log(p_1k[j]) + oblik_tk[1][j];
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
                          // belief state + transition prob + local evidence at t
-          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
+          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[t][i]) + oblik_tk[t][j];
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
@@ -81,7 +91,7 @@ transformed parameters {
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
                          // backwards t  + transition prob + local evidence at t
-          accumulator[i] = unbeta_tk[t, i] + log(A_ij[t][i]) + normal_lpdf(x_t[t] | u_tm[t]'* b_km[j], s_k[j]);
+          accumulator[i] = unbeta_tk[t, i] + log(A_ij[t][i]) + oblik_tk[t][j];
           }
         unbeta_tk[t-1, j] = log_sum_exp(accumulator);
       }
@@ -137,7 +147,7 @@ generated quantities {
     }
   }
 
-  {
+  { // Viterbi decoding
     int a_tk[T, K];                 // backpointer to the source of the link
     real delta_tk[T, K];            // max prob for the seq up to t
                                     // with final output from state k for time t

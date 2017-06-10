@@ -431,6 +431,10 @@ functions {
 ```
 
 I'll have to see to a better implementation, of course.
+
+### 20170608 Th 20 to 22 ###
+* Adding observation log and other adhoc I'll need for paper replication.
+
 ---
 
 # Notes

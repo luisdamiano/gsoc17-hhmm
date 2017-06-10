@@ -4,13 +4,13 @@ source('iohmm-ex/R/plots.R')
 source('iohmm-ex/R/iohmm-sim.R')
 
 # Set up ------------------------------------------------------------------
-T.length = 500
+T.length = 100
 K = 3
-M = 3
+M = 4
 R = 1
 intercept = FALSE
-w = matrix(c(5, 6, 7, 2, 0.80, 3, 0.50, 1.5, 0.80), nrow = K, ncol = M, byrow = TRUE)
-b = matrix(c(5, 6, 7, 1, 5, 0.01, 0.01, -1, -5), nrow = K, ncol = M, byrow = TRUE)
+w = matrix(c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1), nrow = K, ncol = M, byrow = TRUE)
+b = matrix(c(5, 6, 7, 0.5, 1, 5, 0.01, -0.5, 0.01, -1, -5, 0.2), nrow = K, ncol = M, byrow = TRUE)
 s = c(0.1, 0.1, 0.1)
 p1 = c(0.45, 0.10, 0.45)
 obs.model <- function(u, z, b, s) {
@@ -34,7 +34,7 @@ set.seed(9000)
 
 # Data simulation ---------------------------------------------------------
 u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
-if(intercept)
+if (intercept)
   u[, 1] = 1
 
 dataset <- iohmm_sim(T.length, K, u, w, p1, obs.model, b, s)
@@ -106,53 +106,9 @@ summary(stan.fit,
         probs = c(0.50))$summary
 launch_shinystan(stan.fit)
 
-# Parameters --------------------------------------------------------------
-plot(x = dataset$x, y = apply(extract(stan.fit, pars = 'hatx_t')[[1]], 2, median))
-
-tmp <- apply(extract(stan.fit, pars = 'hatx_t')[[1]], 2, function(x) {quantile(x, c(0.10, 0.50, 0.90))})
-plot(
-  x = dataset$x,
-  y = tmp[2, ],
-  xlim = c(-15, 15),
-  ylim = c(-15, 15),
-  xlab = bquote(t),
-  ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
-  main = bquote("Filtered probability for Hidden State" ~ .(k))
-)
-
-points(
-  x = dataset$x,
-  y = tmp[1, ]
-)
-
-points(
-  x = dataset$x,
-  y = tmp[3, ]
-)
-
-# layout(rbind(matrix(c(1:(M*K)), nrow = M, ncol = K, byrow = TRUE), (M*K) + 1),
-#        heights = c(rep((1 - 0.05) / M, M), 0.05))
-# for (m in 1:M) {
-#   for (k in 1:K) {
-#     plot(x = rep(w[k, m], n.samples), y = w_km[, k, m],
-#          pch = 21, cex = 0.7,
-#          col = dataset$z, bg = dataset$z,
-#          ylab = bquote("Fitted prob of state" ~ hat(w)[.(k, m)]), xlab = bquote("Prob of state" ~ w[.(k, m)]))
-#   }
-# }
-# mtext("Input-State probability relationship", side = 3, line = -2.5, outer = TRUE)
-#
-# opar <- par(); par(mai = c(0,0,0,0))
-# plot.new()
-# legend(x = "center",
-#        legend = bquote(.(paste("Hidden state", 1:K))),
-#        lwd = 3, col = sort(unique(dataset$z)), horiz = TRUE, bty = 'n')
-# par(opar)
-
-# Estimates ---------------------------------------------------------------
-# alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
-
 # Extraction
+oblik_tk <- extract(stan.fit, pars = 'oblik_tk')[[1]]
+w_km <- extract(stan.fit, pars = 'w_km')[[1]]
 alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 
@@ -241,6 +197,7 @@ round(table(
   actual = rep(dataset$z, each = n.samples),
   fit = zstar) / n.samples, 0)
 
+par(mfrow = c(1, 1))
 plot(
   x = 1:T.length,
   y = apply(zstar, 2, median),
@@ -256,7 +213,8 @@ legend(x = 0.15 * T.length, y = K + 0.22,
        col = c('lightgray', 1:K),
        pt.bg = c('lightgray', 1:K),
        bty = 'n', cex = 0.7,
-       horiz = TRUE, xpd=TRUE)
+       horiz = TRUE, xpd = TRUE)
 
 points(x = 1:T.length, y = dataset$z,
        pch = 21, bg = dataset$z, col = dataset$z, cex = 0.7)
+
