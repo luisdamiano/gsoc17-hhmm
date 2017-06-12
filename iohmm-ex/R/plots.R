@@ -124,8 +124,8 @@ plot_inputoutput <- function(x, u, z = NULL) {
 #'
 #' @examples plot_inputprob(u, p.mat, z)
 plot_inputprob <- function(u, p.mat, z = NULL) {
-  if (!is.matrix(u) || !is.matrix(p.mat) || any(dim(u) != dim(p.mat)))
-    stop("The sequence of inputs must be a matrix with same dimensions as
+  if (!is.matrix(u) || !is.matrix(p.mat) || dim(u)[1] != dim(p.mat)[1])
+    stop("The sequence of inputs must be a matrix with same number of rows as
          the probability matrix.")
 
   M <- ncol(u)
@@ -223,5 +223,49 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
       type = 'p', pch = 21, col = zcol, bg = zcol, cex = 0.7
     )
     abline(0, 1, col = 'lightgray', lwd = 0.25)
+  }
+}
+
+#' Plots the sequence corresponding to the jointly most probably state path as
+#' computed by the Viterbi decoding algorithm.
+#'
+#' @param zstar Array of size N, T, K with the sampled hidden states, where
+#' N is the sample size, T is the sequence length and K is the number of
+#' hidden states.
+#' @param z A vector with the sequence of hidden states (optional).
+#'
+#' @return Plots the graph in current device.
+#' @export
+#'
+#' @examples plot_statepath(zstar, z)
+plot_statepath <- function(zstar, z = NULL) {
+  K <- length(unique(as.vector(zstar)))
+  t <- 1:dim(zstar)[2]
+  zcol <- if (is.null(z)) 1 else z
+
+  plot(
+    x = t,
+    y = apply(zstar, 2, median),
+    xlab = bquote(t),
+    ylab = bquote(z),
+    main = bquote("Sequence of states"),
+    type = 'l', col = 'gray')
+
+  legend(x = "top", adj = c(0, -5),
+         legend = c('Jointly most probable path (Viterbi)', paste('Actual ', 1:K)),
+         pch = c(NA, rep(21, K)),
+         lwd = c(2, rep(NA, K)),
+         col = c('lightgray', 1:K),
+         pt.bg = c('lightgray', 1:K),
+         bty = 'n', cex = 0.7,
+         horiz = TRUE, xpd = TRUE)
+
+  if (!is.null(z)) {
+    if (dim(zstar)[2] != length(z))
+      stop("The length of the vector with the sequence of hidden states (z) must
+           equal the length of the sequence of the sampled jointly most probable
+           hidden states (zstar).")
+    points(x = t, y = z,
+           pch = 21, bg = zcol, col = zcol, cex = 0.7)
   }
 }

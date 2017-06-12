@@ -30,8 +30,8 @@ obs.model <- function(u, z, b, s) {
 }
 
 # Markov Chain Monte Carlo
-n.iter = 400
-n.warmup = 200
+n.iter = 1000
+n.warmup = 500
 n.chains = 1
 n.cores = 1
 n.thin = 1
@@ -79,11 +79,9 @@ summary(stan.fit,
 launch_shinystan(stan.fit)
 
 # Extraction --------------------------------------------------------------
-# oblik_tk <- extract(stan.fit, pars = 'oblik_tk')[[1]]
-# w_km <- extract(stan.fit, pars = 'w_km')[[1]]
 alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
-# beta <- extract(stan.fit, pars = 'beta_tk')[[1]]
 gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
 
 # Relabeling (ugly hack edition -------------------------------------------
 dataset$zrelab <- rep(0, T)
@@ -102,7 +100,6 @@ for (k in 1:K) {
 
 print("Label re-imputation (relabeling due to switching labels)")
 table(new = dataset$zrelab, original = dataset$z)
-
 
 # Estimation summary ------------------------------------------------------
 options(digits = 2)
@@ -131,6 +128,7 @@ print("Observations with no imputation by the smoother (check)")
 sum(apply(gamma, 1, rowSums) == 0)
 
 # Inference summary -------------------------------------------------------
+# Filtered and smoothed state probability plot
 plot_stateprobability(alpha, gamma, 0.8, dataset$zrelab)
 
 # Confusion matrix for hard (naive) classification
@@ -141,32 +139,11 @@ print(table(
                                   quantile(x, c(0.50)) })), 1, which.max),
   real = dataset$zrelab))
 
-# Most likely hidden path (Viterbi decoding) - joint states
-# zstar <- apply(extract(stan.fit, pars = 'zstar_t')[[1]], 2, bin_std)
-zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
+# Jointly most likely state path (Viterbi decoding)
+plot_statepath(zstar, dataset$zrelab)
+
+# Confusion matrix for jointly most likely state path
+print("Estimated hidden states for the jointly most likely path (Viterbi decoding)")
 round(table(
   actual = rep(dataset$zrelab, each = n.samples),
   fit = zstar) / n.samples, 0)
-
-par(opar)
-plot(
-  x = 1:T.length,
-  y = apply(zstar, 2, median),
-  xlab = bquote(t),
-  ylab = bquote(z),
-  main = bquote("Sequence of states"),
-  type = 'l', col = 'gray')
-
-legend(x = 0.30 * T.length, y = K + 0.16,
-       legend = c('Fit', paste('Actual ', 1:K)),
-       pch = c(NA, rep(21, K)),
-       lwd = c(2, rep(NA, K)),
-       col = c('lightgray', 1:K),
-       pt.bg = c('lightgray', 1:K),
-       bty = 'n', cex = 0.7,
-       horiz = TRUE, xpd = TRUE)
-
-points(x = 1:T.length, y = dataset$zrelab,
-       pch = 21, bg = dataset$zrelab, col = dataset$zrelab, cex = 0.7)
-
-table(dataset$zrelab, apply(zstar, 2, median))
