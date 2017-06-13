@@ -2,15 +2,18 @@
 title: "Input-Output Hidden Markov Model"
 author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    includes:
+      in_header: ../Rmd/preamble-html.Rmd
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Input-Output Hidden Markov Model}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: ../references.bib
 ---
 
-This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by Hassan (2005) to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) for a fully bayesian estimation of the model parameters and inferene on hidden quantities (including filtered state belief, smoothed state belief and jointly most likely state path). The model is introduced briefly, a deeper mathematical treatment can be found in our [literature review](../litreview/main.pdf).
+This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by @hassan2005stock to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities, namely filtered state belief, smoothed state belief, jointly most probable state path and fitted output. The model is introduced only briefly, a more detailed mathematical treatment can be found in our [literature review](../litreview/main.pdf).
 
 ### Acknowledgements
 
@@ -20,7 +23,7 @@ The authors acknowledge Google for financial support via the Google Summer of Co
 
 # The Input-Output Hidden Markov Model
 
-The IOHMM is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. It differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of just the output sequence distribution. IOHMM is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction.
+The IOHMM is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. It is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction. It differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of learning only the output sequence distribution.
 
 ## Definitions
 
@@ -31,19 +34,19 @@ z_{t} &= f(z_{t-1}, \mat{u}_{t}) \\
 \mat{x}_{t} &= g(z_{t  }, \mat{u}_{t}).
 \end{align*}
 
-The first line corresponds to the state model, which consists of discrete-time, discrete-state hidden states $z_t \in \{1, \dots, K\}$ whose transition depends on the previous hidden state $z_{t-1}$ and the input vector $\mat{u}_{t} \in \RR^M$. Additionally, the observation model is governed by $g(z_{t}, \mat{u}_{t})$, where $\mat{x}_t \in \RR^R$ is the vector of observations, emissions or output. The corresponding joint distribution,
+The first line corresponds to the state model, which consists of discrete-time, discrete-state hidden states $z_t \in \{1, \dots, K\}$ whose transition depends on the previous hidden state $z_{t-1}$ and the input vector $\mat{u}_{t} \in \RR^M$. Additionally, the observation model is governed by $g(z_{t}, \mat{u}_{t})$, where $\mat{x}_t \in \RR^R$ is the vector of observations, emissions or output. The corresponding joint distribution is
 
 \[
-p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}),
+p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}).
 \]
 
-In this parametrization for continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state $i$,
+In the proposed parametrization wtih continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state taking the value $i$,
 
 \[
 p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
 \]
 
-and the observation model is built upon the Gaussian density with parameters depending on the current state $j$,
+and the observation model is built upon the Gaussian density with parameters depending on the current state taking the value $j$,
 
 \[
 p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
@@ -86,8 +89,9 @@ where
   & \triangleq p(\mat{x}_{t:T} | z_{t-1} = i, \mat{u}_{t:T}).
 \end{align*}
 
-Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline. Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization]. Let $\gamma_t(j)$ be the desired smoothed posterior marginal,
+Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline. Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization].
 
+### Most likely hidden path
 It is also of interest to compute the most probable state sequence or path,
 
 \[
@@ -102,24 +106,47 @@ The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \
 ---
 
 # Learning by simulation
-We approach the model with simulations before diving into real data. We first create a simulation routine to generate data that complies with the model assumptions and we then write a MCMC sampler to recover the parameters. After that, we finally move into analysing real data from actual stock markets as proposed in the original work.
+We first create a simulation routine that generates data complying with the model assumptions and we then write a MCMC sampler in Stan to recover the parameters and other hidden quantities. Next, we feed our model with the real data used in the original work and analyse the results.
 
-This approach has many benefits, including:
+We believe that learning by simulation has many benefits, including:
 
-* We can confirm that the sampler works as intended, i.e. it retrieves the parameters used in the data simulation stage.
-* The generated data meets all the assumptions and the estimates are free of the effects of data contamination, thus simplifying the interpretation of the results.
-* The user can gain insight into the model functioning by trying different combinations of the parameters and/or inputs.
+* The possibility to confirm that the sampler works as intended, i.e. it retrieves the parameters used to generate the data.
+* The generated data meets all the assumptions and the estimates are free of the effects of data contamination due to unmodeled phenomena, thus simplifying the interpretation of the results.
+* The user can gain insight into the model functioning by trying different combinations of the parameters, inputs and outputs.
+
+## Auxiliary files
+
+### Math functions
+
+We write an auxiliary R function to compute the softmax transformation of a given vector. The calculations are run in log scale for greater numerical stability, i.e. to avoid any overflow.
+
+```{r}
+source('R/math.R')
+```
+
+### Plot functions
+
+As plots are extensively used, we arrange the code in an auxiliary file.
+
+```{r}
+source('R/plots.R')
+```
+
+### Simulation functions
+
+We arrange the code to generate simulated data, as explained below, in an auxiliary file.
+
+```{r}
+source('R/iohmm-sim.R')
+```
 
 ## Generative model
 
-We first write an R function for our generative model. The inputs are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, and finally the parameters from both the hidden states and the observation models $\mat{\theta}_h$ and $\mat{\theta}_o$ respectively.
-
-The hidden state for the first step is drawn from a multinomial according to the initial state probability vector. The transition probabilities for each of the following steps $t$ are computed from a multinomial linear regression with vector parameters $\mat{w}_k$, one set per possible hidden state $k = 1, \dots, K$, and covariates $\mat{u}_t$. The hidden states are subsequently drawn from the transition probabilities at each step.
+We first write an R function for our generative model. The arguments are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, a matrix wit the regressor of the multinomial regression that rules the hidden states dynamics $\mat{w}$, the name of a function drawing samples from the observation distribution and its parameters.
 
 ```{r}
-iohmm_sim <- function(T, K, u, p.init, w, obs.model, b, S) {
+iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, s) {
   m <- ncol(u)
-  # r <- mcol(b)
 
   if (dim(u)[1] != T)
     stop("The input matrix must have T rows.")
@@ -143,7 +170,7 @@ iohmm_sim <- function(T, K, u, p.init, w, obs.model, b, S) {
     z[t] <- sample(x = 1:K, size = 1, replace = FALSE, prob = p.mat[t, ])
   }
 
-  x <- do.call(obs.model, list(u, z, b, S))
+  x <- do.call(obs.model, list(u, z, b, s))
 
   list(
     u = u,
@@ -154,7 +181,9 @@ iohmm_sim <- function(T, K, u, p.init, w, obs.model, b, S) {
 }
 ```
 
-The observations for each step are generated from a linear regressions with parameters $\mat{b}_k$, ...
+The initial hidden state is drawn from a multinomial distribution with one trial and event probabilities given by the initial state probability vector $\mat{\pi}_1$. The transition probabilities for each of the following steps $t$ are computed from a multinomial linear regression with vector parameters $\mat{w}_k$, one set per possible hidden state $k = 1, \dots, K$, and covariates $\mat{u}_t$. The hidden states are subsequently sampled based on the transition probabilities.
+
+The observation for each step generates from a linear regressions with regressors $\mat{b}_k$ and error variance $\mat{\Sigma}_k$, one set per possible hidden state.
 
 ```{r}
 obs.model <- function(u, z, b, s) {
@@ -168,8 +197,162 @@ obs.model <- function(u, z, b, s) {
 }
 ```
 
+We set up our simulated experiments with arbitrary values for all the involved parameters. Additionally, we define the settings for the Markov Chain Monte Carlo sampler.
+
+```{r}
+# Set up ------------------------------------------------------------------
+
+# Data
+T.length = 300
+K = 3
+M = 4
+R = 1
+u.intercept = FALSE
+w = matrix(
+  c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1),
+  nrow = K, ncol = M, byrow = TRUE)
+b = matrix(
+  c(5, 6, 7, 0.5, 1, 5, 0.01, -0.5, 0.01, -1, -5, 0.2),
+  nrow = K, ncol = M, byrow = TRUE)
+s = c(0.25, 1, 2.5)
+p1 = c(0.45, 0.10, 0.45)
+
+# Markov Chain Monte Carlo
+n.iter = 500
+n.warmup = 250
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+```
+
+It is worth noting that we decide to rely on only one chain to avoid between-chain label switching of regression parameters ^[Enlarge why]. We refer the reader to @betancourt2017identifying for an in-depth treatment of the diagnostics, causes and possible solutions for label switching in Bayesian Mixture Models.
+
+We create random inputs from a standard Gaussian distribution and generate the dataset accordingly.
+
+```{r}
+# Data simulation ---------------------------------------------------------
+set.seed(n.seed)
+u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
+if (u.intercept)
+  u[, 1] = 1
+
+dataset <- iohmm_sim(T.length, K, u, w, p1, obs.model, b, s)
+```
+
+```{r, fig.height = 5, fig.width = 7.2, out.width="\\textwidth"}
+plot_inputoutput(x = dataset$x, u = dataset$u, z = dataset$z)
+```
+
+We observe how the chosen values for the parameters affect the generated data. For example, the relationship between the third input $\mat{u}_3$ and the output $\mat{x}$ is positive, indifferent and negative for the hidden states 1 to 3, the true slopes being `r b[1, 3]`, `r b[2, 3]` and `r b[3, 3]` respectively.
+
+```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
+plot_inputprob(u = dataset$u, p.mat = dataset$p.mat, z = dataset$z)
+```
+
+We then analyse the relationship between the input and the state probabilities, which are usually hidden in applications with real data. We observe the strongest relationships between the pairs $\mat{u}_1, p(z_t = 1)$, $\mat{u}_2, p(z_t = 2)$ and $\mat{u}_3, p(z_t = 3)$, which is unsurprising given the values of the true regression parameters: those inputs take the largest weight in each state, namely $w_{11} = `r w[1, 1]`$, $w_{22} = `r w[2, 2]`}$ and $w_{33} = `r w[3, 3]`$.
+
+Using a fully Bayesian approach, we now rely on our MCMC sampler to draw samples from the posterior density of model parameters and other hidden quantities ^[The Stan code is treated as given by now and will be explained below].
+
+```{r}
+# Model estimation --------------------------------------------------------
+library(rstan)
+library(shinystan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+stan.model = 'stan/iohmm.stan'
+stan.data = list(
+  T = T.length,
+  K = K,
+  M = M,
+  u_tm = as.array(u),
+  x_t = dataset$x
+)
+
+stan.fit <- stan(file = stan.model,
+                 model_name = stan.model,
+                 data = stan.data, verbose = T,
+                 iter = n.iter, warmup = n.warmup,
+                 thin = n.thin, chains = n.chains,
+                 cores = n.cores, seed = n.seed)
+
+n.samples = (n.iter - n.warmup) * n.chains
+```
+
+We rely on the Rhat statistics and several diagnostic plots provided by shinystan^[cite] to assess mixing, convergence and the inexistence of divergences. We extract the samples for some quantities of interest, namely the filtered probabilities $\mat{alpha}_t$, the smoothed probability vector $\mat{\gamma}_t$, the most probable hidden path $\mat{z}^*$ and the fitted output $\hat{x}$.
+
+```{r}
+# MCMC Diagnostics --------------------------------------------------------
+options(digits = 2)
+summary(stan.fit,
+        pars = c('p_1k', 'w_km', 'b_km', 's_k'),
+        probs = c(0.50))$summary
+# launch_shinystan(stan.fit)
+
+# Extraction --------------------------------------------------------------
+alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
+hatx  <- extract(stan.fit, pars = 'hatx_t')[[1]]
+```
+
+While mixing and convergence is very good, which is expected since we are dealing with data generated exactly as assumed by the model, we note that regression parameters for latent states perform worse than other parameters. One possible reason is that softmax is invarian to chance in location, thus the parameters of a multinomial regression do not have a natural location and become harder to estimate.
+
+We want to assess if the hidden states were recovered correctly by our software. Unfortunately, due to the label switching problem, the states generated under the labels 1 to 3 were recovered in inverse order. In consequence, we decide to relabel the data based on best fit. This would not prove to be a problem with real data since the hidden states are never observed.
+
+```{r}
+# Relabelling (ugly hack edition) -----------------------------------------
+dataset$zrelab <- rep(0, T)
+
+hard <- sapply(1:T.length, function(t, med) {
+  which.max(med[t, ])
+}, med = apply(alpha, c(2, 3),
+                    function(x) {
+                      quantile(x, c(0.50)) }))
+
+tab <- table(hard = hard, original = dataset$z)
+
+for (k in 1:K) {
+  dataset$zrelab[which(dataset$z == k)] <- which.max(tab[, k])
+}
+
+print("Label re-imputation (relabeling due to switching labels)")
+table(new = dataset$zrelab, original = dataset$z)
+```
+
+Point estimates and credibility intervals are provided by rstan's^[cite] `{r}summary` function.
+
+```{r}
+# Estimation summary ------------------------------------------------------
+print("Estimated initial state probabilities")
+summary(stan.fit,
+        pars = c('p_1k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated probabilities in the transition matrix")
+summary(stan.fit,
+        pars = c('A_ij'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated regressors of hidden states")
+summary(stan.fit,
+        pars = c('w_km'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated regressors and standard deviation of observations in each state")
+summary(stan.fit,
+        pars = c('b_km', 's_k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+```
+
+We confirm that the samples drawn from the posterior density are reasonable close to the true values.
 
 ---
 
 # Stock Market Forecasting Using Hidden Markov Model
 (the replication with actual data)
+
+---
+
+# References

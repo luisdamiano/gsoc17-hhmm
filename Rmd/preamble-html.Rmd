@@ -1,6 +1,8 @@
 \(
 % Math operators
 \newcommand{\argmax}{\arg\!\max}
+\newcommand\ev[1]{E\left\langle#1\right\rangle}
+\newcommand\vv[1]{V\left\langle#1\right\rangle}
 
 % Math commands
 \newcommand{\mat}[1]{\mathbf{#1}}
@@ -8,5 +10,3 @@
 % Math symbols
 \renewcommand{\RR}{\mathbb{R}}
 \)
-
-

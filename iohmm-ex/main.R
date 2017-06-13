@@ -1,5 +1,6 @@
 library(rstan)
 library(shinystan)
+source('iohmm-ex/R/math.R')
 source('iohmm-ex/R/plots.R')
 source('iohmm-ex/R/iohmm-sim.R')
 
@@ -17,21 +18,12 @@ w = matrix(
 b = matrix(
   c(5, 6, 7, 0.5, 1, 5, 0.01, -0.5, 0.01, -1, -5, 0.2),
   nrow = K, ncol = M, byrow = TRUE)
-s = c(3, 1, 5)
+s = c(0.25, 1, 2.5)
 p1 = c(0.45, 0.10, 0.45)
-obs.model <- function(u, z, b, s) {
-  T.length <- nrow(u)
-
-  x <- vector("numeric", T.length)
-  for (t in 1:T.length) {
-    x[t] <- rnorm(1, u[t, ] %*% b[z[t], ], s[z[t]])
-  }
-  return(x)
-}
 
 # Markov Chain Monte Carlo
-n.iter = 1000
-n.warmup = 500
+n.iter = 500
+n.warmup = 250
 n.chains = 1
 n.cores = 1
 n.thin = 1
@@ -73,6 +65,7 @@ stan.fit <- stan(file = stan.model,
 n.samples = (n.iter - n.warmup) * n.chains
 
 # MCMC Diagnostics --------------------------------------------------------
+options(digits = 2)
 summary(stan.fit,
         pars = c('p_1k', 'w_km', 'b_km', 's_k'),
         probs = c(0.50))$summary
@@ -82,8 +75,9 @@ launch_shinystan(stan.fit)
 alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
+hatx <- extract(stan.fit, pars = 'hatx_t')[[1]]
 
-# Relabeling (ugly hack edition -------------------------------------------
+# Relabelling (ugly hack edition) -----------------------------------------
 dataset$zrelab <- rep(0, T)
 
 hard <- sapply(1:T.length, function(t, med) {
@@ -102,8 +96,6 @@ print("Label re-imputation (relabeling due to switching labels)")
 table(new = dataset$zrelab, original = dataset$z)
 
 # Estimation summary ------------------------------------------------------
-options(digits = 2)
-
 print("Estimated initial state probabilities")
 summary(stan.fit,
         pars = c('p_1k'),
@@ -147,3 +139,7 @@ print("Estimated hidden states for the jointly most likely path (Viterbi decodin
 round(table(
   actual = rep(dataset$zrelab, each = n.samples),
   fit = zstar) / n.samples, 0)
+
+# Fitted output
+plot_outputfit(dataset$x, hatx, z = dataset$zrelab, TRUE)
+

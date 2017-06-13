@@ -448,6 +448,10 @@ I'll have to see to a better implementation, of course.
 * Worked on exploratory and diagnostic plots and their documentation.
 * Check-in email.
 
+### 20170612 Mo 20 to 02+01 ###
+* Created a new plot fit fitted vs actual.
+* Started writing our replication paper.
+
 ---
 
 # Notes
