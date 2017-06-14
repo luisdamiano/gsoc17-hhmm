@@ -22,8 +22,8 @@ s = c(0.25, 1, 2.5)
 p1 = c(0.45, 0.10, 0.45)
 
 # Markov Chain Monte Carlo
-n.iter = 500
-n.warmup = 250
+n.iter = 400
+n.warmup = 200
 n.chains = 1
 n.cores = 1
 n.thin = 1
@@ -72,17 +72,17 @@ summary(stan.fit,
 launch_shinystan(stan.fit)
 
 # Extraction --------------------------------------------------------------
-alpha <- extract(stan.fit, pars = 'alpha_tk')[[1]]
-gamma <- extract(stan.fit, pars = 'gamma_tk')[[1]]
-zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
-hatx <- extract(stan.fit, pars = 'hatx_t')[[1]]
+alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar_t <- extract(stan.fit, pars = 'zstar_t')[[1]]
+hatx_t <- extract(stan.fit, pars = 'hatx_t')[[1]]
 
 # Relabelling (ugly hack edition) -----------------------------------------
 dataset$zrelab <- rep(0, T)
 
 hard <- sapply(1:T.length, function(t, med) {
   which.max(med[t, ])
-}, med = apply(alpha, c(2, 3),
+}, med = apply(alpha_tk, c(2, 3),
                     function(x) {
                       quantile(x, c(0.50)) }))
 
@@ -117,29 +117,29 @@ summary(stan.fit,
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 print("Observations with no imputation by the smoother (check)")
-sum(apply(gamma, 1, rowSums) == 0)
+sum(apply(gamma_tk, 1, rowSums) == 0)
 
 # Inference summary -------------------------------------------------------
 # Filtered and smoothed state probability plot
-plot_stateprobability(alpha, gamma, 0.8, dataset$zrelab)
+plot_stateprobability(alpha_tk, gamma_tk, 0.8, dataset$zrelab)
 
 # Confusion matrix for hard (naive) classification
 print("Estimated hidden states (hard naive classification using filtered prob)")
 print(table(
-  estimated = apply(round(apply(alpha, c(2, 3),
+  estimated = apply(round(apply(alpha_tk, c(2, 3),
                                 function(x) {
                                   quantile(x, c(0.50)) })), 1, which.max),
   real = dataset$zrelab))
 
 # Jointly most likely state path (Viterbi decoding)
-plot_statepath(zstar, dataset$zrelab)
+plot_statepath(zstar_t, dataset$zrelab)
 
 # Confusion matrix for jointly most likely state path
 print("Estimated hidden states for the jointly most likely path (Viterbi decoding)")
 round(table(
   actual = rep(dataset$zrelab, each = n.samples),
-  fit = zstar) / n.samples, 0)
+  fit = zstar_t) / n.samples, 0)
 
 # Fitted output
-plot_outputfit(dataset$x, hatx, z = dataset$zrelab, TRUE)
+plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 

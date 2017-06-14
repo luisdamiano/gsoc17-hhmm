@@ -1,6 +1,7 @@
 functions {
   vector normalize(vector x) {
-    return x / max({sum(x), machine_precision()});
+    return x / sum(x);
+    // return x / max({sum(x), machine_precision()});
   }
 }
 
@@ -91,7 +92,7 @@ transformed parameters {
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
                          // backwards t  + transition prob + local evidence at t
-          accumulator[i] = unbeta_tk[tbackwards, i] + log(A_ij[tbackwards][i]) + oblik_tk[tbackwards][j];
+          accumulator[i] = unbeta_tk[tbackwards, i] + log(A_ij[tbackwards][i]) + oblik_tk[tbackwards][i];
           }
         unbeta_tk[tbackwards-1, j] = log_sum_exp(accumulator);
       }

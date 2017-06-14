@@ -1,5 +1,3 @@
-source('R/math.R')
-
 #' Draws a sample from an Input Output Hidden Markov Model
 #'
 #' @param T Length of the sequence.

@@ -452,6 +452,10 @@ I'll have to see to a better implementation, of course.
 * Created a new plot fit fitted vs actual.
 * Started writing our replication paper.
 
+### 20170613 Tu 20 to 22 ###
+* I observed that hard classification based on filtered probability is very precise as expected, but smoothed probability isn't. Also, their relationship looks weird. Shall check the code for the forwards-backwards algo.
+* Nevermind, a problem with loop indices, it works now.
+
 ---
 
 # Notes
