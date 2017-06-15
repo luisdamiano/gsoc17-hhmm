@@ -13,6 +13,10 @@ vignette: >
 bibliography: ../references.bib
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
 This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by @hassan2005stock to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities, namely filtered state belief, smoothed state belief, jointly most probable state path and fitted output. The model is introduced only briefly, a more detailed mathematical treatment can be found in our [literature review](../litreview/main.pdf).
 
 ### Acknowledgements
@@ -385,12 +389,19 @@ plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 
 All in all, we are confindent that the Stan code works as specified and we find model calibration satisfactory.
 
-
-
 ---
 
 # Stock Market Forecasting Using Hidden Markov Model
 (the replication with actual data)
+
+---
+
+# Original Computing Environment
+
+```{r}
+writeLines(readLines(file.path(Sys.getenv("HOME"), ".R/Makevars")))
+devtools::session_info("rstan")
+```
 
 ---
 
