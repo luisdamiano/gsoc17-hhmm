@@ -456,6 +456,15 @@ I'll have to see to a better implementation, of course.
 * I observed that hard classification based on filtered probability is very precise as expected, but smoothed probability isn't. Also, their relationship looks weird. Shall check the code for the forwards-backwards algo.
 * Nevermind, a problem with loop indices, it works now.
 
+### 20170614 We 20 to 22 ###
+* Worked on the vignette.
+
+### 20170615 Th 22 to WIP ###
+* Pushed a cache folder last night. Fixed my gitignore.
+* Folder structure needed a few changes.
+* Worked on iohmm-mixture, which is the stan code that will be used for the replication (an IOHMM where the observation model is a mixture of gaussians).
+* I should rework the README file a bit too.
+
 ---
 
 # Notes
