@@ -459,11 +459,17 @@ I'll have to see to a better implementation, of course.
 ### 20170614 We 20 to 22 ###
 * Worked on the vignette.
 
-### 20170615 Th 22 to WIP ###
+### 20170615 Th 22 to 02+1 ###
 * Pushed a cache folder last night. Fixed my gitignore.
 * Folder structure needed a few changes.
 * Worked on iohmm-mixture, which is the stan code that will be used for the replication (an IOHMM where the observation model is a mixture of gaussians).
 * I should rework the README file a bit too.
+
+### 20170617 Sa 10 to 20 ###
+* Went on with the mixtures in iohmm-mixture. Sampler works for L = 1 component, but it hits maxtreedepth for L = 3 :( Having trouble dealign with mixtures inside hidden states based on regressión parameters, too many hidden things I guess. Will have to spend more time doing diagnostics.
+* Improved plots
+* Improved the section of the README file.
+* Chains still look funky, but I'll have to see to this tomorrow. Some look non stationary and are highly autocorrelated. Estimated parameters aren't well off. Things to try tomorrow: 1) more data, 2) better separated data, 3) better initial possition, 4) larger warmup??.
 
 ---
 

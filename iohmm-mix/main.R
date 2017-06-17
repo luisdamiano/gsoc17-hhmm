@@ -8,24 +8,24 @@ source('iohmm-reg/R/iohmm-sim.R')
 
 # Data
 T.length = 300
-K = 3
+K = 2
+L = 3
 M = 4
 R = 1
 u.intercept = FALSE
 w = matrix(
   c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1),
   nrow = K, ncol = M, byrow = TRUE)
-L = 3
 lambda = matrix(
-  c(0.2, 0.2, 0.6, 0.4, 0.3, 0.3, 0.1, 0.2, 0.7),
+  c(2, 0.1, 0.5, 1.2, 0.3, 1.6, 0.1, 0.5, 0.5, 0.1, 1.2, 0.1),
   nrow = K, ncol = L, byrow = TRUE)
 mu = matrix(
-  c(-30, -25, -20, -5, 0, 5, 20, 25, 30),
+  1:(K*L),
   nrow = K, ncol = L, byrow = TRUE)
 s = matrix(
-  c(0.01, 0.1, 0.2, 0.1, 0.1, 0.1, 0.3, 0.2, 0.1),
+  c(0.1, 0.5, 1, 1, 1.2, 1.5, 2, 2.5, 3, 3, 3.5, 4),
   nrow = K, ncol = L, byrow = TRUE)
-p1 = c(0.45, 0.10, 0.45)
+p1 = c(0.25, 0.10, 0.45, 0.15)
 
 # Markov Chain Monte Carlo
 n.iter = 400
@@ -61,18 +61,31 @@ stan.data = list(
   x_t = dataset$x
 )
 
+# Chains are initialized close to k-means to speed up convergence
+init_fun <- function() {
+  clasif <- kmeans(stan.data$x_t, stan.data$K)
+  init.mu <- by(stan.data$x_t, clasif$cluster, mean)
+  init.sigma <- by(stan.data$x_t, clasif$cluster, sd)
+  init.order <- order(init.mu)
+
+  list(
+    mu_k = matrix(init.mu[init.order], nrow = stan.data$K, ncol = stan.data$L),
+    sigma_k = matrix(init.sigma[init.order], nrow = stan.data$K, ncol = stan.data$L)
+  )
+}
+
 stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
                  iter = n.iter, warmup = n.warmup,
                  thin = n.thin, chains = n.chains,
-                 cores = n.cores, seed = n.seed)
+                 cores = n.cores, seed = n.seed, init = init_fun)
 
 n.samples = (n.iter - n.warmup) * n.chains
 
 # MCMC Diagnostics --------------------------------------------------------
 options(digits = 2)
 summary(stan.fit,
-        pars = c('p_1k', 'w_km', 'mu_kl', 's_kl'),
+        pars = c('p_1k', 'w_km', 'lambda_kl', 'mu_kl', 's_kl'),
         probs = c(0.50))$summary
 launch_shinystan(stan.fit)
 
@@ -83,7 +96,7 @@ zstar_t <- extract(stan.fit, pars = 'zstar_t')[[1]]
 hatx_t <- extract(stan.fit, pars = 'hatx_t')[[1]]
 
 # Relabelling (ugly hack edition) -----------------------------------------
-dataset$zrelab <- rep(0, T)
+dataset$zrelab <- rep(0, T.length)
 
 hard <- sapply(1:T.length, function(t, med) {
   which.max(med[t, ])
@@ -93,11 +106,27 @@ hard <- sapply(1:T.length, function(t, med) {
 
 tab <- table(hard = hard, original = dataset$z)
 
-for (k in 1:K) {
-  dataset$zrelab[which(dataset$z == k)] <- which.max(tab[, k])
+for (k in 1:(K - 1)) {
+  ptab <- prop.table(tab, 1)
+  ind.swap <- which(ptab == max(ptab), arr.ind = T)
+  dataset$zrelab[dataset$z == as.numeric(dimnames(tab)$original[ind.swap[2]])] <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+
+  if (k == K - 1) {
+    ind.swap[1] <- if (ind.swap[1] == 1) 2 else 1
+    ind.swap[2] <- if (ind.swap[2] == 1) 2 else 1
+
+    a <- as.numeric(dimnames(tab)$original[ind.swap[2]])
+    b <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+    dataset$zrelab[dataset$z == a] <- b
+
+    print(paste("Will swap out ", a, "for", b))
+
+  }
+
+  tab <- tab[-ind.swap[1], -ind.swap[2]]
 }
 
-print("Label re-imputation (relabeling due to switching labels)")
+print("Label re-imputation (relabelling due to switching labels)")
 table(new = dataset$zrelab, original = dataset$z)
 
 # Estimation summary ------------------------------------------------------
@@ -107,18 +136,18 @@ summary(stan.fit,
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 print("Estimated probabilities in the transition matrix")
-summary(stan.fit,
+head(summary(stan.fit,
         pars = c('A_ij'),
-        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)])
 
 print("Estimated regressors of hidden states")
 summary(stan.fit,
         pars = c('w_km'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
-print("Estimated regressors and standard deviation of observations in each state")
+print("Estimated component mean and standard deviation in each state")
 summary(stan.fit,
-        pars = c('b_km', 's_k'),
+        pars = c('mu_kl', 's_kl'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 print("Observations with no imputation by the smoother (check)")
@@ -131,9 +160,9 @@ plot_stateprobability(alpha_tk, gamma_tk, 0.8, dataset$zrelab)
 # Confusion matrix for hard (naive) classification
 print("Estimated hidden states (hard naive classification using filtered prob)")
 print(table(
-  estimated = apply(round(apply(alpha_tk, c(2, 3),
+  estimated = apply(apply(alpha_tk, c(2, 3),
                                 function(x) {
-                                  quantile(x, c(0.50)) })), 1, which.max),
+                                  quantile(x, c(0.50)) }), 1, which.max),
   real = dataset$zrelab))
 
 # Jointly most likely state path (Viterbi decoding)
@@ -148,3 +177,7 @@ round(table(
 # Fitted output
 plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 
+hatz_t <- extract(stan.fit, pars = 'hatz_t')[[1]]
+
+for (k in 1:K)
+  print(summary(as.vector(hatx_t[as.vector(hatz_t) == k])))

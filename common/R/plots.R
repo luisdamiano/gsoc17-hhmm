@@ -266,7 +266,7 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
                       quantile(x, qs) })
 
   layout(matrix(
-    rep(c(1, 1, 2, 2, 3), K) + rep(c(0, 3, 6), each = 5),
+    rep(c(1, 1, 2, 2, 3), K) + rep(seq.int(0, 3*K, 3), each = 5),
     ncol = 5, nrow = K, byrow = TRUE))
 
   for (k in 1:K) {
@@ -317,6 +317,9 @@ plot_statepath <- function(zstar, z = NULL) {
   K <- length(unique(as.vector(zstar)))
   t <- 1:dim(zstar)[2]
   zcol <- if (is.null(z)) 1 else z
+  opar <- par(no.readonly = TRUE)
+
+  layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
 
   plot(
     x = t,
@@ -324,16 +327,8 @@ plot_statepath <- function(zstar, z = NULL) {
     xlab = bquote(t),
     ylab = bquote(z),
     main = bquote("Sequence of states"),
+    ylim = c(1, K),
     type = 'l', col = 'gray')
-
-    legend(x = "top", adj = c(0, -5),
-         legend = c('Jointly most probable path (Viterbi)', paste('Actual ', 1:K)),
-         pch = c(NA, rep(21, K)),
-         lwd = c(2, rep(NA, K)),
-         col = c('lightgray', 1:K),
-         pt.bg = c('lightgray', 1:K),
-         bty = 'n', cex = 0.7,
-         horiz = TRUE, xpd = TRUE)
 
   if (!is.null(z)) {
     if (dim(zstar)[2] != length(z))
@@ -343,6 +338,19 @@ plot_statepath <- function(zstar, z = NULL) {
     points(x = t, y = z,
            pch = 21, bg = zcol, col = zcol, cex = 0.7)
   }
+
+  # 4. Legend
+  par(mai = c(0, 0, 0, 0))
+  plot.new()
+  legend(x = "center",
+         legend = c('Jointly most probable path (Viterbi)', paste('Actual ', 1:K)),
+         pch = c(NA, rep(21, K)),
+         lwd = c(2, rep(NA, K)),
+         col = c('lightgray', 1:K),
+         pt.bg = c('lightgray', 1:K),
+         bty = 'n', cex = 0.7,
+         horiz = TRUE)
+  par(opar)
 }
 
 #' Plots a scatterpot with the observed and fitted output and intervals with
@@ -359,12 +367,40 @@ plot_statepath <- function(zstar, z = NULL) {
 #'
 #' @examples plot_outputfit(x, xhat, interval, z)
 plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
+  t <- 1:length(x)
   qs <- c((1 - interval)/2, 0.50, 1 - (1 - interval)/2)
   xhat.qs <- apply(xhat, c(2),
                 function(r) {
                   quantile(r, qs) })
+  zcol <- if (is.null(z)) 1 else z
+  opar <- par(no.readonly = TRUE)
 
+  layout(matrix(c(1, 1, 2), nrow = 1, ncol = 3))
+
+  # 1. Observation and fit sequence
+  plot(x = t, y = x,
+       type = 'l', col = 'lightgray',
+       ylab = bquote("Output" ~ x), xlab = bquote("Time" ~ t))
+
+  points(x = t, y = x,
+         pch = 21, cex = 0.7,
+         col = zcol, bg = zcol)
+
+  lines(x = t, y = xhat.qs[2, ],
+         col = 20, bg = 20)
+
+  points(x = t, y = xhat.qs[2, ],
+         pch = 21, cex = 0.7,
+         col = 20, bg = 20)
+
+  legend(x = "bottom",
+         legend = c(bquote(.(paste("Observed (state ", 1:K, ")", sep = ''))), "Fit"),
+         lwd = 3, col = c(sort(unique(zcol)), 20), horiz = TRUE, bty = 'n')
+
+  # 2. Observation and fit cross-section
   plot_intervals(x, xhat.qs, z, interval,
                  ylab = bquote("Fitted output" ~ hat(x)),
                  xlab = bquote("Observed output" ~ x))
+
+  par(opar)
 }

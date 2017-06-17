@@ -46,7 +46,7 @@ The first line corresponds to the state model, which consists of discrete-time, 
 p(\mat{z}_{1:T}, \mat{x}_{1:T} | \mat{u}_{t}).
 \]
 
-In the proposed parametrization wtih continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state taking the value $i$,
+In the proposed parametrization with continuous inputs and outputs, the state model involves a multinomial regression whose parameters depend on the previous state taking the value $i$,
 
 \[
 p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
@@ -394,7 +394,26 @@ All in all, we are confindent that the Stan code works as specified and we find 
 ---
 
 # Stock Market Forecasting Using Hidden Markov Model
-(the replication with actual data)
+
+As in the original work, we set up a IOHMM model to forecast stock prices. We define $K = 4$ hidden states. There are $R = 4$ inputs, namely opening price, closing price, highest price, and the lowest price from the previous time step. The output is stock closing price. The model of the output is a Gaussian mixture with $L = 3$ components per estate, that is
+
+\[
+p(x_t | z_{t} = j) = \sum_{l = 1}^{L}{\lambda_l N(x_t | \mu_{l}, \sigma_{l})},
+\]
+
+with $0 \le \lambda_l \le 1 \ \forall \ l$ and $\sum_{l=1}^{L}{\lambda_l} = 1$.
+
+we set up a state model involves a multinomial regression whose parameters depend on the previous state taking the value $i$,
+
+\[
+p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
+\]
+
+and the observation model is built upon the Gaussian density with parameters depending on the current state taking the value $j$,
+
+\[
+p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
+\]
 
 ---
 

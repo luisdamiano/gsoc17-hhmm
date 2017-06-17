@@ -22,7 +22,7 @@ parameters {
   // Continuous observation model
   simplex[L] lambda_kl[K];          // component weights
   ordered[L] mu_kl[K];              // component mean
-  vector<lower=0.0001>[L] s_kl[K];  // component standard deviations
+  vector<lower=0>[L] s_kl[K];       // component standard deviations
 }
 
 transformed parameters {
@@ -52,10 +52,12 @@ transformed parameters {
 
   { // Observation likelihood
     real accumulator[L];
+    vector[L] loglambda_kl[K] = log(lambda_kl);
+
     for(t in 1:T) {
       for(j in 1:K) {
         for(l in 1:L) {
-          accumulator[l] = log(lambda_kl[j][l]) + normal_lpdf(x_t[t] | mu_kl[j][l], s_kl[j][l]);
+          accumulator[l] = loglambda_kl[j][l] + normal_lpdf(x_t[t] | mu_kl[j][l], s_kl[j][l]);
         }
         oblik_tk[t][j] = log_sum_exp(accumulator);
       }
@@ -64,6 +66,7 @@ transformed parameters {
 
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
+    vector[K] logA_ij[T] = log(A_ij);
 
     for(j in 1:K)
       unalpha_tk[1][j] = log(p_1k[j]) + oblik_tk[1][j];
@@ -73,7 +76,7 @@ transformed parameters {
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
                          // belief state + transition prob + local evidence at t
-          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[t][i]) + oblik_tk[t][j];
+          accumulator[i] = unalpha_tk[t-1, i] + logA_ij[t][i] + oblik_tk[t][j];
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
@@ -88,7 +91,7 @@ transformed parameters {
     int tbackwards;
 
     for (j in 1:K)
-      unbeta_tk[T, j] = 1;
+    unbeta_tk[T, j] = 1;
 
     for (tforwards in 0:(T-2)) {
       tbackwards = T - tforwards;
@@ -119,7 +122,7 @@ transformed parameters {
 model {
   for(j in 1:K) {
     w_km[j] ~ normal(0, 5);
-    // b_km[j] ~ normal(0, 5);
+    mu_kl[j] ~ normal(0, 10);
     s_kl[j] ~ normal(0, 3);
   }
 
@@ -129,7 +132,7 @@ model {
 generated quantities {
   vector[K] hatpi_tk[T];
   int<lower=1, upper=K> hatz_t[T];
-  int<lower=1, upper=K> hatl_t[T];
+  int<lower=1, upper=L> hatl_t[T];
   real hatx_t[T];
 
   int<lower=1, upper=K> zstar_t[T];

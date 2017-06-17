@@ -14,13 +14,22 @@ Jangmin et al. (2004) first proposed a HHMM to mimic dynamics of price trends in
 
 Although the selected works develop different financial models in diverse market contexts (asset, exchange, frequency and strategy), they share the underlying statistical logic: model parameters are time variant and change according to unobservable discrete market states. As for the replications, this statistical common core is a strong incentive to write reusable code that will naturally allow for a certain degree of generalization.
 
-## Reports
+## Papers
 
-The final reports will be located in the [to be completed] folder.
+* [A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series](litreview/main.pdf).
+* [Input-Output Hidden Markov Model](iohmm-mix/main.html), a replication of Hassan (2005).
 
 ## Running the replications
 
-[To be completed: Explain how to run the replications.]
+All the work is organized in a few folders at root level:
+
+* [common](common) contains general purpose files.
+* [litreview](litreview) is a theoretical review of the HMM family. Read our [literature review](litreview/main.pdf).
+* [hmm](hmm) includes working code that generates simulated data from a HMM and a MCMC sampler. See the [main.R](hmm/main.R) for step-by-step code.
+* [iohmm-reg](iohmm-reg) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully bayesian estimation and inference. In this implementation, the observation model is a linear regression that maps the inputs to the outputs according to a set of parameters that change according to the hidden states, which in turn follow a multinomial (softmax) regression. See [main.R](iohmm-reg/main.R) for step-by-step code.
+* [iohmm-mix](iohmm-mix) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully bayesian estimation and inference. In this implementation, the observation model is a mixture of Gaussians with three components per hidden state, which in turn follows a multinomial (softmax) regression. Read [our paper](iohmm-mix/main.html) and see [main.R](iohmm-mix/main.R) for step-by-step code.
+
+Each folder may have inner folders for R, Stan and RMarkdown code.
 
 ### Prerequisites
   * R 3.3.3
