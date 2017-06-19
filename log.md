@@ -471,6 +471,80 @@ I'll have to see to a better implementation, of course.
 * Improved the section of the README file.
 * Chains still look funky, but I'll have to see to this tomorrow. Some look non stationary and are highly autocorrelated. Estimated parameters aren't well off. Things to try tomorrow: 1) more data, 2) better separated data, 3) better initial possition, 4) larger warmup??.
 
+### 20170618 Su 10 to 22 ###
+* Will try many of the alternatives stated above and see how the sampler reacts. Need to make sure the sampler recovers the parameters before plugging in real data, which won't be as well behaved as simulations.
+* Increased distance among clusters, larger dataset, good initial values and larger sampling size and warmup improved sampling performance largely. Convergence and speed are now remarkably good. All parameters were well recovered, although sampling efficiency is low for the parameters of the hidden-state multinomial regression (number of effective sampling size drops from 300 to 30).
+
+```R
+# Data
+T.length = 300
+K = 2
+L = 3
+M = 4
+R = 1
+u.intercept = FALSE
+w = matrix(
+  c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1),
+  nrow = K, ncol = M, byrow = TRUE)
+lambda = matrix(
+  1/3,
+  nrow = K, ncol = L, byrow = TRUE)
+mu = matrix(
+  1:(K*L),
+  nrow = K, ncol = L, byrow = TRUE)
+s = matrix(
+  0.1,
+  nrow = K, ncol = L, byrow = TRUE)
+p1 = c(0.5, 0.5)
+
+# Markov Chain Monte Carlo
+n.iter = 600
+n.warmup = 300
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+
+# ...
+
+#                   mean se_mean      sd     50% n_eff Rhat
+# p_1k[1]         0.3382 1.4e-02 0.23470  0.3126   300  1.0
+# p_1k[2]         0.6618 1.4e-02 0.23470  0.6874   300  1.0
+# w_km[1,1]       1.2615 6.4e-01 3.74994  1.2759    34  1.1
+# w_km[1,2]      -0.0236 2.5e-01 3.80345  0.1021   233  1.0
+# w_km[1,3]      -0.6970 5.2e-01 2.96839 -0.9629    33  1.0
+# w_km[1,4]      -0.8778 4.6e-01 3.22484 -0.7979    49  1.1
+# w_km[2,1]       1.3951 6.4e-01 3.74191  1.3767    34  1.1
+# w_km[2,2]       0.0841 2.5e-01 3.81057  0.1201   235  1.0
+# w_km[2,3]      -0.7028 5.2e-01 2.96406 -0.9990    33  1.0
+# w_km[2,4]      -1.0408 4.6e-01 3.23715 -0.8777    49  1.1
+# lambda_kl[1,1]  0.3377 2.0e-03 0.03388  0.3338   300  1.0
+# lambda_kl[1,2]  0.3296 2.0e-03 0.03536  0.3292   300  1.0
+# lambda_kl[1,3]  0.3327 2.0e-03 0.03461  0.3328   300  1.0
+# lambda_kl[2,1]  0.3792 2.2e-03 0.03796  0.3796   300  1.0
+# lambda_kl[2,2]  0.3197 2.1e-03 0.03570  0.3198   300  1.0
+# lambda_kl[2,3]  0.3011 2.1e-03 0.03585  0.2991   300  1.0
+# mu_kl[1,1]      1.0008 7.6e-05 0.00132  1.0007   300  1.0
+# mu_kl[1,2]      1.9985 9.0e-05 0.00149  1.9985   274  1.0
+# mu_kl[1,3]      2.9971 9.2e-05 0.00150  2.9971   267  1.0
+# mu_kl[2,1]      4.0007 1.1e-04 0.00148  4.0006   198  1.0
+# mu_kl[2,2]      5.0000 9.3e-05 0.00161  5.0001   300  1.0
+# mu_kl[2,3]      6.0011 9.7e-05 0.00168  6.0011   300  1.0
+# s_kl[1,1]       0.0088 4.9e-05 0.00085  0.0087   300  1.0
+# s_kl[1,2]       0.0116 6.3e-05 0.00109  0.0115   300  1.0
+# s_kl[1,3]       0.0107 6.9e-05 0.00119  0.0106   300  1.0
+# s_kl[2,1]       0.0110 7.2e-05 0.00125  0.0109   300  1.0
+# s_kl[2,2]       0.0103 7.3e-05 0.00113  0.0103   238  1.0
+# s_kl[2,3]       0.0108 7.6e-05 0.00131  0.0107   300  1.0
+```
+
+* I tried many variations to see the sensibility of the results to many of the simplifications stated above. I removed the features one by one (a sort of ceteris paribus or partial derivative analysis).
+* Removed initial values: sampling time doubled (from 5 to 10 mins - treedepth increased from 7 to almost 10, which is the cause of the problem), all parameters were perfectly recovered, sampling efficiency remains the same. This is **not** surprising since mixture density are multimodal and any algorithm (either frequentist or bayesian) would either need good init values or several starting points.
+* Decreased distance between clusters: with `s = matrix(1, K, L)`, clusters overlap largely. Initial values given by kmeans are good but noisy. Sampling time improved (from 5 to 2 mins - treedepth improved from 7 to 6, which is a good figure), parameters are recovered with a large degree of uncertainty as expected, sampling efficiency drops significantly for all the parameters (from 300 to 30-60).
+* Added complexity: `K = 4`, as in Hassan (2005). Initial values given by kmeans are good but noisy. Sampling time increased a huge lot (from 5 to 30 mins, 6 times, hitting treedepth at max levels =/), parameters recovery is reasonable although sampling efficiency dropped significantly for all the parameters (from 300 to 30-60).
+* After many tries, I think the model works but it's pretty data-greedy. It works very well with K = 2 hidden states, but it needs much more data to accomodate K = 4 hidden states.
+* Started writing the replication section of the essay.
+
 ---
 
 # Notes

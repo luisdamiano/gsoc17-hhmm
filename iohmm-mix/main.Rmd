@@ -192,18 +192,58 @@ The initial hidden state is drawn from a multinomial distribution with one trial
 The observation for each step generates from a linear regressions with regressors $\mat{b}_k$ and error variance $\mat{\Sigma}_k$, one set per possible hidden state.
 
 ```{r}
-obs.model <- function(u, z, b, s) {
+obsmodel_reg <- function(...) {
+  args <- list(...)
+  u <- args$u
+  z <- args$z
+  b <- args$b
+  s <- args$s
+
+  K <- length(unique(z))
+  m <- ncol(u)
+
+  if (any(dim(b) != c(K, m)))
+    stop("The regressors matrix must be of size Kxm, where m is the size of the input vector.")
+
   T.length <- nrow(u)
 
   x <- vector("numeric", T.length)
   for (t in 1:T.length) {
     x[t] <- rnorm(1, u[t, ] %*% b[z[t], ], s[z[t]])
   }
+
   return(x)
 }
 ```
 
-We set up our simulated experiments with arbitrary values for all the involved parameters. Additionally, we define the settings for the Markov Chain Monte Carlo sampler.
+Alternatively, the observation could be generated from a Gaussian mixture density where $\lambda_{kl}$ is the component weight for the $l$-th component in the $k$-th state with $0 \le \lambda_{kl} \le 1 \ \forall \ l \in \{1, \dots, L\}, k \in \{1, \dots, K\}$ and $\sum_{l=1}^{L}{\lambda_{kl}} = 1 \ \forall \ k$.
+
+```{r}
+obsmodel_mix <- function(...) {
+  args <- list(...)
+  z <- args$z
+  lambda <- args$lambda
+  mu <- args$mu
+  s <- args$s
+
+  if (!all.equal(length(unique(z)), length(lambda), length(mu), length(s)))
+    stop("The size of the vector parameters lambda, mu and s must equal to the
+         number of different states.")
+
+  T.length <- length(z)
+  L <- ncol(lambda)
+
+  x <- vector("numeric", T.length)
+  for (t in 1:T.length) {
+    l <- sample(1:L, 1, FALSE, prob = lambda[z[t], ])
+    x[t] <- rnorm(1, mu[z[t], l], s[z[t], l])
+  }
+
+  return(x)
+}
+```
+
+We set up our simulated experiments for a regression observation model with arbitrary values for all the involved parameters. Additionally, we define the settings for the Markov Chain Monte Carlo sampler.
 
 ```{r}
 # Set up ------------------------------------------------------------------
@@ -267,12 +307,11 @@ library(shinystan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'stan/iohmm-mixture.stan'
+stan.model = '../iohmm-reg/stan/iohmm-reg.stan'
 stan.data = list(
   T = T.length,
   K = K,
   M = M,
-  L = 3,
   u_tm = as.array(u),
   x_t = dataset$x
 )
@@ -395,25 +434,109 @@ All in all, we are confindent that the Stan code works as specified and we find 
 
 # Stock Market Forecasting Using Hidden Markov Model
 
-As in the original work, we set up a IOHMM model to forecast stock prices. We define $K = 4$ hidden states. There are $R = 4$ inputs, namely opening price, closing price, highest price, and the lowest price from the previous time step. The output is stock closing price. The model of the output is a Gaussian mixture with $L = 3$ components per estate, that is
+## Model
+
+We adhere to the methodology proposed in the original work as much as possible. We set up an IOHMM model with $K = 4$ hidden states to forecast stock prices. The hidden state model is driven by a multinomial (softmax) regression with $R = 4$ inputs, namely opening, closing, highest and lowest prices from the previous time step. The univariate output is the stock closing price for the current time step. The observation model is a Gaussian mixture with $L = 3$ components per state, that is
 
 \[
-p(x_t | z_{t} = j) = \sum_{l = 1}^{L}{\lambda_l N(x_t | \mu_{l}, \sigma_{l})},
+p(x_t | z_{t} = j) = \sum_{l = 1}^{L}{\lambda_{jl} \ \NN(x_t | \mu_{jl}, \sigma_{jl})},
 \]
 
-with $0 \le \lambda_l \le 1 \ \forall \ l$ and $\sum_{l=1}^{L}{\lambda_l} = 1$.
+where $\lambda_{jl}$ is the component weight for the $l$-th component in the $j$-th state with $0 \le \lambda_{jl} \le 1 \ \forall \ l, j$ and $\sum_{l=1}^{L}{\lambda_{jl}} = 1 \ \forall \ j$.
 
-we set up a state model involves a multinomial regression whose parameters depend on the previous state taking the value $i$,
+The vector parameter then becomes $\mat{\theta} = (\mat{\pi}_1, \mat{w}_k, \lambda_{kl}, \mu_{kl}, \sigma_{kl})$ for $k \in \{1, \dots, K\}$ and $l \in \{1, \dots, L\}$.
+
+## Dataset
+
+We use daily OHLC prices for the stocks and time spans listed in the table below. The data is downloaded from Google Finance via Quantmod.
+
+```{r}
+symbols <- data.frame(
+  symbol    = c("NYSE:DAL", "NYSE:DAL", "NYSE:LUV", "LON:RYA"),
+  name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
+  train.from = c("17-09-2002", "27-12-2002", "18-12-2002", "06-05-2003"),
+  train.to   = c("10-09-2004", "31-08-2004", "23-07-2004", "06-12-2004"),
+  test.from  = c("11-09-2004", "01-09-2004", "24-07-2004", "07-12-2004"),
+  test.to    = c("20-01-2005", "17-11-2004", "17-11-2004", "17-03-2005"),
+  stringsAsFactors = FALSE)
+```
+
+```{r, echo = FALSE}
+library(knitr)
+kable(t(sapply(1:nrow(symbols), function(i) { c(
+        symbols$symbol[i],
+        symbols$name[i],
+        paste(symbols$train.from[i], "to", symbols$train.to[i]),
+        paste(symbols$test.from[i] , "to", symbols$test.to[i])
+      )})),
+      col.names = c("Symbol", "Name", "Training set", "Test set"),
+      align = "c", caption = "Details of the dataset.")
+```
+
+## Methodology
+
+The goal of the experiment is to predict the closing price for a specific stock market share. We estimate the model parameters $\mat{\hat{\theta}}$ using all the information avaliable in the training dataset. For each day $h$ in the training set, we compute the likelihood of the input vector conditional on the trained parameters $p(\mat{u}_{t+h} | \mat{\hat{\theta}})$ and we locate the observation in the training set with the nearest likelihood,
 
 \[
-p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \mat{u}_{t}),
+\mat{u}_{t+h}^* = \argmin_{\mat{u}_t} \ \left| p(\mat{u}_{t} | \mat{\hat{\theta}}) - p(\mat{u}_{t+h} | \mat{\hat{\theta}}) \right|.
+% $\hat{\LL}_{t+h} = p(\mat{u}_{t+h} | \mat{\hat{\theta}})$
+% $\hat{\LL}_{t+h}^* = p(\mat{u}_{t+h}^* | \mat{\hat{\theta}})$ where 
 \]
 
-and the observation model is built upon the Gaussian density with parameters depending on the current state taking the value $j$,
+We compute the change in the closing price from the located time step to the next,
 
 \[
-p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
+\delta_{t+h}^* = \mat{x}_{t+h}^* - \mat{x}_{t+h-1}^*},
 \]
+
+and build out forecast assuming that a similar pattern will repeat
+
+\[
+\hat{\mat{x}_{t+h}} = \hat{\mat{x}_{t+h-1}} + \delta_{t+h}^*.
+\]
+
+The process is run independently for each stock.
+
+## Programming code
+
+```{r}
+library(quantmod)
+invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
+invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
+
+iohmmmix_estimate <- function(symbol, ...) {
+  prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = train.to)
+  
+  stan.model = 'stan/iohmm-mix.stan'
+  stan.data = list(
+    T = T.length,
+    K = K,
+    M = M,
+    L = L,
+    u_tm = as.array(u),
+    x_t = dataset$x
+  )
+
+  stan.fit <- stan(file = stan.model,
+                   data = stan.data, verbose = T,
+                   iter = n.iter, warmup = n.warmup,
+                   thin = n.thin, chains = n.chains,
+                   cores = n.cores, seed = n.seed)
+}
+
+# i = 2
+# symbol <- symbols$symbol[i]
+# name <- symbols$name[i]
+# train.from <- symbols$train.from[i]
+# train.to <- symbols$train.to[i]
+# test.from <- symbols$test.from[i]
+# test.to <- symbols$test.to[i]
+# 
+# prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = train.to)
+
+```
+
+
 
 ---
 

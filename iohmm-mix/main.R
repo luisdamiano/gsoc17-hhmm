@@ -8,7 +8,7 @@ source('iohmm-reg/R/iohmm-sim.R')
 
 # Data
 T.length = 300
-K = 2
+K = 4
 L = 3
 M = 4
 R = 1
@@ -23,7 +23,7 @@ mu = matrix(
   1:(K*L),
   nrow = K, ncol = L, byrow = TRUE)
 s = matrix(
-  c(0.1, 0.5, 1, 1, 1.2, 1.5, 2, 2.5, 3, 3, 3.5, 4),
+  c(0.1, 0.3, 0.5),
   nrow = K, ncol = L, byrow = TRUE)
 p1 = c(0.25, 0.10, 0.45, 0.15)
 
@@ -63,14 +63,23 @@ stan.data = list(
 
 # Chains are initialized close to k-means to speed up convergence
 init_fun <- function() {
-  clasif <- kmeans(stan.data$x_t, stan.data$K)
-  init.mu <- by(stan.data$x_t, clasif$cluster, mean)
-  init.sigma <- by(stan.data$x_t, clasif$cluster, sd)
-  init.order <- order(init.mu)
+  classif <- kmeans(stan.data$x_t, stan.data$K)
+  init.mu <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
+  init.sigma <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
+
+  for (k in 1:K) {
+    inner.classif <- kmeans(stan.data$x_t[classif$cluster == k], stan.data$L)
+    inner.mu <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, mean))
+    inner.sigma <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, sd))
+    inner.order <- order(inner.mu)
+
+    init.mu[k, ] <- inner.mu[inner.order]
+    init.sigma[k, ] <- inner.sigma[inner.order]
+  }
 
   list(
-    mu_k = matrix(init.mu[init.order], nrow = stan.data$K, ncol = stan.data$L),
-    sigma_k = matrix(init.sigma[init.order], nrow = stan.data$K, ncol = stan.data$L)
+    mu_k = t(init.mu),
+    sigma_k = t(init.sigma)
   )
 }
 
@@ -108,8 +117,11 @@ tab <- table(hard = hard, original = dataset$z)
 
 for (k in 1:(K - 1)) {
   ptab <- prop.table(tab, 1)
-  ind.swap <- which(ptab == max(ptab), arr.ind = T)
-  dataset$zrelab[dataset$z == as.numeric(dimnames(tab)$original[ind.swap[2]])] <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+  ind.swap <- which(ptab == max(ptab), arr.ind = T)[1, ]
+
+  a <- as.numeric(dimnames(tab)$original[ind.swap[2]])
+  b <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+  dataset$zrelab[dataset$z == a] <- b
 
   if (k == K - 1) {
     ind.swap[1] <- if (ind.swap[1] == 1) 2 else 1
@@ -118,9 +130,6 @@ for (k in 1:(K - 1)) {
     a <- as.numeric(dimnames(tab)$original[ind.swap[2]])
     b <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
     dataset$zrelab[dataset$z == a] <- b
-
-    print(paste("Will swap out ", a, "for", b))
-
   }
 
   tab <- tab[-ind.swap[1], -ind.swap[2]]
@@ -177,7 +186,3 @@ round(table(
 # Fitted output
 plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 
-hatz_t <- extract(stan.fit, pars = 'hatz_t')[[1]]
-
-for (k in 1:K)
-  print(summary(as.vector(hatx_t[as.vector(hatz_t) == k])))

@@ -3,6 +3,7 @@
 
 % Math operators
 \DeclareMathOperator*{\argmax}{\operatorname*{arg\,max}}
+\DeclareMathOperator*{\argmin}{\operatorname*{arg\,min}}
 \DeclareMathOperator{\evsym}{E}
 \newcommand\ev[1]{\evsym\left\langle#1\right\rangle}
 \DeclareMathOperator{\vsym}{V}
@@ -12,4 +13,6 @@
 \newcommand{\mat}[1]{\bm{#1}}
 
 % Math symbols
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\LL}{\mathcal{L}}
 \newcommand{\RR}{\mathbb{R}}
