@@ -109,7 +109,7 @@ plot_seqintervals <- function(y, z = NULL, k = NULL, ...) {
 #' @export
 #'
 #' @examples plot_inputoutput(x, u, z)
-plot_inputoutput <- function(x, u, z = NULL) {
+plot_inputoutput <- function(x, u, z = NULL, x.label = NULL, u.label = NULL) {
   if (!is.matrix(u) || nrow(u) != length(x))
     stop("The sequence of inputs must be a matrix whose number of rows must
          equal the length of the output sequence.")
@@ -117,6 +117,8 @@ plot_inputoutput <- function(x, u, z = NULL) {
   M <- ncol(u)
   t <- 1:length(x)
   zcol <- if (is.null(z)) 1 else z
+  x.label <- if (is.null(x.label)) "Input-Output relationship" else sprintf("Input-Output relationship (%s)", x.label)
+  u.label <- if (is.null(u.label)) bquote(.(paste("\"Input\" ~ u[", 1:M, "]", sep = ""))) else bquote(.(paste("u[", 1:M, "] ", u.label, sep = "")))
   opar <- par(no.readonly = TRUE)
 
   layout(rbind(1, rbind(2,
@@ -149,7 +151,7 @@ plot_inputoutput <- function(x, u, z = NULL) {
   axis(4)
 
   legend(x = "bottomright",
-         legend = bquote(.(paste("Input", 1:M))),
+         legend = u.label,
          lwd = 3, lty = 1,
          col = 5 + 1:M,
          bty = 'n', horiz = TRUE)
@@ -157,32 +159,34 @@ plot_inputoutput <- function(x, u, z = NULL) {
   # 3. Output ~ Input scatterplots
   for (m in 1:M) {
     if (m == 1)
-      par(mar = c(0, 4.1, 0, 0))
+      par(mar = c(4.1, 4.1, 0, 0))
     else if (m == M)
-      par(mar = c(0, 0, 0, 2.1))
+      par(mar = c(4.1, 0, 0, 2.1))
     else
-      par(mar = c(0, 0, 0, 0))
+      par(mar = c(4.1, 0, 0, 0))
 
     plot(x = u[, m], y = x,
-         xaxt = 'n', yaxt = 'n',
+         yaxt = 'n',
          pch = 21, cex = 0.7,
          col = zcol, bg = zcol,
-         ylab = bquote("Output" ~ x), xlab = bquote("Input" ~ u[.(m)]))
+         ylab = bquote("Output" ~ x), xlab = u.label[m])
 
     if (m == 1)
       axis(2)
     else if (m == M)
       axis(4)
   }
-  mtext("Input-Output relationship",
+  mtext(x.label,
         side = 3, line = -2.5, outer = TRUE)
 
-  # 4. Legend
-  par(mai = c(0, 0, 0, 0))
-  plot.new()
-  legend(x = "center",
-         legend = bquote(.(paste("Hidden state", 1:K))),
-         lwd = 3, col = sort(unique(zcol)), horiz = TRUE, bty = 'n')
+  if (!is.null(z)) {
+    # 4. Legend
+    par(mai = c(0, 0, 0, 0))
+    plot.new()
+    legend(x = "center",
+           legend = bquote(.(paste("Hidden state", 1:K))),
+           lwd = 3, col = sort(unique(zcol)), horiz = TRUE, bty = 'n')
+  }
   par(opar)
 }
 

@@ -486,16 +486,16 @@ The goal of the experiment is to predict the closing price for a specific stock 
 We compute the change in the closing price from the located time step to the next,
 
 \[
-\delta_{t+h}^* = \mat{x}_{t+h}^* - \mat{x}_{t+h-1}^*},
+\Delta_{t+h}^* = \mat{x}_{t+h}^* - \mat{x}_{t+h-1}^*},
 \]
 
 and build out forecast assuming that a similar pattern will repeat
 
 \[
-\hat{\mat{x}_{t+h}} = \hat{\mat{x}_{t+h-1}} + \delta_{t+h}^*.
+\hat{\mat{x}_{t+h}} = \hat{\mat{x}_{t+h-1}} + \Delta_{t+h}^*.
 \]
 
-The process is run independently for each stock.
+The procedure is run independently for each stock.
 
 ## Programming code
 
@@ -505,8 +505,9 @@ invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
 invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
 
 iohmmmix_estimate <- function(symbol, ...) {
-  prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = train.to)
-  
+  prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = test.to)
+
+  # Estimation data
   stan.model = 'stan/iohmm-mix.stan'
   stan.data = list(
     T = T.length,

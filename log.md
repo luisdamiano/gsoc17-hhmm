@@ -545,6 +545,19 @@ n.seed = 9000
 * After many tries, I think the model works but it's pretty data-greedy. It works very well with K = 2 hidden states, but it needs much more data to accomodate K = 4 hidden states.
 * Started writing the replication section of the essay.
 
+### 20170619 Mo 20 to 02+01 ###
+* Back to work, decided to get that sampler working!
+* Adding a hyperparam to mean components helped a lot: computational time reduced 70%, mixing, convergence and sampling efficiency greatly improved too.
+* Made many little changes into iohmm-hmix.stan tofor small gains in efficiency.
+* New changes in folder structure, again :)
+* Plugged in real data and, of course, it didn't work. 200 samples = 200 divergences, HMC is hinting me that something is wrong:
+  * All observations are assigned to just one state.
+  * In consequence, the fitted x stays close to approx. 48.
+  * Tried with two hidden states and one component (no mixture) and sampler doesn't converge with real data. It converges with simulated data of various type, including stationary io, non stationary output, but it doesn't for non stationary io.
+  * Tried with iohmm-reg and I get many divergences. It recovers only two hidden states. The actual vs fit looks reasonable but a bit biased.
+* Possible solutions:
+  * Standarize the inputs and/or outputs? First difference?
+
 ---
 
 # Notes

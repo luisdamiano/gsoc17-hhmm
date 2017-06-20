@@ -27,7 +27,8 @@ All the work is organized in a few folders at root level:
 * [litreview](litreview) is a theoretical review of the HMM family. Read our [literature review](litreview/main.pdf).
 * [hmm](hmm) includes working code that generates simulated data from a HMM and a MCMC sampler. See the [main.R](hmm/main.R) for step-by-step code.
 * [iohmm-reg](iohmm-reg) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully bayesian estimation and inference. In this implementation, the observation model is a linear regression that maps the inputs to the outputs according to a set of parameters that change according to the hidden states, which in turn follow a multinomial (softmax) regression. See [main.R](iohmm-reg/main.R) for step-by-step code.
-* [iohmm-mix](iohmm-mix) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully bayesian estimation and inference. In this implementation, the observation model is a mixture of Gaussians with three components per hidden state, which in turn follows a multinomial (softmax) regression. Read [our paper](iohmm-mix/main.html) and see [main.R](iohmm-mix/main.R) for step-by-step code.
+* [iohmm-mix](iohmm-mix) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully bayesian estimation and inference. In this implementation, the observation model is a mixture of Gaussians with different components per hidden state, which in turn follows a multinomial (softmax) regression. Read [our paper](iohmm-mix/main.html) and see [main.R](iohmm-mix/main.R) for step-by-step code.
+* [hassan2005](hassan2005/) contains the code and the report for the replication of Hassan (2005).
 
 Each folder may have inner folders for R, Stan and RMarkdown code.
 
