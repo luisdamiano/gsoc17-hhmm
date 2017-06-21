@@ -558,6 +558,15 @@ n.seed = 9000
 * Possible solutions:
   * Standarize the inputs and/or outputs? First difference?
 
+### 20170620 Tu 10 to WIP ###
+* Today I expect a marathon that should get me closer to the final version of the first paper.
+* A simple model with K = 2 and L = 1: scaling (demeaning and dividing by sd) inputs fixed most of the divergence issues. Scaling both input and output fixed all but one divergent iteration. Samplig efficiency reached it's maximum.
+* An intermediate model with K = 4 and L = 1 with scaling input and output: No divergences. Sampling efficiency dropped for a few parameters (mu for two states went from 200 to 20, sd for one state from 200 to 58). Computational time increased by a magnitude of 10 (treedepth from 3 to 7). Fit given the model is reasonable.
+* The goal model with K = 4 and L = 3 with scaling input and output: No divergences. Sampling efficiency dropped for a few component parameters vs the simple model (mu for two components went from 200 to 20, mu for another two from 200 to 63 and 95, sd for one component from 200 to 58). Computational time increased by a magnitude of 20 vs the simple (treedepth from 3 to 8) and 2 vs the intermediate. Fit given the model is reasonable. 
+* Wrote the code that fetches and handles the data.
+* Wrote the code that follows the forecasting procedure in the original work.
+* Created a lite version of the sampler that computes only the quantities needed to make forecats.
+
 ---
 
 # Notes

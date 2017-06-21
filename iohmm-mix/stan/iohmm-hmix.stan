@@ -117,7 +117,7 @@ transformed parameters {
 
   { // Observation likelihood
     for(t in 1:T)
-      oblik_t[t] = log_sum_exp(unalpha_tk[t] + oblik_tk[t]);
+      oblik_t[t] = log_sum_exp(log(alpha_tk[t]) + oblik_tk[t]);
   }
 }
 

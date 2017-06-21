@@ -17,7 +17,7 @@ Although the selected works develop different financial models in diverse market
 ## Papers
 
 * [A literature review of Bayesian Hierarchical Hidden Markov Models applied to financial time series](litreview/main.pdf).
-* [Input-Output Hidden Markov Model](iohmm-mix/main.html), a replication of Hassan (2005).
+* [Input-Output Hidden Markov Model](hassan2005/main.html), a replication of Hassan (2005).
 
 ## Running the replications
 

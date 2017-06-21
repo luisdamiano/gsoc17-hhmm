@@ -297,6 +297,7 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
       x = alpha.qs[2, , k], y = gamma.qs[2, , k],
       xlab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:t])),
       ylab = bquote(p(z[t] == .(k) ~ "|" ~ x[" " ~ 1:T])),
+      xlim = c(0, 1), ylim = c(0, 1),
       main = bquote("Filtered vs smoothed probability for Hidden State" ~ .(k)),
       type = 'p', pch = 21, col = zcol, bg = zcol, cex = 0.7
     )
@@ -405,6 +406,125 @@ plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
   plot_intervals(x, xhat.qs, z, interval,
                  ylab = bquote("Fitted output" ~ hat(x)),
                  xlab = bquote("Observed output" ~ x))
+
+  par(opar)
+}
+
+
+#' Plots the sequence of output, input, state probability and a the Jointly most
+#' probable path. It provides an intuitive way to understand the relationship
+#' between the observed variables and the estimated hidden states.
+#'
+#' @param x A vector with the sequence of observations.
+#' @param u A matrix with the sequence of inputs.
+#' @param stateprob Array of size N, T, K with the sampled filtered or smoothed
+#' probability, where N is the sample size, T is the sequence length and K is
+#' the number of hidden states.
+#' @param zstar Array of size N, T, K with the sampled hidden states, where
+#' N is the sample size, T is the sequence length and K is the number of
+#' hidden states.
+#' @param x.label String
+#' @param u.label
+#' @param stateprob.label
+#'
+#' @return
+#' @export
+#'
+#' @examples
+plot_inputoutputprob <- function(x, u, stateprob, zstar,
+                                 x.label = NULL, u.label = NULL, stateprob.label = NULL) {
+  if (any(length(x) != dim(stateprob)[2], nrow(u) != dim(stateprob)[2]))
+    stop("The array of state probability must have the same
+         length as the input and output series.")
+
+  T.length <- dim(stateprob)[2]
+  K <- dim(stateprob)[3]
+  M <- ncol(u)
+  t <- 1:T.length
+  zcol <- 1:K
+  mcol <- 10 + 1:M
+  x.label <- if (is.null(x.label)) "Input-Output-State Probability relationship" else sprintf("Input-Output-State Probability relationship (%s)", x.label)
+  u.label <- if (is.null(u.label)) bquote(.(paste("\"Input\" ~ u[", 1:M, "]", sep = ""))) else bquote(.(paste("u[", 1:M, "] ", u.label, sep = "")))
+  stateprob.label <- if (is.null(stateprob.label)) "State probability" else stateprob.label
+  zstar.med <- apply(zstar, 2, median)
+  opar <- par(no.readonly = TRUE)
+
+  layout(matrix(1:5, nrow = 5, ncol = 1, byrow = TRUE),
+         heights = c(0.26, 0.20, 0.20, 0.26, 0.08))
+
+  # 1. Observation sequence
+  par(mar = c(0, 4.1, 4.1, 2.1))
+  plot(x = t, y = x,
+       type = 'l', col = 'lightgray',
+       xaxt = 'n', yaxt = 'n',
+       ylab = bquote("Output" ~ x))
+
+  points(x = t, y = x,
+         pch = 21, cex = 0.7,
+         col = zcol[zstar.med], bg = zcol[zstar.med])
+
+  axis(2)
+
+  # 2. Input sequence
+  par(mar = c(0, 4.1, 0, 2.1))
+  matplot(x = t, y = u,
+          type = 'l', col = mcol,
+          xaxt = 'n', yaxt = 'n',
+          lwd = 1, lty = 1,
+          ylab = bquote("Input" ~ u))
+
+  axis(4)
+
+  legend(x = "bottomright",
+         legend = u.label,
+         lwd = 3, lty = 1,
+         col = 5 + 1:M,
+         bty = 'n', horiz = TRUE)
+
+  # 3. State probability
+  par(mar = c(0, 4.1, 0, 2.1))
+  plot(NULL, xlim = c(0, T.length),
+       ylim = c(0, 1), type = 'l',
+       xaxt = 'n', yaxt = 'n',
+       ylab = bquote(.(stateprob.label)))
+
+  for (k in 1:K)
+    lines(x = t, y = apply(stateprob[, ,k], c(2), median), col = zcol[k])
+
+  abline(h = 0.5, col = 'lightgray', lwd = 0.25)
+
+  axis(2)
+
+  # 4. Sequence of states
+  par(mar = c(5.1, 4.1, 0, 2.1))
+  plot(
+    x = t,
+    y = zstar.med,
+    xaxt = 'n', yaxt = 'n',
+    xlab = bquote("Time" ~ t),
+    ylab = bquote("Jointly most probable path (Viterbi)"),
+    ylim = c(1, K),
+    type = 'l', col = 'gray')
+
+  points(x = t, y = zstar.med,
+         pch = 21, cex = 0.7,
+         col = zcol[zstar.med], bg = zcol[zstar.med])
+
+  axis(1)
+
+  axis(4, at = 1:K)
+
+  # 5. Legend
+  par(mai = c(0, 0, 0, 0))
+  plot.new()
+  legend(x = "center",
+         legend = paste('State ', 1:K),
+         lwd = 3, col = zcol,
+         bty = 'n', cex = 1,
+         horiz = TRUE)
+
+  mtext(x.label,
+        side = 3, line = -2.5, outer = TRUE)
 
   par(opar)
 }

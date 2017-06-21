@@ -459,6 +459,18 @@ symbols <- data.frame(
   test.from  = c("11-09-2004", "01-09-2004", "24-07-2004", "07-12-2004"),
   test.to    = c("20-01-2005", "17-11-2004", "17-11-2004", "17-03-2005"),
   stringsAsFactors = FALSE)
+
+library(quantmod)
+invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
+invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
+
+get_prices <- function(symbol, train.from, train.to, test.from, test.to, ...) {
+  prices <- getSymbols(symbol, env = NULL, from = train.from, to = test.to, ...)
+  list(
+    train = prices[paste(train.from, train.to, sep = "/")],
+    test  = prices[paste(test.from, test.to, sep = "/")]
+  )
+}
 ```
 
 ```{r, echo = FALSE}
