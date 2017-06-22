@@ -51,7 +51,7 @@ registerDoParallel(cl)
 # results <- vector(mode = "list", length = nrow(symbols))
 # for (i in 3:nrow(symbols)) {
 results <- foreach(
-    i = 2:nrow(symbols),
+    i = 3:nrow(symbols),
     .packages = c("quantmod", "rstan")
   ) %do% {
     cache.symbolfile <- file.path(cache.dir, paste0(symbols[i, ]$symbol, ".RDS"))
@@ -65,21 +65,22 @@ results <- foreach(
                            src  = "yahoo")
     T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
     S <- nrow(prices) - T.length # Number of walk forward forecasts (steps)
+    S <- 5
 
-    forecast <- matrix(NA, nrow = n.samples, ncol = S)
+    # forecast  <- matrix(NA, nrow = n.samples, ncol = S)
     # for (s in 1:S) {
-    foreach(
+    ret <- foreach(
       s = 1:S,
       .packages = c("quantmod", "rstan")
     ) %dopar% {
       cache.stepfile <- file.path(cache.dir, paste0(symbols[i, ]$symbol, "-step", s, ".RDS"))
       if (!is.null(cache.dir) && file.exists(file.path(cache.stepfile)))
-        return(forecast[, s] <- readRDS(cache.stepfile))
+        return(readRDS(cache.stepfile))
 
-      dataset  <- make_dataset(prices[1:(T.length + s), ], TRUE)
+      dataset <- make_dataset(prices[1:(T.length + s), ], TRUE)
 
       stan.model = 'iohmm-mix/stan/iohmm-hmix-lite.stan'
-      stan.data = list(
+      stan.data <- list(
         K = K,
         L = L,
         M = ncol(dataset$u),
@@ -98,20 +99,24 @@ results <- foreach(
 
       oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
 
-      forecast[, s] <- neighbouring_forecast(x = dataset$x.unscaled,
+      forecast <- neighbouring_forecast(x = dataset$x.unscaled,
                                            oblik_t = oblik_t,
                                            h = 1, threshold = 0.05)
 
-      if (!is.null(cache.dir))
-        return(saveRDS(forecast[, s], cache.stepfile))
-    } # s = 1, ..., S steps
+      ret.step <- list(
+        dataset = dataset,
+        stan.model = stan.model,
+        stan.data = stan.data,
+        stan.fit = stan.fit,
+        oblik_t = oblik_t,
+        forecast = forecast
+      )
 
-    ret <- list(
-      prices    = prices,
-      stan.data = stan.data,
-      stan.fit  = stan.fit,
-      forecast  = forecast
-    )
+      if (!is.null(cache.dir))
+        return(saveRDS(ret.step, cache.stepfile))
+
+      return(ret.step)
+    } # s = 1, ..., S steps
 
     if (!is.null(cache.dir))
       return(saveRDS(ret, cache.symbolfile))
@@ -120,3 +125,9 @@ results <- foreach(
   } # sym
 
 stopCluster(cl)
+
+fore <- lapply(results, function(r) {
+  sapply(1:length(r), function(i){
+    r[[i]]$forecast
+  })
+})
