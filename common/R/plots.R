@@ -380,7 +380,7 @@ plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
   zcol <- if (is.null(z)) 1 else z
   opar <- par(no.readonly = TRUE)
 
-  layout(matrix(c(1, 1, 2), nrow = 1, ncol = 3))
+  # layout(matrix(c(1, 1, 2), nrow = 1, ncol = 3))
 
   # 1. Observation and fit sequence
   plot(x = t, y = x,
@@ -401,11 +401,11 @@ plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
   legend(x = "bottom",
          legend = c(bquote(.(paste("Observed (state ", 1:K, ")", sep = ''))), "Fit"),
          lwd = 3, col = c(sort(unique(zcol)), 20), horiz = TRUE, bty = 'n')
-
-  # 2. Observation and fit cross-section
-  plot_intervals(x, xhat.qs, z, interval,
-                 ylab = bquote("Fitted output" ~ hat(x)),
-                 xlab = bquote("Observed output" ~ x))
+#
+#   # 2. Observation and fit cross-section
+#   plot_intervals(x, xhat.qs, z, interval,
+#                  ylab = bquote("Fitted output" ~ hat(x)),
+#                  xlab = bquote("Observed output" ~ x))
 
   par(opar)
 }

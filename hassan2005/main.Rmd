@@ -300,7 +300,7 @@ We then analyse the relationship between the input and the state probabilities, 
 
 Using a fully Bayesian approach, we now rely on our MCMC sampler to draw samples from the posterior density of model parameters and other hidden quantities ^[The Stan code is treated as given by now and will be explained below].
 
-```{r}
+```{r, echo = FALSE}
 # Model estimation --------------------------------------------------------
 library(rstan)
 library(shinystan)
@@ -434,6 +434,19 @@ All in all, we are confindent that the Stan code works as specified and we find 
 
 # Stock Market Forecasting Using Hidden Markov Model
 
+## Preamble
+We first load the packages and source auxiliary functions.
+
+```{r, echo = FALSE, warning= FALSE}
+library(quantmod)
+library(rstan)
+library(shinystan)
+source('R/data.R')
+source('R/forecast.R')
+source('../common/R/math.R')
+source('../common/R/plots.R')
+```
+
 ## Model
 
 We adhere to the methodology proposed in the original work as much as possible. We set up an IOHMM model with $K = 4$ hidden states to forecast stock prices. The hidden state model is driven by a multinomial (softmax) regression with $R = 4$ inputs, namely opening, closing, highest and lowest prices from the previous time step. The univariate output is the stock closing price for the current time step. The observation model is a Gaussian mixture with $L = 3$ components per state, that is
@@ -446,31 +459,40 @@ where $\lambda_{jl}$ is the component weight for the $l$-th component in the $j$
 
 The vector parameter then becomes $\mat{\theta} = (\mat{\pi}_1, \mat{w}_k, \lambda_{kl}, \mu_{kl}, \sigma_{kl})$ for $k \in \{1, \dots, K\}$ and $l \in \{1, \dots, L\}$.
 
-## Dataset
+```{r}
+K = 4
+L = 3
+```
 
-We use daily OHLC prices for the stocks and time spans listed in the table below. The data is downloaded from Google Finance via Quantmod.
+## The sampler
+
+We use Stan's implementation of Hamiltonian Monte Carlo for a fully bayesian estimation of the parameters. We set up the parameters for the Markov Chain Monte Carlo sampler below^[**This is the place where we should explain that we decided to go hierarchical with the component mean to improve model performance**.].
+
+```{r}
+hyperparams <- c(0, 5, 10, 0, 5, 0, 10);
+
+n.iter = 400
+n.warmup = 200
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+```
+
+## Dataset & data transformation
+
+We use daily OHLC prices for the stocks and time spans listed in the table below, which are identical to the original work. The data is downloaded from Google Finance via Quantmod.
 
 ```{r}
 symbols <- data.frame(
-  symbol    = c("NYSE:DAL", "NYSE:DAL", "NYSE:LUV", "LON:RYA"),
+  symbol    = c("NYSE:DAL", "DAL", "LUV", "RYA.L"),
   name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
-  train.from = c("17-09-2002", "27-12-2002", "18-12-2002", "06-05-2003"),
-  train.to   = c("10-09-2004", "31-08-2004", "23-07-2004", "06-12-2004"),
-  test.from  = c("11-09-2004", "01-09-2004", "24-07-2004", "07-12-2004"),
-  test.to    = c("20-01-2005", "17-11-2004", "17-11-2004", "17-03-2005"),
+  train.from = c("2002-09-17", "2002-12-27", "2002-12-18", "2003-05-06"),
+  train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
+  test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
+  test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
   stringsAsFactors = FALSE)
-
-library(quantmod)
-invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
-invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
-
-get_prices <- function(symbol, train.from, train.to, test.from, test.to, ...) {
-  prices <- getSymbols(symbol, env = NULL, from = train.from, to = test.to, ...)
-  list(
-    train = prices[paste(train.from, train.to, sep = "/")],
-    test  = prices[paste(test.from, test.to, sep = "/")]
-  )
-}
 ```
 
 ```{r, echo = FALSE}
@@ -485,71 +507,330 @@ kable(t(sapply(1:nrow(symbols), function(i) { c(
       align = "c", caption = "Details of the dataset.")
 ```
 
+We observed that the chains would not mix when the sampler is fed the raw input and output variables. After a good deal of trial and error, we found that centering and scaling the variables will not only improve convergence but also speed up the sampler significantly.
+
+```{r}
+make_dataset <- function(prices, scale = TRUE) {
+  T.length = nrow(prices)
+
+  x = as.vector(Cl(prices))[2:T.length]
+  u = as.matrix(prices)[1:(T.length - 1), 1:4]
+
+  dataset <- list(
+    x = as.vector(x),
+    u = as.matrix(u),
+    x.unscaled = as.vector(x),
+    u.unscaled = as.matrix(u),
+    x.center = 0,
+    x.scale  = 1,
+    u.center = 0,
+    u.scale  = 1
+  )
+
+  if (scale) {
+    x <- scale(x, TRUE, TRUE)
+    u <- scale(u, TRUE, TRUE)
+
+    dataset$x <- as.vector(x)
+    dataset$u <- as.matrix(u)
+    dataset$x.center <- attr(x, "scaled:center")
+    dataset$x.scale  <- attr(x, "scaled:scale")
+    dataset$u.center <- attr(u, "scaled:center")
+    dataset$u.scale  <- attr(u, "scaled:scale")
+  }
+
+  dataset
+}
+```
+
 ## Methodology
 
-The goal of the experiment is to predict the closing price for a specific stock market share. We estimate the model parameters $\mat{\hat{\theta}}$ using all the information avaliable in the training dataset. For each day $h$ in the training set, we compute the likelihood of the input vector conditional on the trained parameters $p(\mat{u}_{t+h} | \mat{\hat{\theta}})$ and we locate the observation in the training set with the nearest likelihood,
+The goal of the experiment is to predict the closing price for a specific stock market share. We estimate the model parameters $\mat{\hat{\theta}}$ using all the information avaliable in the training dataset. We compute the likelihood of the last observation in the training set conditional on the trained parameters $p(\mat{x}_{t} | \mat{\hat{\theta}})$ and we locate the observation in the training set with the nearest likelihood,
 
 \[
-\mat{u}_{t+h}^* = \argmin_{\mat{u}_t} \ \left| p(\mat{u}_{t} | \mat{\hat{\theta}}) - p(\mat{u}_{t+h} | \mat{\hat{\theta}}) \right|.
+\mat{x}_{t^*} = \argmin_{s} \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{t-s} | \mat{\hat{\theta}}) \right|.
 % $\hat{\LL}_{t+h} = p(\mat{u}_{t+h} | \mat{\hat{\theta}})$
 % $\hat{\LL}_{t+h}^* = p(\mat{u}_{t+h}^* | \mat{\hat{\theta}})$ where 
 \]
 
-We compute the change in the closing price from the located time step to the next,
+We compute the change in the closing price from the located time step to the next one,
 
 \[
-\Delta_{t+h}^* = \mat{x}_{t+h}^* - \mat{x}_{t+h-1}^*},
+\Delta_{t^*} = \mat{x}_{t^*+1} - \mat{x}_{t^*},
 \]
 
 and build out forecast assuming that a similar pattern will repeat
 
 \[
-\hat{\mat{x}_{t+h}} = \hat{\mat{x}_{t+h-1}} + \Delta_{t+h}^*.
+\ mat{\hat{x}_{t+1}} = \ mat{\hat{x}_{t}} + \Delta_{t^*}.
 \]
+
+```{r}
+neighbouring_forecast <- function(x, oblik_t, h = 1, threshold = 0.05) {
+  if (!is.vector(x) || length(x) != dim(oblik_t)[2])
+    stop("The size of the observation vector and the width of the likelihood
+         array must be equal.")
+
+  n.samples <- dim(oblik_t)[1]
+  T.length  <- dim(oblik_t)[2]
+
+  find_closest <- function(target, candidates, threshold) {
+    ind <- which(abs(target - candidates) < abs(target) * threshold)
+
+    if (!length(ind))
+      ind <- which(abs(target - candidates) == min(abs(target - candidates)))
+
+    ind
+  }
+
+  forecast = vector("numeric", n.samples)
+  for (n in 1:n.samples) {
+    oblik_target <- oblik_t[n, T.length]
+    oblik_cand   <- oblik_t[n, 1:(T.length - h)]
+
+    closests <- find_closest(oblik_target, oblik_cand, threshold)
+    d        <- abs(oblik_target - oblik_t[n, closests])
+    w        <- exp(d)
+
+    forecast[n] <- x[T.length] + sum((x[closests + h] - x[closests]) * w) / sum(w)
+  }
+
+  forecast
+}
+```
+
+Although the authors state that one or more observations in the training dataset are selected, the paper includes no methodological details about the determination of the number, the selection and the combination of the neighbouring observations. In our implementation, we locate all the observation whose estimated likelihood value lays inside the interval that covers $\pm 5%$ of the target observation likelihood.
+
+\[
+\mat{x}_{t-s} : \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{t-s} | \mat{\hat{\theta}}) \right| < 0.05 \times p(\mat{x}_{t} | \mat{\hat{\theta}}).
+\]
+
+If the set is empty, we use the past observation with closest likelihood instead.
 
 The procedure is run independently for each stock.
 
-## Programming code
+## Southwest Airlines (LUV)
 
-```{r}
-library(quantmod)
-invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
-invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
+We present an in-depth analysis of one stock, LUV, to assess its strength and weakeness to fit the data and predict out of sample. We then present forecast error measures for all the four involved stocks.
 
-iohmmmix_estimate <- function(symbol, ...) {
-  prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = test.to)
+### Data exploration
 
-  # Estimation data
-  stan.model = 'stan/iohmm-mix.stan'
-  stan.data = list(
-    T = T.length,
-    K = K,
-    M = M,
-    L = L,
-    u_tm = as.array(u),
-    x_t = dataset$x
+```{r, warning = FALSE, fig.width = 7, fig.height = 6}
+i = 3 # LUV
+
+prices   <- getSymbols(symbols[i, ]$symbol,
+                       env  = NULL,
+                       from = symbols[i, ]$train.from,
+                       to   = symbols[i, ]$test.to,
+                       src  = "yahoo")
+T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
+
+dataset <- make_dataset(prices[1:T.length, ], TRUE)
+
+plot_inputoutput(x = dataset$x, u = dataset$u,
+                 x.label = symbols[i, ]$symbol,
+                 u.label = c("Open", "High", "Low", "Close"))
+```
+
+As we expected, OHLC prices follow an almost identical trend and are in turn highly correlated with the next day closing price. It is not surprising that raw prices are highly correlated.
+
+### Estimation
+
+We first create a. We attempt to ease convergence by setting up initial values for the component parameters that are approximated with k-means. Although nested k-means is not truthful to the model we replicate, we found that this simplification is useful for a starter point.
+
+```{r, echo = FALSE, warning = FALSE}
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+stan.model = '../iohmm-mix/stan/iohmm-hmix.stan'
+stan.data = list(
+  K = K,
+  L = L,
+  M = ncol(dataset$u),
+  T = length(dataset$x),
+  u_tm = as.array(dataset$u),
+  x_t = as.vector(dataset$x),
+  hyperparams = as.array(hyperparams)
+)
+
+# Chains are initialized close to k-means to speed up convergence
+init_fun <- function(stan.data) {
+  classif <- kmeans(stan.data$x_t, stan.data$K)
+  init.mu <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
+  init.sigma <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
+
+  for (k in 1:stan.data$K) {
+    inner.classif <- kmeans(stan.data$x_t[classif$cluster == k], stan.data$L)
+    inner.mu <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, mean))
+    inner.sigma <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, sd))
+    inner.order <- order(inner.mu)
+
+    init.mu[k, ] <- inner.mu[inner.order]
+    init.sigma[k, ] <- inner.sigma[inner.order]
+  }
+
+  list(
+    mu_k = t(init.mu),
+    sigma_k = t(init.sigma)
   )
-
-  stan.fit <- stan(file = stan.model,
-                   data = stan.data, verbose = T,
-                   iter = n.iter, warmup = n.warmup,
-                   thin = n.thin, chains = n.chains,
-                   cores = n.cores, seed = n.seed)
 }
 
-# i = 2
-# symbol <- symbols$symbol[i]
-# name <- symbols$name[i]
-# train.from <- symbols$train.from[i]
-# train.to <- symbols$train.to[i]
-# test.from <- symbols$test.from[i]
-# test.to <- symbols$test.to[i]
-# 
-# prices <- getSymbols(symbol, env = NULL, src = "google", from = train.from, to = train.to)
+stan.fit <- stan(file = stan.model,
+                 data = stan.data, verbose = T,
+                 iter = n.iter, warmup = n.warmup,
+                 thin = n.thin, chains = n.chains,
+                 cores = n.cores, seed = n.seed,
+                 init = function() {init_fun(stan.data)})
+
+n.samples = (n.iter - n.warmup) * n.chains
 
 ```
 
+### Convergence
+We ... Rhat, Neff, etc.
 
+```{r}
+options(digits = 4)
+summary(stan.fit,
+        pars = c('p_1k', 'w_km', 'lambda_kl', 'mu_kl', 's_kl'),
+        probs = c(0.50))$summary
+```
+
+We extract sampled parameters for later use.
+
+```{r}
+alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar_t  <- extract(stan.fit, pars = 'zstar_t')[[1]]
+hatx_t   <- extract(stan.fit, pars = 'hatx_t')[[1]]
+oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
+```
+
+### State probability
+Comments about the filtered and smoothed. Mention that states are persistents, which makes a lot of sense from the financial point of view.
+
+```{r, warning = FALSE, fig.width = 7, fig.height = 7}
+plot_stateprobability(alpha_tk, gamma_tk, 0.8)
+```
+
+The jointly most likely path
+
+```{r, fig.width = 7, fig.height = 3}
+plot_statepath(zstar_t)
+```
+
+### Fitted output
+
+The hidden states capture the variation in the mean, but the observation model is too simplistic. The idea is good tho and it is very well worth exploring IOHMM with better inputs and observation models. By seeing the fit, we don't expect accurate forecasts from this model.
+
+```{r, fig.width = 7, fig.height = 7}
+plot_outputfit(dataset$x, hatx_t, TRUE)
+```
+
+Modifying our implementation to allocate a better observation model would be trivial in most cases.
+
+### Fit summary
+
+```{r, fig.width = 7, fig.height = 7}
+plot_inputoutputprob(x = dataset$x, u = dataset$u,
+                     stateprob = alpha_tk, zstar = zstar_t,
+                     x.label = symbols[2, ]$symbol,
+                     u.label = c("Open", "High", "Low", "Close"),
+                     stateprob.label = bquote("Filtered probability" ~ p(z[t] ~ "|" ~ x[" " ~ 1:t])))
+```
+
+### Forecast
+
+The intervals only represent parameters uncertainty since the method proposed in the original work only allows for point forecasts ^[We should probably make a nice time series plot with intervals].
+
+```{r}
+fore <- neighbouring_forecast(x = dataset$x.unscaled, oblik_t = oblik_t,
+                      h = 1, threshold = 0.05)
+
+hist(fore, breaks = "FD")
+```
+
+### Discussion
+
+Strengths:
+
+* Hidden states seem to capture data patterns quite well.
+* Hidden states are persistent, which makes great sense.
+
+Weaknesses:
+
+* Observation model doesn't fit very well.
+* Convergence is hard because the model doesn't capture the dynamics of the data, so the logposterior behaves quite badly.
+
+## All stocks
+
+For walk forward we've implemented a reduced version of out sampler with only the features needed to compute the forecasts. The forecasting methodology proposed in the original work requires refitting the model each time a new observation comes. Stan doesn't have a natural way to update a previous fit model (just refit again). Since we run only one chain per stock, we can run many stocks and/or forecast steps at the same time.
+
+```{r, eval = FALSE}
+library(doParallel)
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+results <- foreach(
+    i = 3:nrow(symbols),
+    .packages = c("quantmod", "rstan")
+  ) %do% {
+    prices   <- getSymbols(symbols[i, ]$symbol,
+                           env  = NULL,
+                           from = symbols[i, ]$train.from,
+                           to   = symbols[i, ]$test.to,
+                           src  = "yahoo")
+    T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
+    S <- nrow(prices) - T.length # Number of walk forward forecasts (steps)
+
+    ret <- foreach(
+      s = 1:S,
+      .packages = c("quantmod", "rstan")
+    ) %dopar% {
+      dataset <- make_dataset(prices[1:(T.length + s), ], TRUE)
+
+      stan.model = 'iohmm-mix/stan/iohmm-hmix-lite.stan'
+      stan.data <- list(
+        K = K,
+        L = L,
+        M = ncol(dataset$u),
+        T = length(dataset$x),
+        u_tm = as.array(dataset$u),
+        x_t = as.vector(dataset$x),
+        hyperparams = as.array(hyperparams)
+      )
+
+      stan.fit <- stan(file = stan.model,
+                                data = stan.data, verbose = T,
+                                iter = n.iter, warmup = n.warmup,
+                                thin = n.thin, chains = n.chains,
+                                cores = n.cores, seed = n.seed,
+                                init = function() {init_fun(stan.data)})
+
+      oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
+
+      forecast <- neighbouring_forecast(x = dataset$x.unscaled,
+                                           oblik_t = oblik_t,
+                                           h = 1, threshold = 0.05)
+
+      ret.step <- list(
+        dataset = dataset,
+        stan.model = stan.model,
+        stan.data = stan.data,
+        stan.fit = stan.fit,
+        oblik_t = oblik_t,
+        forecast = forecast
+      )
+
+      return(ret.step)
+    } # s = 1, ..., S steps
+
+    ret
+  } # sym
+
+stopCluster(cl)
+```
 
 ---
 

@@ -571,6 +571,9 @@ n.seed = 9000
 * Fixed forecasting loops.
 * Left the computer walk forward the series during the night.
 
+### 20170622 Th 21 to WIP ###
+* Working on the paper.
+
 ---
 
 # Notes

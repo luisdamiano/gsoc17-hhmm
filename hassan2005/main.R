@@ -1,8 +1,8 @@
 library(quantmod)
 library(rstan)
 library(shinystan)
-source('common/R/data.R')
-source('common/R/forecast.R')
+source('hassan2005/R/data.R')
+source('hassan2005/R/forecast.R')
 source('common/R/math.R')
 source('common/R/plots.R')
 
@@ -10,18 +10,18 @@ source('common/R/plots.R')
 
 # Data
 symbols <- data.frame(
-  symbol    = c("NYSE:DAL", "NYSE:DAL", "NYSE:LUV", "LON:RYA"),
+  symbol    = c("NYSE:DAL", "DAL", "LUV", "RYA.L"),
   name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
   train.from = c("2002-09-17", "2002-12-27", "2002-12-18", "2003-05-06"),
   train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
   test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
   test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 
 # Model - IOHMM
 K = 4
 L = 3
-S = 1 # Number of walk forward forecasts (steps)
 
 # Model - Hyperparameters
 hyperparams <- c(0, 5, 10, 0, 5, 0, 10);
@@ -42,13 +42,15 @@ n.seed = 9000
 
 # Data fetching and pre-processing ----------------------------------------
 i = 3
-prices   <- getSymbols('LUV', NULL,
-                     from = symbols[i, ]$train.from,
-                     to   = symbols[i, ]$test.to,
-                     src  = "yahoo")
 
-dataset  <- make_dataset(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
-T.length <- length(dataset$x)
+prices   <- getSymbols(symbols[i, ]$symbol,
+                       env  = NULL,
+                       from = symbols[i, ]$train.from,
+                       to   = symbols[i, ]$test.to,
+                       src  = "yahoo")
+T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
+
+dataset <- make_dataset(prices[1:T.length, ], TRUE)
 
 # Data exploration --------------------------------------------------------
 plot_inputoutput(x = dataset$x, u = dataset$u,
@@ -96,7 +98,8 @@ stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
                  iter = n.iter, warmup = n.warmup,
                  thin = n.thin, chains = n.chains,
-                 cores = n.cores, seed = n.seed, init = init_fun(stan.data))
+                 cores = n.cores, seed = n.seed,
+                 init = function() {init_fun(stan.data)})
 
 n.samples = (n.iter - n.warmup) * n.chains
 
@@ -152,33 +155,4 @@ plot_inputoutputprob(x = dataset$x, u = dataset$u,
 # Forecasting -------------------------------------------------------------
 neighbouring_forecast(x = dataset$x.unscaled, oblik_t = oblik_t,
                       h = 1, threshold = 0.05)
-
-# Walk forward forecasting ------------------------------------------------
-forecast <- vector(numeric, S)
-for (s in 1:S) {
-  forecast.dataset  <- make_dataset(prices[1:(T.length + s), ], TRUE)
-
-  forecast.stan.model = 'iohmm-mix/stan/iohmm-hmix-lite.stan'
-  forecast.stan.data = list(
-    K = K,
-    L = L,
-    M = ncol(forecast.dataset$u),
-    T = length(forecast.dataset$x),
-    u_tm = as.array(forecast.dataset$u),
-    x_t = as.vector(forecast.dataset$x),
-    hyperparams = as.array(hyperparams)
-  )
-
-  forecast.stan.fit <- stan(file = forecast.stan.model,
-                            data = forecast.stan.data, verbose = T,
-                            iter = n.iter, warmup = n.warmup,
-                            thin = n.thin, chains = n.chains,
-                            cores = n.cores, seed = n.seed,
-                            init = function() {init_fun(forecast.stan.data)})
-
-  forecast[s] <- neighbouring_forecast(x = forecast.dataset$x.unscaled,
-                                       oblik_t = oblik_t,
-                                       h = 1, threshold = 0.05)
-}
-
 

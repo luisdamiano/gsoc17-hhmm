@@ -1,4 +1,5 @@
 # Data adquisition and management functions
+library(quantmod)
 invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
 invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
 

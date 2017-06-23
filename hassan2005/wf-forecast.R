@@ -17,6 +17,7 @@ symbols <- data.frame(
   train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
   test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
   test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 
 # Model - IOHMM
@@ -65,7 +66,6 @@ results <- foreach(
                            src  = "yahoo")
     T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
     S <- nrow(prices) - T.length # Number of walk forward forecasts (steps)
-    S <- 5
 
     # forecast  <- matrix(NA, nrow = n.samples, ncol = S)
     # for (s in 1:S) {
