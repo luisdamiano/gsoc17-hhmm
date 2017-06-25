@@ -10,13 +10,13 @@ source('common/R/plots.R')
 
 # Data
 symbols <- data.frame(
-  symbol    = c("NYSE:DAL", "DAL", "LUV", "RYA.L"),
-  name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
-  train.from = c("2002-09-17", "2002-12-27", "2002-12-18", "2003-05-06"),
-  train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
-  test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
-  test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
-  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
+  symbol    = c("LUV", "RYA.L"),
+  name      = c("Southwest Airlines Co", "Ryanair Holdings Plc"),
+  train.from = c("2002-12-18", "2003-05-06"),
+  train.to   = c("2004-07-23", "2004-12-06"),
+  test.from  = c("2004-07-24", "2004-12-07"),
+  test.to    = c("2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 
 # Model - IOHMM
@@ -24,7 +24,7 @@ K = 4
 L = 3
 
 # Model - Hyperparameters
-hyperparams <- c(0, 5, 10, 0, 5, 0, 10);
+hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
 
 # Markov Chain Monte Carlo
 n.iter = 400
@@ -41,16 +41,14 @@ n.seed = 9000
 # ------------------------------------------------------------------------
 
 # Data fetching and pre-processing ----------------------------------------
-i = 3
-
+i = 1 # LUV
 prices   <- getSymbols(symbols[i, ]$symbol,
                        env  = NULL,
                        from = symbols[i, ]$train.from,
                        to   = symbols[i, ]$test.to,
-                       src  = "yahoo")
+                       src  = symbols[i, ]$src)
 T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
-
-dataset <- make_dataset(prices[1:T.length, ], TRUE)
+dataset  <- make_dataset(prices[1:T.length, ], TRUE)
 
 # Data exploration --------------------------------------------------------
 plot_inputoutput(x = dataset$x, u = dataset$u,
@@ -59,7 +57,6 @@ plot_inputoutput(x = dataset$x, u = dataset$u,
 
 # Model estimation --------------------------------------------------------
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
 
 stan.model = 'iohmm-mix/stan/iohmm-hmix.stan'
 stan.data = list(
@@ -72,16 +69,17 @@ stan.data = list(
   hyperparams = as.array(hyperparams)
 )
 
-# Chains are initialized close to k-means to speed up convergence
+# Chains are initialized close to k-means to help convergence
 init_fun <- function(stan.data) {
-  classif <- kmeans(stan.data$x_t, stan.data$K)
+  outer.classif <- kmeans(stan.data$x_t, stan.data$K)
+  outer.cluster <- match(outer.classif$cluster, order(outer.classif$centers))
+
   init.mu <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
   init.sigma <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
-
   for (k in 1:stan.data$K) {
-    inner.classif <- kmeans(stan.data$x_t[classif$cluster == k], stan.data$L)
-    inner.mu <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, mean))
-    inner.sigma <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, sd))
+    inner.classif <- kmeans(stan.data$x_t[outer.cluster == k], stan.data$L)
+    inner.mu <- as.vector(by(stan.data$x_t[outer.cluster == k], inner.classif$cluster, mean))
+    inner.sigma <- as.vector(by(stan.data$x_t[outer.cluster == k], inner.classif$cluster, sd))
     inner.order <- order(inner.mu)
 
     init.mu[k, ] <- inner.mu[inner.order]

@@ -321,7 +321,7 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
 plot_statepath <- function(zstar, z = NULL) {
   K <- length(unique(as.vector(zstar)))
   t <- 1:dim(zstar)[2]
-  zcol <- if (is.null(z)) 1 else z
+  zcol <- if (is.null(z)) 1:K else z
   opar <- par(no.readonly = TRUE)
 
   layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
@@ -347,14 +347,25 @@ plot_statepath <- function(zstar, z = NULL) {
   # 4. Legend
   par(mai = c(0, 0, 0, 0))
   plot.new()
-  legend(x = "center",
-         legend = c('Jointly most probable path (Viterbi)', paste('Actual ', 1:K)),
-         pch = c(NA, rep(21, K)),
-         lwd = c(2, rep(NA, K)),
-         col = c('lightgray', 1:K),
-         pt.bg = c('lightgray', 1:K),
-         bty = 'n', cex = 0.7,
-         horiz = TRUE)
+
+  if (!is.null(z)) {
+    legend(x = "center",
+           legend = c('Most probable path', paste('Actual ', 1:K)),
+           pch = c(NA, rep(21, K)),
+           lwd = c(2, rep(NA, K)),
+           col = c('lightgray', 1:K),
+           pt.bg = c('lightgray', 1:K),
+           bty = 'n', cex = 0.7,
+           horiz = TRUE)
+  } else {
+    legend(x = "center",
+           legend = c('Jointly most probable path (Viterbi)'),
+           lwd = 2,
+           col = c('lightgray'),
+           pt.bg = c('lightgray'),
+           bty = 'n', cex = 0.7,
+           horiz = TRUE)
+  }
   par(opar)
 }
 
@@ -371,16 +382,15 @@ plot_statepath <- function(zstar, z = NULL) {
 #' @export
 #'
 #' @examples plot_outputfit(x, xhat, interval, z)
-plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
+plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL, K = NULL) {
+  K <- if (is.null(K)) 1 else K
   t <- 1:length(x)
   qs <- c((1 - interval)/2, 0.50, 1 - (1 - interval)/2)
   xhat.qs <- apply(xhat, c(2),
                 function(r) {
                   quantile(r, qs) })
-  zcol <- if (is.null(z)) 1 else z
+  zcol <- if (is.null(z)) 1:K else z
   opar <- par(no.readonly = TRUE)
-
-  # layout(matrix(c(1, 1, 2), nrow = 1, ncol = 3))
 
   # 1. Observation and fit sequence
   plot(x = t, y = x,
@@ -399,17 +409,11 @@ plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL) {
          col = 20, bg = 20)
 
   legend(x = "bottom",
-         legend = c(bquote(.(paste("Observed (state ", 1:K, ")", sep = ''))), "Fit"),
-         lwd = 3, col = c(sort(unique(zcol)), 20), horiz = TRUE, bty = 'n')
-#
-#   # 2. Observation and fit cross-section
-#   plot_intervals(x, xhat.qs, z, interval,
-#                  ylab = bquote("Fitted output" ~ hat(x)),
-#                  xlab = bquote("Observed output" ~ x))
+         legend = c(bquote("Observed", .(paste("Fit (state ", 1:K, ")", sep = '')))),
+         lwd = 3, col = c("lightgray", sort(unique(zcol))), horiz = TRUE, bty = 'n')
 
   par(opar)
 }
-
 
 #' Plots the sequence of output, input, state probability and a the Jointly most
 #' probable path. It provides an intuitive way to understand the relationship

@@ -143,7 +143,7 @@ source('../common/R/plots.R')
 We arrange the code to generate simulated data, as explained below, in an auxiliary file.
 
 ```{r}
-source('../iohmm-sim/R/iohmm-sim.R')
+source('../iohmm-reg/R/iohmm-sim.R')
 ```
 
 ## Generative model
@@ -151,7 +151,7 @@ source('../iohmm-sim/R/iohmm-sim.R')
 We first write an R function for our generative model. The arguments are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, a matrix wit the regressor of the multinomial regression that rules the hidden states dynamics $\mat{w}$, the name of a function drawing samples from the observation distribution and its parameters.
 
 ```{r}
-iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, s) {
+iohmm_sim <- function(T, K, u, w, p.init, obs.model, obs.pars) {
   m <- ncol(u)
 
   if (dim(u)[1] != T)
@@ -159,9 +159,6 @@ iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, s) {
 
   if (any(dim(w) != c(K, m)))
     stop("The transition weight matrix must be of size Kxm, where m is the size of the input vector.")
-
-  if (any(dim(b) != c(K, m)))
-    stop("The regressors matrix must be of size Kxm, where m is the size of the input vector.")
 
   if (length(p.init) != K)
     stop("The vector p.init must have length K.")
@@ -176,7 +173,7 @@ iohmm_sim <- function(T, K, u, w, p.init, obs.model, b, s) {
     z[t] <- sample(x = 1:K, size = 1, replace = FALSE, prob = p.mat[t, ])
   }
 
-  x <- do.call(obs.model, list(u, z, b, s))
+  x <- do.call(obs.model, c(list(u = u, z = z), obs.pars))
 
   list(
     u = u,
@@ -283,7 +280,7 @@ u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
 if (u.intercept)
   u[, 1] = 1
 
-dataset <- iohmm_sim(T.length, K, u, w, p1, obs.model, b, s)
+dataset <- iohmm_sim(T.length, K, u, w, p1, obsmodel_reg, list(b = b, s = s))
 ```
 
 ```{r, fig.height = 5, fig.width = 7.2, out.width="\\textwidth"}
@@ -427,7 +424,6 @@ The most probably hidden state path, computed by the Viterbi algorithm, . Finall
 plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 ```
 
-
 All in all, we are confindent that the Stan code works as specified and we find model calibration satisfactory.
 
 ---
@@ -437,7 +433,7 @@ All in all, we are confindent that the Stan code works as specified and we find 
 ## Preamble
 We first load the packages and source auxiliary functions.
 
-```{r, echo = FALSE, warning= FALSE}
+```{r, echo = FALSE, warning = FALSE}
 library(quantmod)
 library(rstan)
 library(shinystan)
@@ -466,32 +462,34 @@ L = 3
 
 ## The sampler
 
-We use Stan's implementation of Hamiltonian Monte Carlo for a fully bayesian estimation of the parameters. We set up the parameters for the Markov Chain Monte Carlo sampler below^[**This is the place where we should explain that we decided to go hierarchical with the component mean to improve model performance**.].
+We use Stan's Hamiltonian Monte Carlo to run a fully bayesian estimation of the model parameters. Additionally, we compute many hidden quantities, including the forward probability, the future likelihood, the jointly most likely path, transition probabilities and samples from the hidden state distribution. To this end, we write our own implementation of the forward filter, the forwards-backwards filter and the Viterbi decoding algorithm. We acknowledge the authors of the Stan Manual [@team2017stan] for the numerous examples, some of which served as a starting point for our final code.
+
+We define the following parameters for the Markov Chain Monte Carlo. We run one chain to avoid between-chain label switching.
 
 ```{r}
-hyperparams <- c(0, 5, 10, 0, 5, 0, 10);
+hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
 
 n.iter = 400
 n.warmup = 200
 n.chains = 1
 n.cores = 1
 n.thin = 1
-n.seed = 9000
+n.seed = 5000
 ```
 
 ## Dataset & data transformation
 
-We use daily OHLC prices for the stocks and time spans listed in the table below, which are identical to the original work. The data is downloaded from Google Finance via Quantmod.
+We use daily OHLC prices for the stocks and time spans listed in the table below, which are identical to the original work. The data is downloaded from Yahoo Finance via Quantmod. The original work includes the analysis of two stocks that are currently delisted. Since public sources such as Yahoo and Google Finance, we do not  do not include this data
 
 ```{r}
 symbols <- data.frame(
-  symbol    = c("NYSE:DAL", "DAL", "LUV", "RYA.L"),
-  name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
-  train.from = c("2002-09-17", "2002-12-27", "2002-12-18", "2003-05-06"),
-  train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
-  test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
-  test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
-  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
+  symbol    = c("LUV", "RYA.L"),
+  name      = c("Southwest Airlines Co", "Ryanair Holdings Plc"),
+  train.from = c("2002-12-18", "2003-05-06"),
+  train.to   = c("2004-07-23", "2004-12-06"),
+  test.from  = c("2004-07-24", "2004-12-07"),
+  test.to    = c("2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 ```
 
@@ -616,15 +614,13 @@ We present an in-depth analysis of one stock, LUV, to assess its strength and we
 ### Data exploration
 
 ```{r, warning = FALSE, fig.width = 7, fig.height = 6}
-i = 3 # LUV
-
+i = 1 # LUV
 prices   <- getSymbols(symbols[i, ]$symbol,
                        env  = NULL,
                        from = symbols[i, ]$train.from,
                        to   = symbols[i, ]$test.to,
-                       src  = "yahoo")
+                       src  = symbols[i, ]$src)
 T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
-
 dataset <- make_dataset(prices[1:T.length, ], TRUE)
 
 plot_inputoutput(x = dataset$x, u = dataset$u,
@@ -640,7 +636,6 @@ We first create a. We attempt to ease convergence by setting up initial values f
 
 ```{r, echo = FALSE, warning = FALSE}
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
 
 stan.model = '../iohmm-mix/stan/iohmm-hmix.stan'
 stan.data = list(
@@ -653,27 +648,8 @@ stan.data = list(
   hyperparams = as.array(hyperparams)
 )
 
-# Chains are initialized close to k-means to speed up convergence
-init_fun <- function(stan.data) {
-  classif <- kmeans(stan.data$x_t, stan.data$K)
-  init.mu <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
-  init.sigma <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
-
-  for (k in 1:stan.data$K) {
-    inner.classif <- kmeans(stan.data$x_t[classif$cluster == k], stan.data$L)
-    inner.mu <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, mean))
-    inner.sigma <- as.vector(by(stan.data$x_t[classif$cluster == k], inner.classif$cluster, sd))
-    inner.order <- order(inner.mu)
-
-    init.mu[k, ] <- inner.mu[inner.order]
-    init.sigma[k, ] <- inner.sigma[inner.order]
-  }
-
-  list(
-    mu_k = t(init.mu),
-    sigma_k = t(init.sigma)
-  )
-}
+# Chains are initialized close to k-means to help convergence
+source('../iohmm-mix/R/iohmm-mix-init.R')
 
 stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
@@ -683,8 +659,9 @@ stan.fit <- stan(file = stan.model,
                  init = function() {init_fun(stan.data)})
 
 n.samples = (n.iter - n.warmup) * n.chains
-
 ```
+
+As suggested by the warning message and the extended guidelines in Stan website, we do not.
 
 ### Convergence
 We ... Rhat, Neff, etc.
@@ -724,7 +701,7 @@ plot_statepath(zstar_t)
 The hidden states capture the variation in the mean, but the observation model is too simplistic. The idea is good tho and it is very well worth exploring IOHMM with better inputs and observation models. By seeing the fit, we don't expect accurate forecasts from this model.
 
 ```{r, fig.width = 7, fig.height = 7}
-plot_outputfit(dataset$x, hatx_t, TRUE)
+plot_outputfit(dataset$x, hatx_t, K = K)
 ```
 
 Modifying our implementation to allocate a better observation model would be trivial in most cases.
@@ -767,70 +744,19 @@ Weaknesses:
 For walk forward we've implemented a reduced version of out sampler with only the features needed to compute the forecasts. The forecasting methodology proposed in the original work requires refitting the model each time a new observation comes. Stan doesn't have a natural way to update a previous fit model (just refit again). Since we run only one chain per stock, we can run many stocks and/or forecast steps at the same time.
 
 ```{r, eval = FALSE}
-library(doParallel)
-
-cl <- makeCluster(4)
-registerDoParallel(cl)
-
-results <- foreach(
-    i = 3:nrow(symbols),
-    .packages = c("quantmod", "rstan")
-  ) %do% {
-    prices   <- getSymbols(symbols[i, ]$symbol,
-                           env  = NULL,
-                           from = symbols[i, ]$train.from,
-                           to   = symbols[i, ]$test.to,
-                           src  = "yahoo")
-    T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
-    S <- nrow(prices) - T.length # Number of walk forward forecasts (steps)
-
-    ret <- foreach(
-      s = 1:S,
-      .packages = c("quantmod", "rstan")
-    ) %dopar% {
-      dataset <- make_dataset(prices[1:(T.length + s), ], TRUE)
-
-      stan.model = 'iohmm-mix/stan/iohmm-hmix-lite.stan'
-      stan.data <- list(
-        K = K,
-        L = L,
-        M = ncol(dataset$u),
-        T = length(dataset$x),
-        u_tm = as.array(dataset$u),
-        x_t = as.vector(dataset$x),
-        hyperparams = as.array(hyperparams)
-      )
-
-      stan.fit <- stan(file = stan.model,
-                                data = stan.data, verbose = T,
-                                iter = n.iter, warmup = n.warmup,
-                                thin = n.thin, chains = n.chains,
-                                cores = n.cores, seed = n.seed,
-                                init = function() {init_fun(stan.data)})
-
-      oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
-
-      forecast <- neighbouring_forecast(x = dataset$x.unscaled,
-                                           oblik_t = oblik_t,
-                                           h = 1, threshold = 0.05)
-
-      ret.step <- list(
-        dataset = dataset,
-        stan.model = stan.model,
-        stan.data = stan.data,
-        stan.fit = stan.fit,
-        oblik_t = oblik_t,
-        forecast = forecast
-      )
-
-      return(ret.step)
-    } # s = 1, ..., S steps
-
-    ret
-  } # sym
-
-stopCluster(cl)
+# ...
 ```
+
+## Discussion
+
+In a sense, this model could be interpreted as $K \times L$ means that switch depending on previous price levels. We thus expected a highly multinomial, ill-behaved log-posterior that aggraviate the frequent combinatorial non-identifiabilities inherent to mixture models. 
+
+As our first naive and mostly unrestricted implementation could not sample efficiently from the log-posterior, we decided to add more information in the form of prior belief and additional model structure.
+
+Even after all the improvements, we only arrive at a just about satisfactory yet imperfect answer. We are confident that our implementation works as intended since we tested the model calibration by simulation, some computational issues arise when the sampler is fed with real data however. More specifically, we find that sampling efficiency becomes extremely low for some parameters of the observation model. 
+
+In rasemblance to the folk theorem^[See [The folk theorem of statistical computing
+](http://andrewgelman.com/2008/05/13/the_folk_theore/)], which informally states that computational problems may be originated in model misspecification, we find that the output model proposed by the authors is unrepresentative of the features observed in the data.
 
 ---
 

@@ -11,13 +11,13 @@ source('iohmm-mix/R/iohmm-mix-init.R')
 
 # Data
 symbols <- data.frame(
-  symbol    = c("NYSE:DAL", "DAL", "LUV", "RYA.L"),
-  name      = c("BA", "Delta Air Lines, Inc.", "Southwest Airlines Co", "Ryanair Holdings Plc"),
-  train.from = c("2002-09-17", "2002-12-27", "2002-12-18", "2003-05-06"),
-  train.to   = c("2004-09-10", "2004-08-31", "2004-07-23", "2004-12-06"),
-  test.from  = c("2004-09-11", "2004-09-01", "2004-07-24", "2004-12-07"),
-  test.to    = c("2005-01-20", "2004-11-17", "2004-11-17", "2005-03-17"),
-  src        = c("yahoo", "yahoo", "yahoo", "yahoo"),
+  symbol    = c("LUV", "RYA.L"),
+  name      = c("Southwest Airlines Co", "Ryanair Holdings Plc"),
+  train.from = c("2002-12-18", "2003-05-06"),
+  train.to   = c("2004-07-23", "2004-12-06"),
+  test.from  = c("2004-07-24", "2004-12-07"),
+  test.to    = c("2004-11-17", "2005-03-17"),
+  src        = c("yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 
 # Model - IOHMM
@@ -49,13 +49,18 @@ cl <- makeCluster(4)
 registerDoParallel(cl)
 
 # Data fetching and pre-processing ----------------------------------------
-# results <- vector(mode = "list", length = nrow(symbols))
-# for (i in 3:nrow(symbols)) {
 results <- foreach(
     i = 3:nrow(symbols),
     .packages = c("quantmod", "rstan")
   ) %do% {
-    cache.symbolfile <- file.path(cache.dir, paste0(symbols[i, ]$symbol, ".RDS"))
+    cache.symbolfile <- file.path(cache.dir,
+                                  paste0(
+                                    symbols[i, ]$symbol,
+                                    symbols[i, ]$train.from,
+                                    symbols[i, ]$train.to,
+                                    symbols[i, ]$src,
+                                    ".RDS"))
+
     if (!is.null(cache.dir) && file.exists(file.path(cache.symbolfile)))
       return(readRDS(cache.symbolfile))
 
@@ -63,17 +68,23 @@ results <- foreach(
                            env  = NULL,
                            from = symbols[i, ]$train.from,
                            to   = symbols[i, ]$test.to,
-                           src  = "yahoo")
+                           src  = symbols[i, ]$src)
     T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
     S <- nrow(prices) - T.length # Number of walk forward forecasts (steps)
 
-    # forecast  <- matrix(NA, nrow = n.samples, ncol = S)
-    # for (s in 1:S) {
     ret <- foreach(
       s = 1:S,
       .packages = c("quantmod", "rstan")
     ) %dopar% {
-      cache.stepfile <- file.path(cache.dir, paste0(symbols[i, ]$symbol, "-step", s, ".RDS"))
+      cache.stepfile <- file.path(cache.dir,
+                                  paste0(
+                                    symbols[i, ]$symbol,
+                                    symbols[i, ]$train.from,
+                                    symbols[i, ]$train.to,
+                                    symbols[i, ]$src,
+                                    "-step", s,
+                                    ".RDS"))
+
       if (!is.null(cache.dir) && file.exists(file.path(cache.stepfile)))
         return(readRDS(cache.stepfile))
 
@@ -100,8 +111,8 @@ results <- foreach(
       oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
 
       forecast <- neighbouring_forecast(x = dataset$x.unscaled,
-                                           oblik_t = oblik_t,
-                                           h = 1, threshold = 0.05)
+                                        oblik_t = oblik_t,
+                                        h = 1, threshold = 0.05)
 
       ret.step <- list(
         dataset = dataset,
@@ -122,12 +133,6 @@ results <- foreach(
       return(saveRDS(ret, cache.symbolfile))
 
     ret
-  } # sym
+  } # symbols
 
 stopCluster(cl)
-
-fore <- lapply(results, function(r) {
-  sapply(1:length(r), function(i){
-    r[[i]]$forecast
-  })
-})
