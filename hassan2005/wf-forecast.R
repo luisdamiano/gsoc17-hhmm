@@ -25,7 +25,7 @@ K = 4
 L = 3
 
 # Model - Hyperparameters
-hyperparams <- c(0, 5, 10, 0, 5, 0, 10);
+hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
 
 # Markov Chain Monte Carlo
 n.iter = 400
@@ -36,21 +36,20 @@ n.thin = 1
 n.seed = 9000
 
 # Naive cache? NULL = NO
-cache.dir = "hassan2005/stan_cache/"
+cache.dir = "hassan2005/fore_cache/"
 
 # ------------------------------------------------------------------------
 # An automated rolling window forecasting process.
 # ------------------------------------------------------------------------
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
 n.samples = (n.iter - n.warmup) * n.chains
 
-cl <- makeCluster(4)
+cl <- makeCluster(3)
 registerDoParallel(cl)
 
 # Data fetching and pre-processing ----------------------------------------
 results <- foreach(
-    i = 3:nrow(symbols),
+    i = 1:nrow(symbols),
     .packages = c("quantmod", "rstan")
   ) %do% {
     cache.symbolfile <- file.path(cache.dir,

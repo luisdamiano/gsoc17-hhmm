@@ -7,7 +7,7 @@ data {
   real x_t[T];                      // output (scalar so far)
   vector[M] u_tm[T];                // input vectors
 
-  real hyperparams[7];              // hyperparameters
+  real hyperparams[9];              // hyperparameters
 }
 
 parameters {
@@ -86,13 +86,10 @@ model {
     w_km[j] ~ normal(hyperparams[1], hyperparams[2]);
     mu_kl[j] ~ normal(hypermu_k[j], hyperparams[3]);
     s_kl[j] ~ normal(hyperparams[4], hyperparams[5]);
+    lambda_kl[j] ~ beta(hyperparams[6], hyperparams[7]);
   }
 
-  hypermu_k ~ normal(hyperparams[6], hyperparams[7]);
+  hypermu_k ~ normal(hyperparams[8], hyperparams[9]);
 
-  target += log_sum_exp(unalpha_tk[T]);
-}
-
-generated quantities {
-
+  target += log_sum_exp(unalpha_tk[T]); // Note: update based only on last unalpha_tk
 }

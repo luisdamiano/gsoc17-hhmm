@@ -200,14 +200,14 @@ plot_inputoutput <- function(x, u, z = NULL, x.label = NULL, u.label = NULL) {
 #' @export
 #'
 #' @examples plot_inputprob(u, p.mat, z)
-plot_inputprob <- function(u, p.mat, z = NULL) {
+plot_inputprob <- function(u, p.mat, z = NULL, u.label = NULL) {
   if (!is.matrix(u) || !is.matrix(p.mat) || dim(u)[1] != dim(p.mat)[1])
     stop("The sequence of inputs must be a matrix with same number of rows as
          the probability matrix.")
 
   M <- ncol(u)
   K <- ncol(p.mat)
-  zcol <- if (is.null(z)) 1 else z
+  u.label <- if (is.null(u.label)) bquote(.(paste("\"Input\" ~ u[", 1:M, "]", sep = ""))) else bquote(.(paste("u[", 1:M, "] ", u.label, sep = "")))
   opar <- par(no.readonly = TRUE)
 
   layout(matrix(
@@ -217,12 +217,13 @@ plot_inputprob <- function(u, p.mat, z = NULL) {
 
   for (k in 1:K) {
     for (m in 1:M) {
+      zcol <- if (is.null(z)) k else z
       plot(x = u[, m], y = p.mat[, k],
            ylim = c(0, 1),
            pch = 21, cex = 0.7,
            col = zcol, bg = zcol,
            ylab = bquote("Prob of state" ~ .(k) ~ p(z[t] == .(k))),
-           xlab = bquote("Input" ~ u[.(m)]))
+           xlab = u.label[m])
     }
   }
 
@@ -230,7 +231,7 @@ plot_inputprob <- function(u, p.mat, z = NULL) {
   plot.new()
   legend(x = "center",
          legend = bquote(.(paste("Hidden state", 1:K))),
-         lwd = 3, col = sort(unique(zcol)), horiz = TRUE, bty = 'n')
+         lwd = 3, col = 1:K, horiz = TRUE, bty = 'n')
   mtext("Input-State probability relationship",
         side = 3, line = -2, outer = TRUE)
   par(opar)
@@ -321,17 +322,19 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
 plot_statepath <- function(zstar, z = NULL) {
   K <- length(unique(as.vector(zstar)))
   t <- 1:dim(zstar)[2]
-  zcol <- if (is.null(z)) 1:K else z
   opar <- par(no.readonly = TRUE)
+
+  zstar.med <- apply(zstar, 2, median)
+  zcol <- if (is.null(z)) (1:K)[zstar.med] else z
 
   layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
 
   plot(
     x = t,
-    y = apply(zstar, 2, median),
+    y = zstar.med,
     xlab = bquote(t),
-    ylab = bquote(z),
-    main = bquote("Sequence of states"),
+    ylab = bquote(hat(z)[t]),
+    main = bquote("Sequence of hidden states"),
     ylim = c(1, K),
     type = 'l', col = 'gray')
 
@@ -342,30 +345,24 @@ plot_statepath <- function(zstar, z = NULL) {
            hidden states (zstar).")
     points(x = t, y = z,
            pch = 21, bg = zcol, col = zcol, cex = 0.7)
+  } else {
+    points(x = t, y = zstar.med,
+           pch = 21, bg = zcol, col = zcol, cex = 0.7)
   }
 
   # 4. Legend
   par(mai = c(0, 0, 0, 0))
   plot.new()
 
-  if (!is.null(z)) {
-    legend(x = "center",
-           legend = c('Most probable path', paste('Actual ', 1:K)),
-           pch = c(NA, rep(21, K)),
-           lwd = c(2, rep(NA, K)),
-           col = c('lightgray', 1:K),
-           pt.bg = c('lightgray', 1:K),
-           bty = 'n', cex = 0.7,
-           horiz = TRUE)
-  } else {
-    legend(x = "center",
-           legend = c('Jointly most probable path (Viterbi)'),
-           lwd = 2,
-           col = c('lightgray'),
-           pt.bg = c('lightgray'),
-           bty = 'n', cex = 0.7,
-           horiz = TRUE)
-  }
+  legend(x = "center",
+         legend = c('Most probable path', paste('State', 1:K)),
+         pch = c(NA, rep(21, K)),
+         lwd = c(2, rep(NA, K)),
+         col = c('lightgray', 1:K),
+         pt.bg = c('lightgray', 1:K),
+         bty = 'n', cex = 0.7,
+         horiz = TRUE)
+
   par(opar)
 }
 
@@ -385,32 +382,29 @@ plot_statepath <- function(zstar, z = NULL) {
 plot_outputfit <- function(x, xhat, interval = 0.8, z = NULL, K = NULL) {
   K <- if (is.null(K)) 1 else K
   t <- 1:length(x)
-  qs <- c((1 - interval)/2, 0.50, 1 - (1 - interval)/2)
-  xhat.qs <- apply(xhat, c(2),
-                function(r) {
-                  quantile(r, qs) })
   zcol <- if (is.null(z)) 1:K else z
   opar <- par(no.readonly = TRUE)
+
+  layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
 
   # 1. Observation and fit sequence
   plot(x = t, y = x,
        type = 'l', col = 'lightgray',
        ylab = bquote("Output" ~ x), xlab = bquote("Time" ~ t))
 
-  points(x = t, y = x,
+  points(x = t, y = apply(xhat, 2, median),
          pch = 21, cex = 0.7,
          col = zcol, bg = zcol)
 
-  lines(x = t, y = xhat.qs[2, ],
-         col = 20, bg = 20)
+  # 2. Legend
+  par(mai = c(0, 0, 0, 0))
+  plot.new()
 
-  points(x = t, y = xhat.qs[2, ],
-         pch = 21, cex = 0.7,
-         col = 20, bg = 20)
-
-  legend(x = "bottom",
-         legend = c(bquote("Observed", .(paste("Fit (state ", 1:K, ")", sep = '')))),
-         lwd = 3, col = c("lightgray", sort(unique(zcol))), horiz = TRUE, bty = 'n')
+  legend(x = "center",
+         legend = c(bquote("Observed"),
+                    bquote(.(paste("Fit (state ", 1:K, ")", sep = '')))),
+         lwd = 3, col = c("lightgray", 1:K),
+         horiz = TRUE, bty = 'n', cex = 0.7)
 
   par(opar)
 }
@@ -506,7 +500,7 @@ plot_inputoutputprob <- function(x, u, stateprob, zstar,
     y = zstar.med,
     xaxt = 'n', yaxt = 'n',
     xlab = bquote("Time" ~ t),
-    ylab = bquote("Jointly most probable path (Viterbi)"),
+    ylab = bquote("Most probable path"),
     ylim = c(1, K),
     type = 'l', col = 'gray')
 

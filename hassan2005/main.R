@@ -5,6 +5,7 @@ source('hassan2005/R/data.R')
 source('hassan2005/R/forecast.R')
 source('common/R/math.R')
 source('common/R/plots.R')
+source('iohmm-mix/R/iohmm-mix-init.R')
 
 # Set up ------------------------------------------------------------------
 
@@ -69,29 +70,6 @@ stan.data = list(
   hyperparams = as.array(hyperparams)
 )
 
-# Chains are initialized close to k-means to help convergence
-init_fun <- function(stan.data) {
-  outer.classif <- kmeans(stan.data$x_t, stan.data$K)
-  outer.cluster <- match(outer.classif$cluster, order(outer.classif$centers))
-
-  init.mu <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
-  init.sigma <- matrix(0, nrow = stan.data$K, ncol = stan.data$L)
-  for (k in 1:stan.data$K) {
-    inner.classif <- kmeans(stan.data$x_t[outer.cluster == k], stan.data$L)
-    inner.mu <- as.vector(by(stan.data$x_t[outer.cluster == k], inner.classif$cluster, mean))
-    inner.sigma <- as.vector(by(stan.data$x_t[outer.cluster == k], inner.classif$cluster, sd))
-    inner.order <- order(inner.mu)
-
-    init.mu[k, ] <- inner.mu[inner.order]
-    init.sigma[k, ] <- inner.sigma[inner.order]
-  }
-
-  list(
-    mu_k = t(init.mu),
-    sigma_k = t(init.sigma)
-  )
-}
-
 stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
                  iter = n.iter, warmup = n.warmup,
@@ -114,6 +92,7 @@ gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 zstar_t  <- extract(stan.fit, pars = 'zstar_t')[[1]]
 hatx_t   <- extract(stan.fit, pars = 'hatx_t')[[1]]
 oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
+logA_ij  <- extract(stan.fit, pars = 'logA_ij')[[1]]
 
 # Estimation summary ------------------------------------------------------
 print("Estimated initial state probabilities")
@@ -137,6 +116,11 @@ sum(apply(gamma_tk, 1, rowSums) == 0)
 # Inference summary -------------------------------------------------------
 # Filtered and smoothed state probability plot
 plot_stateprobability(alpha_tk, gamma_tk, 0.8)
+
+# Filtered state probability and input plot
+plot_inputprob(dataset$u.unscaled,
+               apply(logA_ij, c(2, 3), function(x) { median(exp(x)) }),
+               u.label = c("Open", "High", "Low", "Close"))
 
 # Jointly most likely state path (Viterbi decoding)
 plot_statepath(zstar_t)
