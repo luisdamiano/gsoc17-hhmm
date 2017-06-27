@@ -577,9 +577,12 @@ n.seed = 9000
 ### 20170624 Sa 11 to 20 ###
 * Working on the paper.
 
-### 20170625 Su 10 to WIP ###
+### 20170625 Su 10 to 21 ###
 * Working on the paper.
 * Mental note: I should take a scientific writing 101 course.
+
+### 20170626 Mo 21 to 24 ###
+* Working on the paper (forecast).
 
 ---
 

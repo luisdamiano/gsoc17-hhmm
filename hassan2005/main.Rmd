@@ -482,7 +482,7 @@ n.seed = 9000
 We use daily OHLC prices for the stocks and time spans listed in the table below, which are identical to the original work. The data is downloaded from Yahoo Finance via Quantmod. The original work includes the analysis of two stocks that are currently delisted. Since public sources such as Yahoo and Google Finance, we do not  do not include this data
 
 ```{r}
-symbols <- data.frame(
+syms <- data.frame(
   symbol    = c("LUV", "RYA.L"),
   name      = c("Southwest Airlines Co", "Ryanair Holdings Plc"),
   train.from = c("2002-12-18", "2003-05-06"),
@@ -495,11 +495,11 @@ symbols <- data.frame(
 
 ```{r, echo = FALSE}
 library(knitr)
-kable(t(sapply(1:nrow(symbols), function(i) { c(
-        symbols$symbol[i],
-        symbols$name[i],
-        paste(symbols$train.from[i], "to", symbols$train.to[i]),
-        paste(symbols$test.from[i] , "to", symbols$test.to[i])
+kable(t(sapply(1:nrow(syms), function(i) { c(
+        syms$symbol[i],
+        syms$name[i],
+        paste(syms$train.from[i], "to", syms$train.to[i]),
+        paste(syms$test.from[i] , "to", syms$test.to[i])
       )})),
       col.names = c("Symbol", "Name", "Training set", "Test set"),
       align = "c", caption = "Details of the dataset.")
@@ -614,17 +614,17 @@ We present an in-depth analysis of one stock, LUV, to assess its strength and we
 ### Data exploration
 
 ```{r, message = FALSE, warning = FALSE, fig.width = 7, fig.height = 6}
-i = 1 # LUV
-prices   <- getSymbols(symbols[i, ]$symbol,
+symbol <- syms[1, ] # LUV
+prices   <- getSymbols(symbol$symbol,
                        env  = NULL,
-                       from = symbols[i, ]$train.from,
-                       to   = symbols[i, ]$test.to,
-                       src  = symbols[i, ]$src)
-T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
+                       from = symbol$train.from,
+                       to   = symbol$test.to,
+                       src  = symbol$src)
+T.length <- nrow(prices[paste(symbol$train.from, symbol$train.to, sep = "/")])
 dataset <- make_dataset(prices[1:T.length, ], TRUE)
 
 plot_inputoutput(x = dataset$x, u = dataset$u,
-                 x.label = symbols[i, ]$symbol,
+                 x.label = symbol$symbol,
                  u.label = c("Open", "High", "Low", "Close"))
 ```
 
@@ -669,8 +669,6 @@ Graphical diagnoses (not shown) make it evident that convergence to stationarity
 Relying on the shrink factor of @gelman1992inference, we identify that component mean, standard deviation and weight are the hardest to converge. More worryingly, the effective sample size of some mixture parameters is below 10\% of the iteration number. Although thinning could reduce autocorrelation in the sampling sequence, it has the computational, and not statistical, purpose of storing and running computations on large sampling sequences [@gelman2011inference]. In line with these diagnostics, Monte Carlo standard error exceeds 10\% of these parameter estimated standard error. The mean hyperparameter per state converges performs unsurprisingly well, a clear indication that our hierarchical implementation is a pertinent improvement.
 
 ```{r}
-# saveRDS(stan.fit, "stan.fit.RDS")
-# options(digits = 4)
 kable(summary(stan.fit,
         pars = c('p_1k', 'w_km', 'lambda_kl', 'hypermu_k', 'mu_kl', 's_kl'),
         probs = c(0.10, 0.50, 0.90))$summary,
@@ -718,7 +716,7 @@ The following plot shows the fitted output. We first draw the hidden state for t
 plot_outputfit(dataset$x, hatx_t, z = apply(zstar_t, 2, median), K = K)
 ```
 
-It is very important to note that we are only drawing observations from the fitted model. The forecast methodology proposed by the authors depends on the estimated 
+It is very important to note that fitted observation is not the forecast itself as the methodology proposed by the authors rely on the likelihood of the observation instead.
 
 ### In-sample summary
 
@@ -727,17 +725,46 @@ All in all, the in-sample fit can be summarized in the following plot.
 ```{r, fig.width = 7, fig.height = 7}
 plot_inputoutputprob(x = dataset$x, u = dataset$u,
                      stateprob = alpha_tk, zstar = zstar_t,
-                     x.label = symbols[2, ]$symbol,
+                     x.label = symbol$symbol,
                      u.label = c("Open", "High", "Low", "Close"),
                      stateprob.label = bquote("Filtered prob" ~ p(z[t] ~ "|" ~ x[" " ~ 1:t])))
 ```
 
 ### Forecast
 
+The methodology relies on the estimated likelihood of the last observation to produce a forecast. We compute a walk forward procedure where the model is refitted each time a new observation is received. Since Stan does not have a natural way to update the log-density from a previous run, we implement a reduced version of our sampler that includes only the minimum computations needed to produce the forecast.
+
+The following script runs the walk forward procedure in parallel and returns the results in a list called `results`.
+
+```{r, message = FALSE, warning = FALSE}
+source('R/wf-forecast.R')
+wf <- wf_forecast(syms = syms[1, ], K, L, hyperparams,
+                        n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed,
+                        cache.dir = "fore_cache/")
+
+luv.300904 <- wf[[1]][[49]]
+```
+
+We first recreate the forecast for 30-sep-2004.
+
+```{r}
+luv.300904.n <- nrow(luv.300904$dataset$u)
+kable(luv.300904$dataset$u.unscaled[(luv.300904.n - 1):luv.300904.n, ],
+      digits = 2, col.names = c("Open", "High", "Low", "Close"),
+      caption = "Summary of the posterior draws from the distribution of the estimated parameters.")
+```
+
+```{r}
+for (wf.step in wf[[1]]) {
+  points(x = wf.step$forecast
+}
+```
+
+
 The intervals only represent parameters uncertainty since the method proposed in the original work only allows for point forecasts ^[We should probably make a nice time series plot with intervals].
 
 ```{r}
-fore <- neighbouring_forecast(x = dataset$x.unscaled, oblik_t = oblik_t,
+fore <- neighbouring_forecasts(x = dataset$x.unscaled, oblik_t = oblik_t,
                       h = 1, threshold = 0.05)
 
 hist(fore, breaks = "FD")
@@ -745,7 +772,7 @@ hist(fore, breaks = "FD")
 
 ## All stocks
 
-For walk forward we've implemented a reduced version of out sampler with only the features needed to compute the forecasts reducing sampling time by a factor of X. The forecasting methodology proposed in the original work requires refitting the model each time a new observation comes. Stan doesn't have a natural way to update a previous fit model (just refit again). Since we run only one chain per stock, we can run many stocks and/or forecast steps at the same time.
+
 
 ```{r, eval = FALSE}
 # ...
