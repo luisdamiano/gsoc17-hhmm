@@ -584,6 +584,10 @@ n.seed = 9000
 ### 20170626 Mo 21 to 24 ###
 * Working on the paper (forecast).
 
+### 20170701 Sa 9 to WIP ###
+* Finally back to end this!
+* 
+
 ---
 
 # Notes

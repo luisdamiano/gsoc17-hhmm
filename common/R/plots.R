@@ -526,3 +526,40 @@ plot_inputoutputprob <- function(x, u, stateprob, zstar,
 
   par(opar)
 }
+
+#' Plots a sequence of observed values and intervals with the possibility of
+#' including the hidden states.
+#'
+#' @param y A 3-row matrix with the upper, middle and lower intervals
+#' values of the series.
+#' @param z A vector with the sequence of hidden states (optional).
+#' @param k The state of interest (optional, but mandatory if z is given).
+#' @param ... Other parameters to be passed to base R plot (optional).
+#'
+#' @return Plots the graph in current device.
+#' @export
+#' @examples
+plot_seqforecast <- function(y, yhat, main.label = NULL, ...) {
+  T.length    <- length(y)
+  T.ooslength <- length(yhat)
+  main.label <- if (is.null(main.label)) "Point forecast" else paste0("Point forecast (", main.label, ")")
+  opar <- par(no.readonly = TRUE)
+
+  layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
+  plot(x = 1:T.length, y = y,
+       ylab = bquote("Output" ~ x), xlab = bquote("Time" ~ t),
+       main = main.label,
+       type = 'l', col = 'lightgray', ...)
+
+  points(x = (T.length - T.ooslength + 1):T.length, y = yhat,
+         pch = 21, cex = 0.35,
+         bg = 1, col = 1)
+
+  par(mai = c(0, 0, 0, 0))
+  plot.new()
+  legend(x = "center",
+         legend = c("Observed", "Forecast"),
+         lwd = 3, col = c('lightgray', 1), horiz = TRUE, bty = 'n')
+
+  par(opar)
+}

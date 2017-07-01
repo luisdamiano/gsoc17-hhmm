@@ -4,6 +4,7 @@ author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
+    toc: true
     number_sections: true
     self_contained: true
     includes:
@@ -404,7 +405,7 @@ print(table(
   real = dataset$zrelab))
 ```
 
-The filtered probability is overly accurate, as expected, making the additional information contained in the smoothed seem of little value. The confusion matrix makes it clear that, under ideal conditions, the sampler and the model works as intended.
+The filtered probability is overly accurate, as expected, making the additional information contained in the smoothed seem of little value. The confusion matrix makes it clear that, under ideal conditions, the sampler and the model works as intended. Similarly, the Viterbi algorithm recovers the expected most probably hidden state.
 
 ```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
 # Jointly most likely state path (Viterbi decoding)
@@ -416,8 +417,6 @@ round(table(
   actual = rep(dataset$zrelab, each = n.samples),
   fit = zstar_t) / n.samples, 0)
 ```
-
-The most probably hidden state path, computed by the Viterbi algorithm, . Finally, the fitted output is ...
 
 ```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
 # Fitted output
@@ -439,8 +438,10 @@ library(rstan)
 library(shinystan)
 source('R/data.R')
 source('R/forecast.R')
+source('R/wf-forecast.R')
 source('../common/R/math.R')
 source('../common/R/plots.R')
+source('../iohmm-mix/R/iohmm-mix-init.R')
 ```
 
 ## Model
@@ -560,7 +561,7 @@ We compute the change in the closing price from the located time step to the nex
 and build out forecast assuming that a similar pattern will repeat
 
 \[
-\ mat{\hat{x}_{t+1}} = \ mat{\hat{x}_{t}} + \Delta_{t^*}.
+\mat{\hat{x}_{t+1}} = \mat{\hat{x}_{t}} + \Delta_{t^*}.
 \]
 
 ```{r}
@@ -632,7 +633,7 @@ As we expected, OHLC prices follow an almost identical trend and are in turn hig
 
 ### Estimation
 
-We first create a. We attempt to ease convergence by setting up initial values for the component parameters that are approximated with k-means. Although nested k-means is not truthful to the model we replicate, we found that this simplification is useful for a starter point.
+We attempt to ease convergence by setting up initial values for the component parameters that are approximated with k-means. Although nested k-means is not truthful to the model we replicate, we found that this simplification is useful for a starter point.
 
 ```{r, warning = FALSE}
 rstan_options(auto_write = TRUE)
@@ -647,9 +648,6 @@ stan.data = list(
   x_t = as.vector(dataset$x),
   hyperparams = as.array(hyperparams)
 )
-
-# Chains are initialized close to k-means to help convergence
-source('../iohmm-mix/R/iohmm-mix-init.R')
 
 stan.fit <- stan(file = stan.model,
                  data = stan.data, verbose = T,
@@ -695,7 +693,7 @@ The following plot shows the probability, along with its 80\% credible interval,
 plot_stateprobability(alpha_tk, gamma_tk, 0.8)
 ```
 
-Since states are determined by the previous step OHLC prices, filtered and smoothed probabilities are equivalent. We note that state membership naturally becomes persistent. State membership basically depends non-linearly on price levels given the choice of input variables and will remain stable as long as prices do so. Persistence may be regarded as a very valuable feature since, in some contexts, latent states are expected to change disruptively but only from time to time. On the other hand, Markov Switching dynamics try to accommodate latent states in a way that they may shift more often than domain knowledge suggest, which in turns may lead to overfitting. The jointly most probably hidden path, as decoded by the Viterbi algorithm, confirms that continuity of states across time.
+Since states are determined by the previous step OHLC prices, filtered and smoothed probabilities are equivalent. We note that state membership naturally becomes persistent. State membership basically depends non-linearly on price levels given the choice of input variables and will remain stable as long as prices do so. Persistence may be regarded as a very valuable feature since, in some contexts, latent states are expected to change disruptively but only from time to time. Contrarily, Markov Switching dynamics try to accommodate latent states in a way that they may shift more often than domain knowledge suggest, which in turns may lead to overfitting. The jointly most probably hidden path, as decoded by the Viterbi algorithm, reflects the continuity of states across time.
 
 ```{r, fig.width = 7, fig.height = 3.5}
 plot_statepath(zstar_t)
@@ -737,59 +735,252 @@ The methodology relies on the estimated likelihood of the last observation to pr
 The following script runs the walk forward procedure in parallel and returns the results in a list called `results`.
 
 ```{r, message = FALSE, warning = FALSE}
-source('R/wf-forecast.R')
-wf <- wf_forecast(syms = syms[1, ], K, L, hyperparams,
+luv.wf <- wf_forecast(syms = symbol, K, L, hyperparams,
                         n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed,
-                        cache.dir = "fore_cache/")
+                        cache.dir = "fore_cache/")[[1]]
 
-luv.300904 <- wf[[1]][[49]]
+luv.300904 <- luv.wf[[49]]
 ```
 
-We first recreate the forecast for 30-sep-2004.
+We first recreate the forecast for 30-sep-2004. Our OHLC values differ from those shown in the original work, possibly due to adjustments. We regret that the authors do not provide enough details about data sources and pre-processing.
 
-```{r}
+```{r, echo = FALSE}
 luv.300904.n <- nrow(luv.300904$dataset$u)
 kable(luv.300904$dataset$u.unscaled[(luv.300904.n - 1):luv.300904.n, ],
       digits = 2, col.names = c("Open", "High", "Low", "Close"),
-      caption = "Summary of the posterior draws from the distribution of the estimated parameters.")
+      caption = "OHLC values for the selected dates.")
 ```
 
+We arbitrarily choose one of the samples generated by MCMC. We find the most similar past observation and produce the point forecast accordingly.
+
 ```{r}
-for (wf.step in wf[[1]]) {
-  points(x = wf.step$forecast
+oblik_t   <- luv.300904$oblik_t
+n.samples <- dim(oblik_t)[1]
+T.length  <- dim(oblik_t)[2]
+h         <- 1
+n         <- 1 # Sample
+
+find_closest <- function(target, candidates, threshold) {
+  ind <- which(abs(target - candidates) < abs(target) * threshold)
+
+  if (!length(ind))
+    ind <- which(abs(target - candidates) == min(abs(target - candidates)))
+
+  ind
 }
+
+oblik_target <- oblik_t[n, T.length]
+oblik_cand   <- oblik_t[n, 1:(T.length - h)]
+threshold    <- 0.05
+
+closests <- find_closest(oblik_target, oblik_cand, threshold)
+d        <- abs(oblik_target - oblik_t[n, closests])
+w        <- exp(d)
 ```
 
-
-The intervals only represent parameters uncertainty since the method proposed in the original work only allows for point forecasts ^[We should probably make a nice time series plot with intervals].
+```{r, echo = FALSE}
+kable(
+  cbind(
+    luv.300904$dataset$u.unscaled[closests, ],
+    Cl(luv.300904$dataset$u.unscaled[closests + h, ]) - Cl(luv.300904$dataset$u.unscaled[closests, ]),
+    w / sum(w)
+  ),
+  digits = 2, col.names = c("Open", "High", "Low", "Close", "Delta", "Weight"),
+  caption = "OHLC values for the selected dates.")
+```
 
 ```{r}
-fore <- neighbouring_forecasts(x = dataset$x.unscaled, oblik_t = oblik_t,
-                      h = 1, threshold = 0.05)
-
-hist(fore, breaks = "FD")
+luv.300904.y     <- luv.300904$dataset$u.unscaled[, 4]
+luv.300904.delta <- luv.300904$dataset$u.unscaled[closests + h, 4] - luv.300904$dataset$u.unscaled[closests, 4]
+luv.300904.yhat  <- luv.300904$dataset$u.unscaled[T.length, 4] + sum(luv.300904.delta * w) / sum(w)
 ```
 
-## All stocks
+The difference between the observed closing price $x_{t+1} = `r luv.300904.n<-nrow(luv.300904$dataset$u); luv.300904$dataset$u.unscaled[luv.300904.n, ]`$ and the forecast $\hat{x}_{t+1} = `r luv.300904.yhat`$ equal `r luv.300904$dataset$u.unscaled[luv.300904.n, ] - luv.300904.yhat`.
 
+```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+T.length <- length(luv.300904.y)
+T.ooslength <- length(luv.300904.yhat)
+luv.300904.cl <- rep(NA, T.length)
+luv.300904.cl[closests] <- luv.300904$dataset$u.unscaled[closests, 4]
+luv.300904.alpha_tk <- extract(luv.300904$stan.fit, pars = 'unalpha_tk')[[1]]
+luv.300904.hard <- sapply(1:T.length, function(t, med) {
+    which.max(med[t, ])
+  }, med = apply(luv.300904.alpha_tk, c(2, 3),
+                      function(x) {
+                        quantile(x, c(0.50)) }))
 
+opar <- par(no.readonly = TRUE)
 
-```{r, eval = FALSE}
-# ...
+layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.95, 0.05))
+plot(x = 1:T.length, y = luv.300904.y,
+     ylab = bquote("Output" ~ x), xlab = bquote("Time" ~ t),
+     main = "Point forecast for 2004-09-30 (LUV)",
+     type = 'l', col = 'lightgray')
+
+points(x = 1:T.length, y = luv.300904.cl,
+       pch = 21, cex = 0.5,
+       bg = 'darkgray', col = 'darkgray')
+
+points(x = (T.length - T.ooslength + 1):T.length, y = luv.300904.yhat,
+       pch = 21, cex = 0.5,
+       bg = 1, col = 1)
+
+par(mai = c(0, 0, 0, 0))
+plot.new()
+legend(x = "center",
+       legend = c("Observed", "Similar", "Forecast"),
+       lwd = 3, col = c('lightgray', 'darkgray', 1), horiz = TRUE, bty = 'n')
+
+par(opar)
+```
+
+We can account for parameter uncertainty by repeating these computations for all the samples corresponding to a given time step. We stress that such a measure would not not be the interval estimate for the forecast, which is simply a point forecast. We now show the walking forward forecasts for the selected stock.
+
+```{r}
+T.ooslength  <- length(luv.wf)
+luv.dataset  <- luv.wf[[T.ooslength]]$dataset
+luv.wfy      <- tail(luv.dataset$x.unscaled, T.ooslength - 1)
+luv.wfyhat   <- head(sapply(luv.wf, function(wf) { median(wf$forecast) }), -1)
+```
+
+```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+plot_seqforecast(y = luv.wfy, yhat = luv.wfyhat,
+                 main.label = symbol$symbol)
+
+```
+
+We summarise the out of sample error measures in the following table.
+
+```{r, echo = FALSE}
+luv.err <- luv.wfy - luv.wfyhat
+kable(data.frame(
+  mean(luv.err^2),
+  paste0(round(100 * mean(luv.err / luv.wfy), 2), "%"),
+  as.numeric(summary(lm(luv.wfy ~ luv.wfyhat))$r.squared)
+),
+      align = "c", digits = 4,
+      col.names = c("MSE", "MAPE", "$R^2$"),
+      caption = "Out of sample error measures for LUV.")
+```
+
+Our forecasts are significantly better compared to the original work, which is both flattering and dubious. One source of improvement is that we identify many similar past observations to produce a forecast, a methodological aspect that was partly imprecise in the original paper. Another benefit of a fully bayesian sampler is that we can use the median of the log-posterior density of the parameter and other estimated quantities, which in turn improves the robustness of our forecasts.
+
+```{r clean, message = FALSE, echo = FALSE}
+rm(stan.fit, stan.data, alpha_tk, gamma_tk, zstar_t, hatx_t, oblik_t, logA_ij)
+rm(list = ls()[grep("luv", ls())])
+gc()
+```
+
+## Ryanair Holdings Plc (RYA.L)
+
+### In-sample analysis
+
+We estimate the model for RYA.L and we then present the in-sample summary. 
+
+```{r, warning = FALSE}
+symbol <- syms[2, ] # RYA
+prices   <- getSymbols(symbol$symbol,
+                       env  = NULL,
+                       from = symbol$train.from,
+                       to   = symbol$test.to,
+                       src  = symbol$src)
+T.length <- nrow(prices[paste(symbol$train.from, symbol$train.to, sep = "/")])
+dataset <- make_dataset(prices[1:T.length, ], TRUE)
+
+rstan_options(auto_write = TRUE)
+
+stan.model = '../iohmm-mix/stan/iohmm-hmix.stan'
+stan.data = list(
+  K = K,
+  L = L,
+  M = ncol(dataset$u),
+  T = length(dataset$x),
+  u_tm = as.array(dataset$u),
+  x_t = as.vector(dataset$x),
+  hyperparams = as.array(hyperparams)
+)
+
+stan.fit <- stan(file = stan.model,
+                 data = stan.data, verbose = T,
+                 iter = n.iter, warmup = n.warmup,
+                 thin = n.thin, chains = n.chains,
+                 cores = n.cores, seed = n.seed,
+                 init = function() {init_fun(stan.data)})
+
+n.samples = (n.iter - n.warmup) * n.chains
+
+alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar_t  <- extract(stan.fit, pars = 'zstar_t')[[1]]
+hatx_t   <- extract(stan.fit, pars = 'hatx_t')[[1]]
+oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
+logA_ij  <- extract(stan.fit, pars = 'logA_ij')[[1]]
+```
+
+We identify the existence of two extreme observations but we decide not to take any further action. State 2 represents a period of time in which the stock suddently reached the maximum value in its history. As observed before, the hidden states are persistent most of the time.
+
+```{r, fig.width = 7, fig.height = 7}
+plot_inputoutputprob(x = dataset$x, u = dataset$u,
+                     stateprob = alpha_tk, zstar = zstar_t,
+                     x.label = symbol$symbol,
+                     u.label = c("Open", "High", "Low", "Close"),
+                     stateprob.label = bquote("Filtered prob" ~ p(z[t] ~ "|" ~ x[" " ~ 1:t])))
+```
+
+```{r, warning = FALSE, fig.width = 7, fig.height = 7.5}
+plot_inputprob(dataset$u.unscaled,
+               apply(logA_ij, c(2, 3), function(x) { median(exp(x)) }),
+               u.label = c("Open", "High", "Low", "Close"))
+```
+
+### Out-of-sample analysis
+
+Again, our forecasts are 
+
+```{r}
+rya.wf <- wf_forecast(syms = symbol, K, L, hyperparams,
+                        n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed,
+                        cache.dir = "fore_cache/")[[1]]
+
+T.ooslength  <- length(rya.wf)
+rya.dataset  <- rya.wf[[T.ooslength]]$dataset
+rya.wfy      <- tail(rya.dataset$x.unscaled, T.ooslength - 1)
+rya.wfyhat   <- head(sapply(rya.wf, function(wf) { median(wf$forecast) }), -1)
+```
+
+```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+plot_seqforecast(y = rya.wfy, yhat = rya.wfyhat,
+                 main.label = symbol$symbol)
+```
+
+We summarise the out of sample error measures in the following table:
+
+```{r, echo = FALSE}
+rya.err <- rya.wfy - rya.wfyhat
+kable(data.frame(
+  mean(rya.err^2),
+  paste0(round(100 * mean(rya.err / rya.wfy), 2), "%"),
+  as.numeric(summary(lm(rya.wfy ~ rya.wfyhat))$r.squared)
+),
+      align = "c", digits = 4,
+      col.names = c("MSE", "MAPE", "$R^2$"),
+      caption = "Out of sample error measures for rya.")
 ```
 
 ## Discussion
 
-In a sense, this model could be interpreted as $K \times L$ means that switch depending on previous price levels. We thus expected a highly multinomial, ill-behaved log-posterior that aggravate the frequent combinatorial non-identifiabilities inherent to mixture models. 
+### The statistical model
 
-As our first naive and mostly unrestricted implementation could not sample efficiently from the log-posterior, we decided to add more information in the form of prior belief and additional model structure.
+In a sense, this model could be interpreted as $K \times L$ means that switch according to previous price levels. We thus expected a highly multinomial, ill-behaved log-posterior that aggravates the frequent combinatorial non-identifiabilities inherent to mixture models. As our first naive and mostly unrestricted implementation could not sample efficiently from the log-posterior, we decided to add more information in the form of prior belief and additional model structure (within-state hierarchical mixture).
 
-Even after all the improvements, we only arrive at a just about satisfactory yet imperfect answer. We are confident that our implementation works as intended since we tested the model calibration by simulation, some computational issues arise when the sampler is fed with real data however. More specifically, we find that sampling efficiency becomes extremely low for some parameters of the observation model. 
+Even after all the improvements, we only arrive at a just about satisfactory yet imperfect convergence. We are confident that our implementation works as intended since we tested the model calibration by simulation, however, some computational issues arise when the sampler is fed with real data. More specifically, we find that sampling efficiency becomes extremely low for some of the parameters of the observation model. 
 
 In resemblance to the folk theorem^[See [The folk theorem of statistical computing
 ](http://andrewgelman.com/2008/05/13/the_folk_theore/)], which informally states that computational problems may be originated in model misspecification, we find that the output model proposed by the authors is unrepresentative of the features observed in the data.
 
-## Discussion
+### The
+
+Letting inputs drive the hidden dynamics has a great potential for financial application. The latent variables are driven by price levels in the original work, but the transition model is flexible enough to adapt to many other features a financial analyst may want to represent such as volume, volatility level, trends and direction or any other persistent process.
 
 Strengths:
 

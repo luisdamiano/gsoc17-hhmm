@@ -3,8 +3,24 @@ library(quantmod)
 invisible(Sys.setlocale("LC_MESSAGES", "C"))  # Google vs date format fix
 invisible(Sys.setlocale("LC_TIME", "C"))      # https://stackoverflow.com/a/20855453/2860744
 
-get_prices <- function(symbol, train.from, train.to, test.from, test.to, ...) {
-  getSymbols(symbol, env = NULL, from = train.from, to = test.to, ...)
+get_prices <- function(symbol, from, to, src, ...) {
+  if (
+    src == "google"
+    && as.Date(from, origin = '1970-01-01') < as.Date("2003-12-28", origin = '1970-01-01')
+    && as.Date(to, origin = '1970-01-01') > as.Date("2003-12-30", origin = '1970-01-01')) {
+    return(rbind(
+      getSymbols(symbol, env = NULL,
+                 from = from,
+                 to = as.Date("2003-12-27", origin = '1970-01-01'),
+                 src = src, ...),
+      getSymbols(symbol, env = NULL,
+                 from = as.Date("2003-12-31", origin = '1970-01-01'),
+                 to = to,
+                 src = src, ...)
+    ))
+  }
+
+  getSymbols(symbol, env = NULL, from = from, to = to, src = src, ...)
 }
 
 make_dataset <- function(prices, scale = TRUE) {
