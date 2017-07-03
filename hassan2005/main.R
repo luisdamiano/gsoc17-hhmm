@@ -9,8 +9,23 @@ source('iohmm-mix/R/iohmm-mix-init.R')
 
 # Set up ------------------------------------------------------------------
 
+# Model - IOHMM
+K = 4
+L = 3
+
+# Model - Hyperparameters
+hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
+
+# Markov Chain Monte Carlo
+n.iter = 800
+n.warmup = 400
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+
 # Data
-symbols <- data.frame(
+syms <- data.frame(
   symbol    = c("LUV", "RYA.L"),
   name      = c("Southwest Airlines Co", "Ryanair Holdings Plc"),
   train.from = c("2002-12-18", "2003-05-06"),
@@ -20,21 +35,6 @@ symbols <- data.frame(
   src        = c("yahoo", "yahoo"),
   stringsAsFactors = FALSE)
 
-# Model - IOHMM
-K = 4
-L = 3
-
-# Model - Hyperparameters
-hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
-
-# Markov Chain Monte Carlo
-n.iter = 400
-n.warmup = 200
-n.chains = 1
-n.cores = 1
-n.thin = 1
-n.seed = 9000
-
 # ------------------------------------------------------------------------
 # First, we analyse step-by-step our model for a given stock and date. We
 # validate that the results of our sampler are reasonable. We then move
@@ -42,18 +42,18 @@ n.seed = 9000
 # ------------------------------------------------------------------------
 
 # Data fetching and pre-processing ----------------------------------------
-i = 1 # LUV
-prices   <- getSymbols(symbols[i, ]$symbol,
+symbol <- syms[1, ] # LUV
+prices   <- getSymbols(symbol$symbol,
                        env  = NULL,
-                       from = symbols[i, ]$train.from,
-                       to   = symbols[i, ]$test.to,
-                       src  = symbols[i, ]$src)
-T.length <- nrow(prices[paste(symbols[i, ]$train.from, symbols[i, ]$train.to, sep = "/")])
-dataset  <- make_dataset(prices[1:T.length, ], TRUE)
+                       from = symbol$train.from,
+                       to   = symbol$test.to,
+                       src  = symbol$src)
+T.length <- nrow(prices[paste(symbol$train.from, symbol$train.to, sep = "/")])
+dataset <- make_dataset(prices[1:T.length, ], TRUE)
 
 # Data exploration --------------------------------------------------------
 plot_inputoutput(x = dataset$x, u = dataset$u,
-                 x.label = symbols[i, ]$symbol,
+                 x.label = symbol$symbol,
                  u.label = c("Open", "High", "Low", "Close"))
 
 # Model estimation --------------------------------------------------------
@@ -130,7 +130,7 @@ plot_outputfit(dataset$x, hatx_t, TRUE)
 
 plot_inputoutputprob(x = dataset$x, u = dataset$u,
                      stateprob = alpha_tk, zstar = zstar_t,
-                     x.label = symbols[2, ]$symbol,
+                     x.label = symbol$symbol,
                      u.label = c("Open", "High", "Low", "Close"),
                      stateprob.label = bquote("Filtered probability" ~ p(z[t] ~ "|" ~ x[" " ~ 1:t])))
 

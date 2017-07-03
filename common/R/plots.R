@@ -270,9 +270,10 @@ plot_stateprobability <- function(alpha, gamma, interval = 0.8, z = NULL) {
                     function(x) {
                       quantile(x, qs) })
 
-  layout(matrix(
+  suppressWarnings( # Ugly hack indeed
+    layout(matrix(
     rep(c(1, 1, 2, 2, 3), K) + rep(seq.int(0, 3*K, 3), each = 5),
-    ncol = 5, nrow = K, byrow = TRUE))
+    ncol = 5, nrow = K, byrow = TRUE)))
 
   for (k in 1:K) {
     # 1. Filtered probability sequence (forward algoritm)

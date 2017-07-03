@@ -1,5 +1,5 @@
 ---
-title: "Input-Output Hidden Markov Model"
+title: "Input-Output Hidden Markov Model applied to financial time series"
 author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: "`r Sys.Date()`"
 output:
@@ -17,20 +17,22 @@ bibliography: ../common/references.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 7.2)
 ```
 
-This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by @hassan2005stock to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities, namely filtered state belief, smoothed state belief, jointly most probable state path and fitted output. The model is introduced only briefly, a more detailed mathematical treatment can be found in our [literature review](../litreview/main.pdf).
+```{r echo = FALSE, results="asis"}
+cat("<style>img{border: 0px !important;}</style>")
+```
 
-### Acknowledgements
+This work aims at replicating the Input-Output Hidden Markov Model (IOHMM) originally proposed by @hassan2005stock to forecast stock prices. The main goal is to produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities, namely filtered state belief, smoothed state belief, jointly most probable state path and fitted output. The model is introduced only briefly, a more detailed mathematical treatment can be found in our [literature review](https://github.com/luisdamiano/gsoc17-hhmm/blob/master/litreview/main.pdf).
 
-The authors acknowledge Google for financial support via the Google Summer of Code 2017.
+The authors acknowledge Google for financial support via the Google Summer of Code 2017 program.
 
 ---
 
 # The Input-Output Hidden Markov Model
 
-The IOHMM is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. It is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction. It differs from HMM, which is part of the unsupervised learning paradigm, since it is capable of learning the output sequence itself instead of learning only the output sequence distribution.
+The IOHMM is an architecture proposed by @bengio1995input to map input sequences, sometimes called the control signal, to output sequences. It is a probabilistic framework that can deal with general sequence processing tasks such as production, classification, or prediction. The main difference with Hidden Markov Models (HMM), which are part of the unsupervised learning paradigm, is the capability to learn the output sequence itself instead of the distribution of the output sequence.
 
 ## Definitions
 
@@ -56,7 +58,7 @@ p(z_t | \mat{x}_{t}, \mat{u}_{t}, z_{t-1} = i) = \text{softmax}^{-1}(\mat{w}_i \
 and the observation model is built upon the Gaussian density with parameters depending on the current state taking the value $j$,
 
 \[
-p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{b}_j \mat{u}_t, \mat{\Sigma}_j).
+p(\mat{x}_t | \mat{u}_{t}, z_{t} = j) = \mathcal{N}(\mat{x}_t | \mat{\mu}_j, \mat{\Sigma}_j).
 \]
 
 IOHMM adapts the logic of HMM to allow for input and output vectors, retaining its fully probabilistic quality. Hidden states are assumed to follow a multinomial distribution that depends on the input sequence. The transition probabilities $\Psi_t(i, j) = p(z_t = j | z_{t-1} = i, \mat{u}_{t})$, which govern the state dynamics, are driven by the control signal as well.
@@ -64,7 +66,7 @@ IOHMM adapts the logic of HMM to allow for input and output vectors, retaining i
 As for the output sequence, the local evidence at time $t$ now becomes $\psi_t(j) = p(\mat{x}_t | z_t = j, \mat{\eta}_t)$, where $\mat{\eta}_t = \ev{\mat{x}_t | z_t, \mat{u}_t}$ can be interpreted as the expected location parameter for the probability distribution of the emission $\mat{x}_{t}$ conditional on the input vector $\mat{u}_t$ and the hidden state $z_t$.
 
 ## Inference
-There are several quantities of interest to be inferred from different algorithms. In this section, the discussion assumes that model parameters $\mat{\theta}$ are known.
+There are several quantities of interest to be estimated via different algorithms. In this section, the discussion assumes that model parameters are known.
 
 ### Filtering
 
@@ -79,7 +81,7 @@ It achieves better noise reduction than simply estimating the hidden state based
 
 ### Smoothing
 
-A smoother infers the belief state at a given state based on all the observations or evidence,
+A smoother infers the belief state at a given step based on all the observations or evidence,
 
 \[
 \begin{align*}
@@ -96,7 +98,7 @@ where
   & \triangleq p(\mat{x}_{t:T} | z_{t-1} = i, \mat{u}_{t:T}).
 \end{align*}
 
-Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline. Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization].
+Although noise and uncertainty are reduced as a result of conditioning on past and future data, the smoothing process can only be run offline. Inference can be run by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization].
 
 ### Most likely hidden path
 It is also of interest to compute the most probable state sequence or path,
@@ -108,18 +110,18 @@ It is also of interest to compute the most probable state sequence or path,
 The jointly most probable sequence of states can be inferred by means of maximum a posterior (MAP) estimation or Viterbi decoding.
 
 ## Parameter estimation
-The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \mat{\theta}_o)$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{\theta}_h$ are the parameters of the hidden model and $\mat{\theta}_o$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j, \mat{u}_t)$. The form of $\mat{\theta}_h$ and $\mat{\theta}_o$ depend on the specification of the model. State transition may be characterized by a logistic or multinomial regression with parameters $\mat{w}_k$ for $k \in \{1, \dots, K\}$, while emissions may be modeled with with a linear regression with Gaussian error with parameters $\mat{b}_k$ and $\mat{\Sigma}_k$ for $k \in \{1, \dots, K\}$.
+The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{\theta}_h, \mat{\theta}_o)$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{\theta}_h$ are the parameters of the hidden model and $\mat{\theta}_o$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j, \mat{u}_t)$. The form of $\mat{\theta}_h$ and $\mat{\theta}_o$ depends on the specification of each model. For example, state transition may be characterized by a logistic or multinomial regression with parameters $\mat{w}_k$ for $k \in \{1, \dots, K\}$, while emissions may be modeled by a linear regression with Gaussian error with parameters $\mat{b}_k$ and $\mat{\Sigma}_k$ for $k \in \{1, \dots, K\}$.
 
 ---
 
 # Learning by simulation
-We first create a simulation routine that generates data complying with the model assumptions and we then write a MCMC sampler in Stan to recover the parameters and other hidden quantities. Next, we feed our model with the real data used in the original work and analyse the results.
+Model complexity and limited software availability requires that we implement our sampler from scratch. Following a very simplified version of the methodology proposed by @cook2006validation, we first create a simulation routine that generates data complying with the model assumptions and we then write a MCMC sampler in Stan to recover the parameters and other hidden quantities. Only after the correctness of our software is tested, we feed our model with real data and analyse the results.
 
 We believe that learning by simulation has many benefits, including:
 
-* The possibility to confirm that the sampler works as intended, i.e. it retrieves the parameters used to generate the data.
-* The generated data meets all the assumptions and the estimates are free of the effects of data contamination due to unmodeled phenomena, thus simplifying the interpretation of the results.
-* The user can gain insight into the model functioning by trying different combinations of the parameters, inputs and outputs.
+* Confirmation whether the software developed to implement the algorithms works properly, i.e. it retrieves the parameters used to generate the data.
+* Enhanced interpretation of the results and deeper understanding of the model behaviour, especially because the generated data meets all the underlying assumptions and the estimates are free of the effects of data contamination originated by unmodeled phenomena.
+* The possibility of calibrating different combinations of values for the parameters, the inputs and the outputs help the development of intuition and insight. This may prove valuable for the data analysis stage.
 
 ## Auxiliary files
 
@@ -149,7 +151,9 @@ source('../iohmm-reg/R/iohmm-sim.R')
 
 ## Generative model
 
-We first write an R function for our generative model. The arguments are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, a matrix with the regressor of the multinomial regression that rules the hidden states dynamics $\mat{w}$, the name of a function drawing samples from the observation distribution and its parameters.
+### Data simulation
+
+We first write an R function for our generative model. The arguments are the sequence length $T$, the number of discrete hidden states $K$, the input matrix $\mat{u}$, the initial state distribution vector $\mat{\pi}_1$, a matrix with the parameters of the multinomial regression that rules the hidden states dynamics $\mat{w}$, the name of a function drawing samples from the observation distribution and its arguments.
 
 ```{r}
 iohmm_sim <- function(T, K, u, w, p.init, obs.model, obs.pars) {
@@ -185,9 +189,9 @@ iohmm_sim <- function(T, K, u, w, p.init, obs.model, obs.pars) {
 }
 ```
 
-The initial hidden state is drawn from a multinomial distribution with one trial and event probabilities given by the initial state probability vector $\mat{\pi}_1$. The transition probabilities for each of the following steps $t$ are computed from a multinomial linear regression with vector parameters $\mat{w}_k$, one set per possible hidden state $k = 1, \dots, K$, and covariates $\mat{u}_t$. The hidden states are subsequently sampled based on the transition probabilities.
+The initial hidden state is drawn from a multinomial distribution with one trial and event probabilities given by the initial state probability vector $\mat{\pi}_1$. The transition probabilities for each of the following steps $t \in \{2, \dots, T\}$ are generated from a multinomial regression with vector parameters $\mat{w}_k$, one set per possible hidden state $k \in \{1, \dots, K\}$, and covariates $\mat{u}_t$. The hidden states are subsequently sampled based on these transition probabilities.
 
-The observation for each step generates from a linear regressions with regressors $\mat{b}_k$ and error variance $\mat{\Sigma}_k$, one set per possible hidden state.
+The observation at each step may generate from a linear regressions with parameters $\mat{b}_k$ and $\mat{\Sigma}_k$, one set per possible hidden state.
 
 ```{r}
 obsmodel_reg <- function(...) {
@@ -214,7 +218,7 @@ obsmodel_reg <- function(...) {
 }
 ```
 
-Alternatively, the observation could be generated from a Gaussian mixture density where $\lambda_{kl}$ is the component weight for the $l$-th component in the $k$-th state with $0 \le \lambda_{kl} \le 1 \ \forall \ l \in \{1, \dots, L\}, k \in \{1, \dots, K\}$ and $\sum_{l=1}^{L}{\lambda_{kl}} = 1 \ \forall \ k$.
+Alternatively, the observation could originate in a Gaussian mixture density where $\lambda_{kl}$ is the component weight for the $l$-th component within the $k$-th state, $0 \le \lambda_{kl} \le 1 \ \forall \ l \in \{1, \dots, L\}, k \in \{1, \dots, K\}$ and $\sum_{l=1}^{L}{\lambda_{kl}} = 1 \ \forall \ k$.
 
 ```{r}
 obsmodel_mix <- function(...) {
@@ -244,8 +248,6 @@ obsmodel_mix <- function(...) {
 We set up our simulated experiments for a regression observation model with arbitrary values for all the involved parameters. Additionally, we define the settings for the Markov Chain Monte Carlo sampler.
 
 ```{r}
-# Set up ------------------------------------------------------------------
-
 # Data
 T.length = 300
 K = 3
@@ -256,26 +258,25 @@ w = matrix(
   c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1),
   nrow = K, ncol = M, byrow = TRUE)
 b = matrix(
-  c(5, 6, 7, 0.5, 1, 5, 0.01, -0.5, 0.01, -1, -5, 0.2),
+  c(5.0, 6.0, 7.0, 0.5, 1.0, 5.0, 0.1, -0.5, 0.1, -1.0, -5.0, 0.2),
   nrow = K, ncol = M, byrow = TRUE)
-s = c(0.25, 1, 2.5)
-p1 = c(0.45, 0.10, 0.45)
+s = c(0.2, 1.0, 2.5)
+p1 = c(0.4, 0.2, 0.4)
 
 # Markov Chain Monte Carlo
-n.iter = 500
-n.warmup = 250
+n.iter = 400
+n.warmup = 200
 n.chains = 1
 n.cores = 1
 n.thin = 1
 n.seed = 9000
 ```
 
-It is worth noting that we decide to rely on only one chain to avoid between-chain label switching of regression parameters ^[Enlarge why]. We refer the reader to @betancourt2017identifying for an in-depth treatment of the diagnostics, causes and possible solutions for label switching in Bayesian Mixture Models.
+We anticipate identification issues in our sampler given the nature of the model. As an arguable simplification with obvious drawbacks, we decide to rely only on one chain to avoid between-chain label switching of regression parameters. We refer the reader to @betancourt2017identifying for an in-depth treatment of the diagnostics, causes and possible solutions for label switching in Bayesian Mixture Models.
 
-We create random inputs from a standard Gaussian distribution and generate the dataset accordingly.
+We draw random inputs from a standard Gaussian distribution and generate the dataset accordingly.
 
 ```{r}
-# Data simulation ---------------------------------------------------------
 set.seed(n.seed)
 u <- matrix(rnorm(T.length*M, 0, 1), nrow = T.length, ncol = M)
 if (u.intercept)
@@ -284,22 +285,23 @@ if (u.intercept)
 dataset <- iohmm_sim(T.length, K, u, w, p1, obsmodel_reg, list(b = b, s = s))
 ```
 
-```{r, fig.height = 5, fig.width = 7.2, out.width="\\textwidth"}
+```{r, fig.height = 5, out.width="\\textwidth"}
 plot_inputoutput(x = dataset$x, u = dataset$u, z = dataset$z)
 ```
 
-We observe how the chosen values for the parameters affect the generated data. For example, the relationship between the third input $\mat{u}_3$ and the output $\mat{x}$ is positive, indifferent and negative for the hidden states 1 to 3, the true slopes being `r b[1, 3]`, `r b[2, 3]` and `r b[3, 3]` respectively.
+We observe how the chosen values for the parameters affect the generated data. For example, the relationship between the third input $\mat{u}_3$ and the output $\mat{x}$ is positive, indifferent and negative for the hidden states 1 through 3, the true slopes being `r b[1, 3]`, `r b[2, 3]` and `r b[3, 3]` respectively.
 
-```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
+```{r, fig.height = 6, out.width="\\textwidth"}
 plot_inputprob(u = dataset$u, p.mat = dataset$p.mat, z = dataset$z)
 ```
 
-We then analyse the relationship between the input and the state probabilities, which are usually hidden in applications with real data. We observe the strongest relationships between the pairs $\mat{u}_1, p(z_t = 1)$, $\mat{u}_2, p(z_t = 2)$ and $\mat{u}_3, p(z_t = 3)$, which is unsurprising given the values of the true regression parameters: those inputs take the largest weight in each state, namely $w_{11} = `r w[1, 1]`$, $w_{22} = `r w[2, 2]`}$ and $w_{33} = `r w[3, 3]`$.
+We then analyse the relationship between the input and the state probabilities, which are usually hidden in applications with real data. The pairs $\{ \mat{u}_1, p(z_t = 1) \}$, $\{ \mat{u}_2, p(z_t = 2) \}$ and $\{ \mat{u}_3, p(z_t = 3) \}$ are most related due to the choice of values for the true regression parameters: those inputs take the largest weight in each state, namely $w_{11} = `r w[1, 1]`$, $w_{22} = `r w[2, 2]`$ and $w_{33} = `r w[3, 3]`$.
 
-Using a fully Bayesian approach, we now rely on our MCMC sampler to draw samples from the posterior density of model parameters and other hidden quantities ^[The Stan code is treated as given by now and will be explained below].
+### Estimation
 
-```{r, echo = FALSE}
-# Model estimation --------------------------------------------------------
+Adopting a fully Bayesian approach, we run our software to draw samples from the posterior density of model parameters and other hidden quantities.
+
+```{r}
 library(rstan)
 library(shinystan)
 rstan_options(auto_write = TRUE)
@@ -323,11 +325,12 @@ stan.fit <- stan(file = stan.model,
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-We rely on the Rhat statistics and several diagnostic plots provided by shinystan^[cite] to assess mixing, convergence and the inexistence of divergences. We extract the samples for some quantities of interest, namely the filtered probabilities $\mat{alpha}_t$, the smoothed probability vector $\mat{\gamma}_t$, the most probable hidden path $\mat{z}^*$ and the fitted output $\hat{x}$.
+### Convergence
 
-```{r}
+We rely on several diagnostic statistics and plots provided by rstan [@sdt2017rstan] and shinystan [@sdt2017shinystan] to assess mixing, convergence and the inexistence of divergences. We then extract the samples for some quantities of interest, namely the filtered probabilities vector $\mat{\alpha}_t$, the smoothed probability vector $\mat{\gamma}_t$, the most probable hidden path $\mat{z}^*$ and the fitted output $\hat{x}$.
+
+```{r, message = FALSE, results = 'hide'}
 # MCMC Diagnostics --------------------------------------------------------
-options(digits = 2)
 summary(stan.fit,
         pars = c('p_1k', 'w_km', 'b_km', 's_k'),
         probs = c(0.50))$summary
@@ -340,9 +343,19 @@ zstar_t <- extract(stan.fit, pars = 'zstar_t')[[1]]
 hatx_t  <- extract(stan.fit, pars = 'hatx_t')[[1]]
 ```
 
-While mixing and convergence is very good, which is expected as we are dealing with data generated exactly as assumed by the model, we note that regression parameters for latent states perform worse than other parameters. The small effective size translates into a high Monte Carlo standard error and broader intervals. One possible reason is that softmax is invariant to change in location, thus the parameters of a multinomial regression do not have a natural center and become harder to estimate.
+```{r, echo = FALSE}
+knitr::kable(summary(stan.fit,
+        pars = c('p_1k', 'w_km', 'b_km', 's_k'),
+        probs = c(0.50))$summary,
+      col.names = c("Mean", "MCSE", "SE", "Med", "ESS", "$\\hat{R}$"),
+      digits = 2, align = "r", caption = "Estimated parameters and hidden quantities. *MCSE = Monte Carlo Standard Error, SE = Standard Error, Med = Median, ESS = Effective Sample Size*.")
+```
 
-We want to assess if the hidden states were recovered correctly by our software. Unfortunately, due to the label switching problem, the states generated under the labels 1 to 3 were recovered in inverse order. In consequence, we decide to relabel the data based on best fit. This would not prove to be a problem with real data since the hidden states are never observed.
+While mixing and convergence is extremely efficient, as expected when dealing with generated data, we note that the regression parameters for the latent states are the worst performers. The small effective size translates into a high Monte Carlo standard error and broader credibility intervals. One possible reason is that softmax is invariant to change in location, thus the parameters of a multinomial regression do not have a natural center and become harder to estimate.
+
+### State probability
+
+We assess that our software recover the hidden states correctly. Due to label switching, the states generated under the labels 1 through 3 were recovered in inverse order. In consequence, we decide to relabel the observations based on the best fit. This would not prove to be a problem with real data considering that the hidden states are never observed.
 
 ```{r}
 # Relabelling (ugly hack edition) -----------------------------------------
@@ -364,10 +377,9 @@ print("Label re-imputation (relabeling due to switching labels)")
 table(new = dataset$zrelab, original = dataset$z)
 ```
 
-Point estimates and credibility intervals are provided by rstan's^[cite] `{r}summary` function.
+Point estimates and credibility intervals are provided by rstan's `{r}summary` function.
 
-```{r}
-# Estimation summary ------------------------------------------------------
+```{r, eval = FALSE}
 print("Estimated initial state probabilities")
 summary(stan.fit,
         pars = c('p_1k'),
@@ -389,15 +401,40 @@ summary(stan.fit,
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 ```
 
-We observed that the samples drawn from the posterior density are reasonably close to the true values. We additionally check the estimated hidden quantities.
+```{r, echo = FALSE}
+knitr::kable(summary(stan.fit,
+        pars = c('p_1k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)],
+      col.names = c("Mean", "SE", "10%", "Med", "90%"),
+      digits = 2, align = "r", caption = "Estimated initial state probabilities.")
 
-```{r, warning = FALSE, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
-# Inference summary -------------------------------------------------------
-# Filtered and smoothed state probability plot
+knitr::kable(head(summary(stan.fit,
+        pars = c('A_ij'),
+        probs = c(0.10, 0.50, 0.90))$summary)[, c(1, 3, 4, 5, 6)],
+      col.names = c("Mean", "SE", "10%", "Med", "90%"),
+      digits = 2, align = "r", caption = "Estimated probabilities in the transition matrix.")
+
+knitr::kable(summary(stan.fit,
+        pars = c('w_km'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)],
+      col.names = c("Mean", "SE", "10%", "Med", "90%"),
+      digits = 2, align = "r", caption = "Estimated regressors of hidden states.")
+
+knitr::kable(summary(stan.fit,
+        pars = c('b_km', 's_k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)],
+      col.names = c("Mean", "SE", "10%", "Med", "90%"),
+      digits = 2, align = "r", caption = "Estimated regression parameters and standard deviation of observations in each state.")
+```
+
+The samples drawn from the posterior density are reasonably close to the true values. We additionally check the estimated hidden quantities.
+
+```{r, fig.height = 6, out.width="\\textwidth"}
 plot_stateprobability(alpha_tk, gamma_tk, 0.8, dataset$zrelab)
+```
 
-# Confusion matrix for hard (naive) classification
-print("Estimated hidden states (hard naive classification using filtered prob)")
+```{r, eval = FALSE}
+print("Estimated hidden states (hard naive classification using filtered probabilities)")
 print(table(
   estimated = apply(round(apply(alpha_tk, c(2, 3),
                                 function(x) {
@@ -405,25 +442,51 @@ print(table(
   real = dataset$zrelab))
 ```
 
-The filtered probability is overly accurate, as expected, making the additional information contained in the smoothed seem of little value. The confusion matrix makes it clear that, under ideal conditions, the sampler and the model works as intended. Similarly, the Viterbi algorithm recovers the expected most probably hidden state.
+```{r, echo = FALSE}
+knitr::kable(table(
+        estimated = apply(round(apply(alpha_tk, c(2, 3),
+                                      function(x) {
+                                        quantile(x, c(0.50)) })), 1, which.max),
+        real = dataset$zrelab),
+      col.names = c("Real 1", "Real 2", "Real 3"),
+      row.names = TRUE,
+      digits = 2, align = "r", caption = "Hard classification.")
+```
 
-```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
-# Jointly most likely state path (Viterbi decoding)
+The filtered probability is overly accurate, as expected, making the additional information contained in the smoothed seem of little value. The confusion matrix makes evident that, under ideal conditions, the sampler works as intended. Similarly, the Viterbi algorithm recovers the expected most probably hidden state.
+
+```{r, fig.height = 6, out.width="\\textwidth"}
 plot_statepath(zstar_t, dataset$zrelab)
+```
 
-# Confusion matrix for jointly most likely state path
+```{r, eval = FALSE}
 print("Estimated hidden states for the jointly most likely path (Viterbi decoding)")
 round(table(
   actual = rep(dataset$zrelab, each = n.samples),
   fit = zstar_t) / n.samples, 0)
 ```
 
-```{r, fig.height = 6, fig.width = 7.2, out.width="\\textwidth"}
-# Fitted output
+```{r, echo = FALSE}
+knitr::kable(table(
+        estimated = apply(round(apply(alpha_tk, c(2, 3),
+                                      function(x) {
+                                        quantile(x, c(0.50)) })), 1, which.max),
+        real = dataset$zrelab),
+      digits = 2, align = "r", caption = "Viterbi decoding.")
+```
+
+### Fitted output
+
+```{r, fig.height = 6, out.width="\\textwidth"}
 plot_outputfit(dataset$x, hatx_t, z = dataset$zrelab, TRUE)
 ```
 
 All in all, we are confident that the Stan code works as specified and we find model calibration satisfactory.
+
+```{r, message = FALSE, echo = FALSE, results = 'hide'}
+rm(list = ls())
+gc()
+```
 
 ---
 
@@ -446,13 +509,13 @@ source('../iohmm-mix/R/iohmm-mix-init.R')
 
 ## Model
 
-We adhere to the methodology proposed in the original work as much as possible. We set up an IOHMM model with $K = 4$ hidden states to forecast stock prices. The hidden state model is driven by a multinomial (softmax) regression with $R = 4$ inputs, namely opening, closing, highest and lowest prices from the previous time step. The univariate output is the stock closing price for the current time step. The observation model is a Gaussian mixture with $L = 3$ components per state, that is
+We adhere to the methodology proposed in the original work as much as possible. We set up an IOHMM model with $K = 4$ hidden states to forecast stock prices. The hidden dynamics are driven by a multinomial (softmax) regression with $R = 4$ inputs, namely opening, closing, highest and lowest prices from the previous time step. The univariate output is the stock closing price for the current time step. The observation model is a Gaussian mixture with $L = 3$ components per state,
 
 \[
 p(x_t | z_{t} = j) = \sum_{l = 1}^{L}{\lambda_{jl} \ \NN(x_t | \mu_{jl}, \sigma_{jl})},
 \]
 
-where $\lambda_{jl}$ is the component weight for the $l$-th component in the $j$-th state with $0 \le \lambda_{jl} \le 1 \ \forall \ l, j$ and $\sum_{l=1}^{L}{\lambda_{jl}} = 1 \ \forall \ j$.
+where $\lambda_{jl}$ is the component weight for the $l$-th component within the $j$-th state, $0 \le \lambda_{jl} \le 1 \ \forall \ l, j$ and $\sum_{l=1}^{L}{\lambda_{jl}} = 1 \ \forall \ j$.
 
 The vector parameter then becomes $\mat{\theta} = (\mat{\pi}_1, \mat{w}_k, \lambda_{kl}, \mu_{kl}, \sigma_{kl})$ for $k \in \{1, \dots, K\}$ and $l \in \{1, \dots, L\}$.
 
@@ -463,9 +526,9 @@ L = 3
 
 ## The sampler
 
-We use Stan's Hamiltonian Monte Carlo to run a fully Bayesian estimation of the model parameters. Additionally, we compute many hidden quantities, including the forward probability, the future likelihood, the jointly most likely path, transition probabilities and samples from the hidden state distribution. To this end, we write our own implementation of the forward filter, the forwards-backwards filter and the Viterbi decoding algorithm. We acknowledge the authors of the Stan Manual [@team2017stan] for the numerous examples, some of which served as a starting point for our final code.
+We use Stan's Hamiltonian Monte Carlo to run a fully Bayesian estimation of the model parameters. Additionally, we compute many hidden quantities, including the forward probability, the future likelihood, the jointly most likely path and transition probabilities. We draw samples from the hidden state distribution as well. To this end, we write our own implementation of the forward filter, the forwards-backwards filter and the Viterbi decoding algorithms. We acknowledge the authors of the Stan Manual [@team2017stan] for the numerous examples, some of which served as a starting point for our code.
 
-We define the following parameters for the Markov Chain Monte Carlo. We run one chain to avoid between-chain label switching.
+We define the following parameters for the MCMC sampler. The chosen hyperparameters correspond to diffuse priors.
 
 ```{r}
 hyperparams <- c(0, 5, 5, 0, 3, 1, 1, 0, 5);
@@ -480,7 +543,7 @@ n.seed = 9000
 
 ## Dataset & data transformation
 
-We use daily OHLC prices for the stocks and time spans listed in the table below, which are identical to the original work. The data is downloaded from Yahoo Finance via Quantmod. The original work includes the analysis of two stocks that are currently delisted. Since public sources such as Yahoo and Google Finance, we do not  do not include this data
+We use daily OHLC prices for the stocks and time spans listed in the original paper. The data is downloaded from Yahoo Finance via Quantmod. We omit two delisted stocks as the series are not avaliable anymore in public sources such as Yahoo and Google Finance.
 
 ```{r}
 syms <- data.frame(
@@ -496,7 +559,7 @@ syms <- data.frame(
 
 ```{r, echo = FALSE}
 library(knitr)
-kable(t(sapply(1:nrow(syms), function(i) { c(
+knitr::kable(t(sapply(1:nrow(syms), function(i) { c(
         syms$symbol[i],
         syms$name[i],
         paste(syms$train.from[i], "to", syms$train.to[i]),
@@ -506,7 +569,7 @@ kable(t(sapply(1:nrow(syms), function(i) { c(
       align = "c", caption = "Details of the dataset.")
 ```
 
-We observed that the chains would not mix when the sampler is fed the raw input and output variables. After a good deal of trial and error, we found that centering and scaling the variables will not only improve convergence but also speed up the sampler significantly.
+We found that feeding the raw dataset to our sampler led to convergence issues. We learnt by trial and error that centering and rescaling the variables did not not only improve convergence but also sped up the software by a factor of 5.
 
 ```{r}
 make_dataset <- function(prices, scale = TRUE) {
@@ -544,12 +607,10 @@ make_dataset <- function(prices, scale = TRUE) {
 
 ## Methodology
 
-The goal of the experiment is to predict the closing price for a specific stock market share. We estimate the model parameters $\mat{\hat{\theta}}$ using all the information available in the training dataset. We compute the likelihood of the last observation in the training set conditional on the trained parameters $p(\mat{x}_{t} | \mat{\hat{\theta}})$ and we locate the observation in the training set with the nearest likelihood,
+The goal of the experiment is to predict the closing price for a specific stock market share. According to the proposed methodology, we estimate the model parameters $\mat{\hat{\theta}}$ using all the information available up to a given step. We compute the likelihood of the last observation in the training set conditional on the trained parameters $p(\mat{x}_{t} | \mat{\hat{\theta}})$ and we locate the observation in the training set with the nearest likelihood,
 
 \[
-\mat{x}_{t^*} = \argmin_{s} \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{t-s} | \mat{\hat{\theta}}) \right|.
-% $\hat{\LL}_{t+h} = p(\mat{u}_{t+h} | \mat{\hat{\theta}})$
-% $\hat{\LL}_{t+h}^* = p(\mat{u}_{t+h}^* | \mat{\hat{\theta}})$ where 
+\mat{x}_{t^*} = \argmin_{s} \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{s} | \mat{\hat{\theta}}) \right|.
 \]
 
 We compute the change in the closing price from the located time step to the next one,
@@ -558,10 +619,10 @@ We compute the change in the closing price from the located time step to the nex
 \Delta_{t^*} = \mat{x}_{t^*+1} - \mat{x}_{t^*},
 \]
 
-and build out forecast assuming that a similar pattern will repeat
+and build our forecast assuming that a similar pattern will repeat
 
 \[
-\mat{\hat{x}_{t+1}} = \mat{\hat{x}_{t}} + \Delta_{t^*}.
+\mat{\hat{x}}_{t+1} = \mat{x}_{t} + \Delta_{t^*}.
 \]
 
 ```{r}
@@ -598,23 +659,23 @@ neighbouring_forecast <- function(x, oblik_t, h = 1, threshold = 0.05) {
 }
 ```
 
-Although the authors state that one or more observations in the training dataset are selected, the paper includes no methodological details about the determination of the number, the selection and the combination of the neighboring observations. In our implementation, we locate all the observation whose estimated likelihood value lays inside the interval that covers $\pm 5%$ of the target observation likelihood.
+Although the authors state that one or more observations in the training dataset are selected, the paper provides no details about the determination of the number, the selection and the combination of the neighboring observations. In our implementation, we locate all the observations whose estimated likelihood is within the interval that covers $\pm 5º%$ of the target observation likelihood.
 
 \[
-\mat{x}_{t-s} : \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{t-s} | \mat{\hat{\theta}}) \right| < 0.05 \times p(\mat{x}_{t} | \mat{\hat{\theta}}).
+\left\{ \mat{x}_{s} : \ \left| p(\mat{x}_{t} | \mat{\hat{\theta}}) - p(\mat{x}_{s} | \mat{\hat{\theta}}) \right| < 0.05 \times p(\mat{x}_{t} | \mat{\hat{\theta}}) \right\}.
 \]
 
-If the set is empty, we use the past observation with closest likelihood instead.
+If the set is empty, we use the past observation with the most similar likelihood instead.
 
 The procedure is run independently for each stock.
 
 ## Southwest Airlines (LUV)
 
-We present an in-depth analysis of one stock, LUV, to assess its strength and weakness to fit the data and predict out of sample. We then present forecast error measures for all the four involved stocks.
+We present an in-depth study of one stock, LUV, to assess the strengths and weaknesses of the model. We later present a brief analysis of RYA.L.
 
 ### Data exploration
 
-```{r, message = FALSE, warning = FALSE, fig.width = 7, fig.height = 6}
+```{r, message = FALSE, warning = FALSE, fig.height = 6}
 symbol <- syms[1, ] # LUV
 prices   <- getSymbols(symbol$symbol,
                        env  = NULL,
@@ -629,11 +690,11 @@ plot_inputoutput(x = dataset$x, u = dataset$u,
                  u.label = c("Open", "High", "Low", "Close"))
 ```
 
-As we expected, OHLC prices follow an almost identical trend and are in turn highly correlated with the next day closing price. It is not surprising that raw prices are highly correlated.
+Unsuprisingly, OHLC prices follow an almost identical trend and are highly correlated with the next day closing price. Nonetheless, we stress that the correlation of two non-stationary variables is an unreliable measure. Althought it is customary to take the first difference or apply other transformations to achieve non-stationarity, the price level is purposely retained in the input series.
 
 ### Estimation
 
-We attempt to ease convergence by setting up initial values for the component parameters that are approximated with k-means. Although nested k-means is not truthful to the model we replicate, we found that this simplification is useful for a starter point.
+We attempt to ease convergence by setting up approximated initial values for the component parameters. Although nested k-means is not truthful to the model we replicate, we still find this simplification worthwhile.
 
 ```{r, warning = FALSE}
 rstan_options(auto_write = TRUE)
@@ -659,23 +720,24 @@ stan.fit <- stan(file = stan.model,
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-As suggested by the warning message and the extended guidelines in the Stan website, the numerical problem is negligible and we do not take any further action.
+Long computational times are a forewarning of poor convergence. This may be specific to the characteristics of the selected price series; despite the similar length, RYA.L performs significantly faster as shown below. As suggested by the warning message and the extended guidelines in the Stan website, the numerical problem is negligible and we do not take any further action.
 
 ### Convergence
-Graphical diagnoses (not shown) make it evident that convergence to stationarity is at very least weak. Switching labels make this assessment more difficult since we cannot compare different chains as widely suggested by standard literature. On the other hand, the number of iterations chosen seems to be enough to allow convergence of averages as assessed by cumulated averages curve. However, this do not compensate the fragile convergence to stationarity.
+Graphical diagnoses (not shown) make evident that convergence to stationarity is at very least weak. Switching labels complicate the assessment since we cannot run and compare several chains as widely suggested in the standard literature. On the other hand, the number of iterations chosen seems to be enough to allow convergence of averages as assessed by the cumulated averages curve. Nonetheless, this do not compensate the fragile convergence to stationarity.
 
-Relying on the shrink factor of @gelman1992inference, we identify that component mean, standard deviation and weight are the hardest to converge. More worryingly, the effective sample size of some mixture parameters is below 10\% of the iteration number. Although thinning could reduce autocorrelation in the sampling sequence, it has the computational, and not statistical, purpose of storing and running computations on large sampling sequences [@gelman2011inference]. In line with these diagnostics, Monte Carlo standard error exceeds 10\% of these parameter estimated standard error. The mean hyperparameter per state converges performs unsurprisingly well, a clear indication that our hierarchical implementation is a pertinent improvement.
+Relying on the shrink factor of @gelman1992inference, we identify that the components mean, standard deviation and weight are the hardest quantities to converge. More worryingly, the effective sample size of some mixture parameters lies below 10\% of the iteration number. Analogously, Monte Carlo standard error exceeds 10\% of the estimated standard error. Although thinning could reduce autocorrelation, it has the computational (but not statistical) purpose of storing and running computations on large sampling sequences [@gelman2011inference]. The mean hyperparameters sample efficiently, a clear indication that the addition of a hierarchy is a pertinent improvement.
 
 ```{r}
-kable(summary(stan.fit,
+knitr::kable(summary(stan.fit,
         pars = c('p_1k', 'w_km', 'lambda_kl', 'hypermu_k', 'mu_kl', 's_kl'),
         probs = c(0.10, 0.50, 0.90))$summary,
+        col.names = c("Mean", "MCSE", "SE", "10\\%", "Med", "90\\%", "ESS", "$\\hat{R}$"),
       digits = 2, caption = "Summary of the posterior draws from the distribution of the estimated parameters.")
 ```
 
-In general terms, convergence is just about satisfactory. As we show in the following sections, the fitted values are roughly consistent with the observations thus hinting that MCMC still adapts to the data even in the cases where diagnostics yield mixed results. Nonetheless, we interpret the results carefully and with skepticism. The fact that mixture parameters are the most ill-behaved lead us to the hypothesis that the observation model would improve significantly with better domain knowledge. We also suspect that setting the same number of hidden states for all the analysed price series may prove excessively arbitrary and hinder sampling performance.
+In general terms, convergence is just about satisfactory. As shown in the following sections, the fitted values are roughly consistent with the observations thus hinting that the sampler adapts to the data even in the cases where diagnostics yield mixed results. Nonetheless, we interpret the results carefully and with skepticism. The fact that mixture parameters are the most ill-behaved leads us to the hypothesis that the observation model would improve significantly with better domain knowledge. Furthermore, we suspect that setting the same number of hidden states for all the price series analysed in the original paper may prove excessively arbitrary and hinder sampling performance.
 
-At this point, we extract sampled hidden quantities for later use.
+We extract sampled hidden quantities for later use.
 
 ```{r}
 alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
@@ -689,38 +751,38 @@ logA_ij  <- extract(stan.fit, pars = 'logA_ij')[[1]]
 ### State probability
 The following plot shows the probability, along with its 80\% credible interval, that an observation belongs to one of the possible hidden states.
 
-```{r, warning = FALSE, fig.width = 7, fig.height = 7}
+```{r, warning = FALSE, fig.height = 7}
 plot_stateprobability(alpha_tk, gamma_tk, 0.8)
 ```
 
-Since states are determined by the previous step OHLC prices, filtered and smoothed probabilities are equivalent. We note that state membership naturally becomes persistent. State membership basically depends non-linearly on price levels given the choice of input variables and will remain stable as long as prices do so. Persistence may be regarded as a very valuable feature since, in some contexts, latent states are expected to change disruptively but only from time to time. Contrarily, Markov Switching dynamics try to accommodate latent states in a way that they may shift more often than domain knowledge suggest, which in turns may lead to overfitting. The jointly most probably hidden path, as decoded by the Viterbi algorithm, reflects the continuity of states across time.
+Since states are determined by the previous step OHLC prices, filtered and smoothed probabilities are equivalent. We note that state membership naturally became persistent. Given the choice of input variables, state membership depends non-linearly on price levels and will remain stable so long as price changes are stationary. In some contexts, persistence may be regarded as a very valuable feature because latent states are expected to change disruptively yet sporadically. Conversely, Markov Switching dynamics attempt to accommodate latent states in a way that they may shift more often than domain knowledge suggests, which in turns may lead to overfitting. The jointly most probably hidden path, as decoded by the Viterbi algorithm, reflects the continuity of states across time.
 
-```{r, fig.width = 7, fig.height = 3.5}
+```{r, fig.height = 3.5}
 plot_statepath(zstar_t)
 ```
 
-It is interesting to study in detail in what way the price level at a given day informs the closing price for the following time step. As expected, the softmax transformation establish a non-linear relationship between OHLC prices and the membership probability. Latent states naturally get a fully intuitive interpretation. States 2 and 3 represent the upper price levels and contain the observations that are considerably and slightly above the mean. The analogous is also true for the states 3 and 4. Following this intuition, the number of possible states $K$ should be chosen according to the observed number of levels in the input series. We notice that the different inputs have a similar impact on the state probability, which is unsurprising given how highly cross-correlated they are. Finally, even though the thresholds are estimated by optimizing the log-posterior density of the parameters, optimization could be run on out of sample error measures if forecasting is the main goal of the model. We mention a few simple ideas [below](#further-research).
+It is interesting to study in detail in what way the price level at a given day informs the closing price for the following time step. As expected, the softmax transformation establishes a non-linear relationship between OHLC prices and the membership probability. The latent variables have a natural and intuitive interpretation. States 2 and 3 represent the upper price levels and contain the observations that are considerably and slightly above the mean. The analogous is also true for the states 3 and 4. Following this intuition, the number of possible states $K$ should be chosen according to the observed number of levels in the input series. We notice that the different inputs have a similar impact on the state probability due to their high cross-correlatation. Even though the thresholds are estimated by maximizing the log-posterior density, out of sample error measures would be used if forecasting were the main goal. We expand on this in the [discussion](#further-research).
 
-```{r, warning = FALSE, fig.width = 7, fig.height = 7.5}
+```{r, warning = FALSE, fig.height = 7.5}
 plot_inputprob(dataset$u.unscaled,
                apply(logA_ij, c(2, 3), function(x) { median(exp(x)) }),
                u.label = c("Open", "High", "Low", "Close"))
 ```
 
 ### Fitted output
-The following plot shows the fitted output. We first draw the hidden state for the next time step according to the weights estimated by the softmax regression applied on the previous day OHLC vector. We then draw one components from such state and we finally draw an observation with a Gaussian with the estimated mean and standard deviation for the combination of state and component.
+The following plot shows the fitted output. We first draw the hidden state according to the probabilities estimated by the softmax regression applied on the previous day OHLC vector. We draw one component from such state, then we draw an observation from a Gaussian distribution with the corresponding mean and standard deviation.
 
-```{r, fig.width = 7, fig.height = 4}
+```{r, fig.height = 4}
 plot_outputfit(dataset$x, hatx_t, z = apply(zstar_t, 2, median), K = K)
 ```
 
-It is very important to note that fitted observation is not the forecast itself as the methodology proposed by the authors rely on the likelihood of the observation instead.
+It is important to note that fitted observation is not the forecast itself. The methodology proposed by the original authors rely on the likelihood of the observations instead.
 
 ### In-sample summary
 
 All in all, the in-sample fit can be summarized in the following plot.
 
-```{r, fig.width = 7, fig.height = 7}
+```{r, fig.height = 7}
 plot_inputoutputprob(x = dataset$x, u = dataset$u,
                      stateprob = alpha_tk, zstar = zstar_t,
                      x.label = symbol$symbol,
@@ -730,9 +792,9 @@ plot_inputoutputprob(x = dataset$x, u = dataset$u,
 
 ### Forecast
 
-The methodology relies on the estimated likelihood of the last observation to produce a forecast. We compute a walk forward procedure where the model is refitted each time a new observation is received. Since Stan does not have a natural way to update the log-density from a previous run, we implement a reduced version of our sampler that includes only the minimum computations needed to produce the forecast.
+The methodology produces a forecast based on the estimated likelihood of the last observation. We write a walk forward procedure where the model is refitted each time a new observation is received. Since Stan does not have a natural way to update the log-density from a previous run, we implement a reduced version of our software that includes only the minimum computations needed for forecasting.
 
-The following script runs the walk forward procedure in parallel and returns the results in a list called `results`.
+The following snippet runs the walk forward procedure in parallel and returns a list of objects.
 
 ```{r, message = FALSE, warning = FALSE}
 luv.wf <- wf_forecast(syms = symbol, K, L, hyperparams,
@@ -742,16 +804,18 @@ luv.wf <- wf_forecast(syms = symbol, K, L, hyperparams,
 luv.300904 <- luv.wf[[49]]
 ```
 
+#### Forecast for 30-sep-2004
+
 We first recreate the forecast for 30-sep-2004. Our OHLC values differ from those shown in the original work, possibly due to adjustments. We regret that the authors do not provide enough details about data sources and pre-processing.
 
 ```{r, echo = FALSE}
 luv.300904.n <- nrow(luv.300904$dataset$u)
-kable(luv.300904$dataset$u.unscaled[(luv.300904.n - 1):luv.300904.n, ],
+knitr::kable(luv.300904$dataset$u.unscaled[(luv.300904.n - 1):luv.300904.n, ],
       digits = 2, col.names = c("Open", "High", "Low", "Close"),
       caption = "OHLC values for the selected dates.")
 ```
 
-We arbitrarily choose one of the samples generated by MCMC. We find the most similar past observation and produce the point forecast accordingly.
+We arbitrarily choose one of the samples generated by MCMC. We identify similar past observations and produce the point forecast accordingly.
 
 ```{r}
 oblik_t   <- luv.300904$oblik_t
@@ -779,7 +843,7 @@ w        <- exp(d)
 ```
 
 ```{r, echo = FALSE}
-kable(
+knitr::kable(
   cbind(
     luv.300904$dataset$u.unscaled[closests, ],
     Cl(luv.300904$dataset$u.unscaled[closests + h, ]) - Cl(luv.300904$dataset$u.unscaled[closests, ]),
@@ -795,9 +859,9 @@ luv.300904.delta <- luv.300904$dataset$u.unscaled[closests + h, 4] - luv.300904$
 luv.300904.yhat  <- luv.300904$dataset$u.unscaled[T.length, 4] + sum(luv.300904.delta * w) / sum(w)
 ```
 
-The difference between the observed closing price $x_{t+1} = `r luv.300904.n<-nrow(luv.300904$dataset$u); luv.300904$dataset$u.unscaled[luv.300904.n, ]`$ and the forecast $\hat{x}_{t+1} = `r luv.300904.yhat`$ equal `r luv.300904$dataset$u.unscaled[luv.300904.n, ] - luv.300904.yhat`.
+The difference between the observed closing price $x_{t+1} = `r luv.300904.n<-nrow(luv.300904$dataset$u); round(luv.300904$dataset$u.unscaled[luv.300904.n, 4], 2)`$ and the forecast $\hat{x}_{t+1} = `r round(luv.300904.yhat, 2)`$ equal `r round(luv.300904$dataset$u.unscaled[luv.300904.n, 4] - luv.300904.yhat, 2)`.
 
-```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+```{r, echo = FALSE, fig.height = 5}
 T.length <- length(luv.300904.y)
 T.ooslength <- length(luv.300904.yhat)
 luv.300904.cl <- rep(NA, T.length)
@@ -834,7 +898,11 @@ legend(x = "center",
 par(opar)
 ```
 
-We can account for parameter uncertainty by repeating these computations for all the samples corresponding to a given time step. We stress that such a measure would not not be the interval estimate for the forecast, which is simply a point forecast. We now show the walking forward forecasts for the selected stock.
+We can account for parameter uncertainty by repeating these computations for all the samples corresponding to a given time step. We stress that such a measure would not conform a true interval estimate as the methodology provides only with a point forecast.
+
+#### Walking forward forecasts
+
+We now show the walking forward forecasts for the selected stock.
 
 ```{r}
 T.ooslength  <- length(luv.wf)
@@ -843,19 +911,19 @@ luv.wfy      <- tail(luv.dataset$x.unscaled, T.ooslength - 1)
 luv.wfyhat   <- head(sapply(luv.wf, function(wf) { median(wf$forecast) }), -1)
 ```
 
-```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+```{r, fig.height = 5}
 plot_seqforecast(y = luv.wfy, yhat = luv.wfyhat,
                  main.label = symbol$symbol)
 
 ```
 
-We summarise the out of sample error measures in the following table.
+We report the out of sample forecast error measures in the table below. Both the coefficient of determination $R^2$ and the Mean Absolute Percentage Error (MAPE) are consistent with the findings in the original paper.
 
 ```{r, echo = FALSE}
 luv.err <- luv.wfy - luv.wfyhat
-kable(data.frame(
+knitr::kable(data.frame(
   mean(luv.err^2),
-  paste0(round(100 * mean(luv.err / luv.wfy), 2), "%"),
+  paste0(round(100 * mean(abs(luv.err / luv.wfy)), 2), "%"),
   as.numeric(summary(lm(luv.wfy ~ luv.wfyhat))$r.squared)
 ),
       align = "c", digits = 4,
@@ -863,9 +931,7 @@ kable(data.frame(
       caption = "Out of sample error measures for LUV.")
 ```
 
-Our forecasts are significantly better compared to the original work, which is both flattering and dubious. One source of improvement is that we identify many similar past observations to produce a forecast, a methodological aspect that was partly imprecise in the original paper. Another benefit of a fully bayesian sampler is that we can use the median of the log-posterior density of the parameter and other estimated quantities, which in turn improves the robustness of our forecasts.
-
-```{r clean, message = FALSE, echo = FALSE}
+```{r, message = FALSE, echo = FALSE, results = 'hide'}
 rm(stan.fit, stan.data, alpha_tk, gamma_tk, zstar_t, hatx_t, oblik_t, logA_ij)
 rm(list = ls()[grep("luv", ls())])
 gc()
@@ -877,7 +943,7 @@ gc()
 
 We estimate the model for RYA.L and we then present the in-sample summary. 
 
-```{r, warning = FALSE}
+```{r, message = FALSE, warning = FALSE}
 symbol <- syms[2, ] # RYA
 prices   <- getSymbols(symbol$symbol,
                        env  = NULL,
@@ -886,7 +952,9 @@ prices   <- getSymbols(symbol$symbol,
                        src  = symbol$src)
 T.length <- nrow(prices[paste(symbol$train.from, symbol$train.to, sep = "/")])
 dataset <- make_dataset(prices[1:T.length, ], TRUE)
+```
 
+```{r}
 rstan_options(auto_write = TRUE)
 
 stan.model = '../iohmm-mix/stan/iohmm-hmix.stan'
@@ -917,9 +985,17 @@ oblik_t  <- extract(stan.fit, pars = 'oblik_t')[[1]]
 logA_ij  <- extract(stan.fit, pars = 'logA_ij')[[1]]
 ```
 
-We identify the existence of two extreme observations but we decide not to take any further action. State 2 represents a period of time in which the stock suddently reached the maximum value in its history. As observed before, the hidden states are persistent most of the time.
+We identify two extreme observations but we decide not to take any further action. State 2 represents a period of time in which the stock suddenly reached the maximum value in its history. As observed before, the hidden states are persistent.
 
-```{r, fig.width = 7, fig.height = 7}
+```{r}
+knitr::kable(summary(stan.fit,
+        pars = c('p_1k', 'w_km', 'lambda_kl', 'hypermu_k', 'mu_kl', 's_kl'),
+        probs = c(0.10, 0.50, 0.90))$summary,
+        col.names = c("Mean", "MCSE", "SE", "10\\%", "Med", "90\\%", "ESS", "$\\hat{R}$"),
+      digits = 2, caption = "Summary of the posterior draws from the distribution of the estimated parameters.")
+```
+
+```{r, fig.height = 7}
 plot_inputoutputprob(x = dataset$x, u = dataset$u,
                      stateprob = alpha_tk, zstar = zstar_t,
                      x.label = symbol$symbol,
@@ -927,15 +1003,9 @@ plot_inputoutputprob(x = dataset$x, u = dataset$u,
                      stateprob.label = bquote("Filtered prob" ~ p(z[t] ~ "|" ~ x[" " ~ 1:t])))
 ```
 
-```{r, warning = FALSE, fig.width = 7, fig.height = 7.5}
-plot_inputprob(dataset$u.unscaled,
-               apply(logA_ij, c(2, 3), function(x) { median(exp(x)) }),
-               u.label = c("Open", "High", "Low", "Close"))
-```
-
 ### Out-of-sample analysis
 
-Again, our forecasts are 
+We produce the forecast using the same methodology and arrive at a similar accuracy level.
 
 ```{r}
 rya.wf <- wf_forecast(syms = symbol, K, L, hyperparams,
@@ -948,18 +1018,16 @@ rya.wfy      <- tail(rya.dataset$x.unscaled, T.ooslength - 1)
 rya.wfyhat   <- head(sapply(rya.wf, function(wf) { median(wf$forecast) }), -1)
 ```
 
-```{r, echo = FALSE, fig.width = 7, fig.height = 5}
+```{r, fig.height = 5}
 plot_seqforecast(y = rya.wfy, yhat = rya.wfyhat,
                  main.label = symbol$symbol)
 ```
 
-We summarise the out of sample error measures in the following table:
-
 ```{r, echo = FALSE}
 rya.err <- rya.wfy - rya.wfyhat
-kable(data.frame(
+knitr::kable(data.frame(
   mean(rya.err^2),
-  paste0(round(100 * mean(rya.err / rya.wfy), 2), "%"),
+  paste0(round(100 * mean(abs(rya.err / rya.wfy)), 2), "%"),
   as.numeric(summary(lm(rya.wfy ~ rya.wfyhat))$r.squared)
 ),
       align = "c", digits = 4,
@@ -967,36 +1035,22 @@ kable(data.frame(
       caption = "Out of sample error measures for rya.")
 ```
 
-## Discussion
+## Discussion {#further-research}
 
 ### The statistical model
 
-In a sense, this model could be interpreted as $K \times L$ means that switch according to previous price levels. We thus expected a highly multinomial, ill-behaved log-posterior that aggravates the frequent combinatorial non-identifiabilities inherent to mixture models. As our first naive and mostly unrestricted implementation could not sample efficiently from the log-posterior, we decided to add more information in the form of prior belief and additional model structure (within-state hierarchical mixture).
+In its simplest form, this model could be interpreted as $K \times L$ means that switch according to previous price levels. We thus anticipated a highly multinomial, ill-behaved log-posterior that aggravates the frequent combinatorial non-identifiabilities inherent to mixture models. As our first naive and mostly unrestricted implementation could not sample efficiently from the log-posterior, we decided to add more information in the form of prior belief and additional model structure (within-state hierarchical mixture).
 
 Even after all the improvements, we only arrive at a just about satisfactory yet imperfect convergence. We are confident that our implementation works as intended since we tested the model calibration by simulation, however, some computational issues arise when the sampler is fed with real data. More specifically, we find that sampling efficiency becomes extremely low for some of the parameters of the observation model. 
 
 In resemblance to the folk theorem^[See [The folk theorem of statistical computing
 ](http://andrewgelman.com/2008/05/13/the_folk_theore/)], which informally states that computational problems may be originated in model misspecification, we find that the output model proposed by the authors is unrepresentative of the features observed in the data.
 
-### The
+### The financial application
 
-Letting inputs drive the hidden dynamics has a great potential for financial application. The latent variables are driven by price levels in the original work, but the transition model is flexible enough to adapt to many other features a financial analyst may want to represent such as volume, volatility level, trends and direction or any other persistent process.
+The patterns captured by the hidden states are consitent with the data under analysis. We believe a better choice of the number of states could improve the fit significantly. We find especially appealing that states are naturally persistent. On the other hand, the observation model seems simplistic to the extent that convergence is hindered. Forecasting methodology should be inspected during a larger time span before reaching any conclusion.
 
-Strengths:
-
-* Hidden states seem to capture data patterns quite well.
-* Hidden states are persistent, which makes great sense.
-
-Weaknesses:
-
-* Observation model doesn't fit very well.
-* Convergence is hard because the model doesn't capture the dynamics of the data, so the log-posterior behaves quite badly.
-* Constant K for all stocks?
-
-### Further research {#further-research}
-
-* Transforms of the inputs should be explored, such as High-Low range, as well as adding other variables such as volume, or adding lagged cross-section variables from other stocks.
-* If we don't want the output model to be driven by input level, we can first remove the trend by first difference or whatever detrending method is more appropriate. More generally, we could use the residuals from a given model, in a way that the next observation is driven by how rare an event.
+Letting inputs drive the hidden dynamics has a great potential for financial application. Although the authors proposed that price levels should drive the latent variables, the transition model is flexible enough to adapt to many other features a financial analyst may want to recreate. Possible candidate inputs for persistent processes are volume, volatility and trends. If persistence is undesired, trends should be removed from the input. For example, hidden dynamics may be driven by the residuals from a given model. 
 
 ---
 

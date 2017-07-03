@@ -584,9 +584,17 @@ n.seed = 9000
 ### 20170626 Mo 21 to 24 ###
 * Working on the paper (forecast).
 
-### 20170701 Sa 9 to WIP ###
+### 20170701 Sa 9 to 18 ###
 * Finally back to end this!
-* 
+* Worked on the forecast and discussion sessions.
+
+### 20170702 Su 10 to 22 ###
+* Re-read the whole report. Fixed many minor issues. Checked there's no old/broken code in the rmarkdown file. Addressed some writing style issues. Improved a few explanations and descriptions.
+* Sent check-in email.
+* To-Do:
+  * Will run the whole code from the beginning to make sure everything works out of the box.
+  * Fix plot legend expression
+  * Fix plot legend output fit
 
 ---
 

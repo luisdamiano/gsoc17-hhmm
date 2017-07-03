@@ -16,10 +16,10 @@ w = matrix(
   c(1.2, 0.5, 0.3, 0.1, 0.5, 1.2, 0.3, 0.1, 0.5, 0.1, 1.2, 0.1),
   nrow = K, ncol = M, byrow = TRUE)
 b = matrix(
-  c(5, 6, 7, 0.5, 1, 5, 0.01, -0.5, 0.01, -1, -5, 0.2),
+  c(5.0, 6.0, 7.0, 0.5, 1.0, 5.0, 0.1, -0.5, 0.1, -1.0, -5.0, 0.2),
   nrow = K, ncol = M, byrow = TRUE)
-s = c(0.25, 1, 2.5)
-p1 = c(0.45, 0.10, 0.45)
+s = c(0.2, 1.0, 2.5)
+p1 = c(0.4, 0.2, 0.4)
 
 # Markov Chain Monte Carlo
 n.iter = 400
@@ -122,7 +122,7 @@ sum(apply(gamma_tk, 1, rowSums) == 0)
 plot_stateprobability(alpha_tk, gamma_tk, 0.8, dataset$zrelab)
 
 # Confusion matrix for hard (naive) classification
-print("Estimated hidden states (hard naive classification using filtered prob)")
+print("Estimated hidden states (hard naive classification using filtered probability)")
 print(table(
   estimated = apply(round(apply(alpha_tk, c(2, 3),
                                 function(x) {
