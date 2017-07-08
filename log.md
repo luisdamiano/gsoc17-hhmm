@@ -306,6 +306,10 @@ OK NOW I'M GETTING VERY ANXIOUS TO GIVE HASSAN MY FIRST TRY, but that won't happ
 * Fixed a few problems with bibliography and formats.
 * Finally pushing to GitHub: https://github.com/luisdamiano/gsoc17-hhmm
 
+---
+
+# Stage II: Hassan 2005 #
+
 ### 20170522 Mo 13 to 22 ###
 * Starting coding for a plain vanilla HMM in R (simulation) and Stan (estimation). Goal: instead of shooting for IOHMM as first implementation, I broke it down into two steps a) HMM, and b) then I add the needed modifications.
 * Update: flight delayed for about two/three hours, extra coding time woohoo!
@@ -595,6 +599,15 @@ n.seed = 9000
   * Will run the whole code from the beginning to make sure everything works out of the box.
   * Fix plot legend expression
   * Fix plot legend output fit
+
+---
+
+# Stage III: Jangmin 2004 #
+
+### 20170708 Sa 09 to 19 ###
+* It was a hard week, sorry
+* Worked on theory (litreview)
+* Started the data simulation function (still WIP)
 
 ---
 

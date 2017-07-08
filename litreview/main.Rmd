@@ -10,18 +10,18 @@ output:
     fig_width: 7
     highlight: default
     includes:
-      in_header: ../Rmd/preamble-latex.Rmd
+      in_header: ../common/Rmd/preamble-latex.Rmd
     keep_tex: no
     latex_engine: pdflatex
     number_sections: yes
     toc: no
   html_document:
     includes:
-      in_header: ../Rmd/preamble-html.Rmd
+      in_header: ../common/Rmd/preamble-html.Rmd
     keep_md: no
     number_sections: yes
     toc: no
-bibliography: ../references.bib
+bibliography: ../common/references.bib
 abstract: This is the abstract. Lorem ipsum dolor sit amet, consectetur adipiscing
   elit. Cras facilisis mi eu diam pellentesque, ac consequat enim ultricies. Duis
   convallis massa neque, sit amet molestie odio sagittis et. Duis aliquet dolor elementum,
@@ -46,6 +46,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r child = 'Rmd/iohmm.Rmd'}
+```
+
+```{r child = 'Rmd/hhmm.Rmd'}
 ```
 
 ```{r child = 'Rmd/references.Rmd'}
