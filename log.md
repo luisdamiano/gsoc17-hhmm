@@ -605,9 +605,12 @@ n.seed = 9000
 # Stage III: Jangmin 2004 #
 
 ### 20170708 Sa 09 to 19 ###
-* It was a hard week, sorry
+* Back after a hard week, sorry
 * Worked on theory (litreview)
 * Started the data simulation function (still WIP)
+
+### 20170708 Su 09 to 19 ###
+* Went on with the data simulation function, learning a lot about recursion
 
 ---
 
