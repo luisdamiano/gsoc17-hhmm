@@ -609,8 +609,12 @@ n.seed = 9000
 * Worked on theory (litreview)
 * Started the data simulation function (still WIP)
 
-### 20170708 Su 09 to 19 ###
+### 20170709 Su 09 to 19 ###
 * Went on with the data simulation function, learning a lot about recursion
+
+### 20170710 Mo 19 to 20 ###
+* No paper describes a HHMM with enough generality, they all miss some details. Had to read all the papers and aggregate the rules of node activation.
+* 
 
 ---
 

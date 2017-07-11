@@ -1,243 +1,141 @@
 library(ref)
 
-sprint <- function(node, children) UseMethod("sprint")
-activate <- function(current, ...) UseMethod("activate")
-
-root_node <- function(children, pi_d) {
+root_node <- function(children, pi_d, A_d) {
   structure(
-    list(
-      d          = 1,
-      i          = 1,
-      children   = children,
-      pi_d       = pi_d
-    ), class = "hhmm_rnode")
-}
+    list(children = children, A_d = A_d, pi_d = pi_d),
+    class = c("hhmm_rnode", "node"))}
 
-internal_node <- function(d, i, parent, siblings, children, pi_d, A_d) {
-  if (length(children) != length(pi_d))
-    stop("The size of the initial distribution vector pi_d must equal the number of children.")
-
-  if (length(A_d) != length(siblings))
-    stop("The size of the transition vector must equal the number of siblings.")
-
+internal_node <- function(d, i, parent, children, pi_d, A_d) {
   structure(
-    list(
-      d          = d,
-      i          = i,
-      parent     = parent,
-      siblings   = siblings,
-      children   = children,
-      A_d        = A_d,
-      pi_d       = pi_d
-    ), class = "hhmm_inode")
-}
+    list(d = d, i = i,
+         parent = parent, children = children,
+         A_d = A_d, pi_d = pi_d),
+    class = c("hhmm_inode", "node"))}
 
 end_node <- function(d, i, parent) {
   structure(
-    list(
-      d          = d,
-      i          = i,
-      parent     = parent
-    ), class = "hhmm_enode")
+    list(d = d, i = i,
+         parent = parent),
+    class = c("hhmm_enode", "node"))}
+
+production_node <- function(d, i, parent, obs.mod, obs.par) {
+  structure(
+    list(d = d, i = i,
+         parent = parent,
+         obs.mod = obs.mod, obs.par = obs.par),
+    class = c("hhmm_pnode", "node"))}
+
+activate            <- function(n, ...) UseMethod("activate")
+activate_horizontal <- function(n, ...) UseMethod("activate_horizontal")
+activate_vertical   <- function(n, ...) UseMethod("activate_vertical")
+parent              <- function(n, ...) UseMethod("parent")
+siblings            <- function(n, ...) UseMethod("siblings")
+children            <- function(n, ...) UseMethod("children")
+has_children        <- function(n, ...) UseMethod("has_children")
+
+parent.node         <- function(n) {n$parent}
+siblings.node       <- function(n) {children(deref(parent(n)))}
+children.node       <- function(n) {n$children}
+has_children.node   <- function(n) {!is.null(n$children)}
+
+activate.hhmm_rnode <- function(n, x = NULL, i = NULL, T.length) {
+  if (is.null(x)) {
+    x <- rep(NA, T.length)
+    i <- 1
+  }
+
+  n.next <- sample(children(n), 1, prob = n$pi_d)[[1]]
+  activate(deref(n.next), as.ref(x), as.ref(i))
 }
 
-production_node <- function(d, i, parent, siblings, A_d, obs.mod, obs.par) {
-  if (length(A_d) != length(siblings))
-    stop("The size of the transition vector must equal the number of siblings.")
+activate_horizontal.hhmm_rnode <- function(n, x, i) {
+  print("Reached the root node, I'll start again!")
+  activate(n, x, i)
+  # return(deref(x))
+}
 
-  structure(
-    list(
-      d          = d,
-      i          = i,
-      parent     = parent,
-      siblings   = siblings,
-      A_d        = A_d,
-      obs.mod = obs.mod,
-      obs.par  = obs.par
-    ), class = "hhmm_pnode")
+activate_vertical.hhmm_inode <- function(n, x, i) {
+  n.next <- sample(children(n), 1, prob = n$pi_d)[[1]]
+  activate(deref(n.next), x, i)
+}
+
+activate_horizontal.hhmm_inode <- function(n, x, i) {
+  n.next <- sample(siblings(n), 1, prob = parent(n)$A_d[, n$i])[[1]]
+  activate(deref(n.next), x, i)
+}
+
+activate.hhmm_inode <- function(n, x, i) {
+  if (has_children(n)) {
+    activate_vertical(n, x, i)
+  } else {
+    activate_horizontal(n, x, i)
+  }
+}
+
+activate.hhmm_enode <- function(n, x, i) {
+  activate_horizontal(deref(parent(n)), x, i)
+}
+
+activate.hhmm_pnode <- function(n, x, i) {
+  deref(x)[deref(i)] <- do.call(n$obs.mod, n$obs.par)
+
+  if (deref(i) == length(deref(x)))
+    return(deref(x))
+
+  deref(i) <- deref(i) + 1
+  activate_horizontal(deref(parent(n)), x, i)
 }
 
 obsmodel_gaussian <- function(mu, sigma) {
   rnorm(1, mu, sigma)
 }
 
-# Dynamics
-
-activate.hhmm_rnode <- function(current, x = NULL, T.length) {
-  K   <- max((length(current$children) - 1), 1)
-  z_t <- sample(1:K, 1, prob = c(current$pi_d, 0))
-  x   <- vector("numeric", T.length)
-
-  activate(deref(current$children[[z_t]]), x, T.length)
-}
-
-activate.hhmm_inode <- function(current, x, T.length, horiz = TRUE) {
-  if (horiz) {  # Horizontal transition
-
-  } else {      # Vertical transition
-    K   <- max((length(current$children) - 1), 1)
-    z_t <- sample(1:K, 1, prob = current$pi_d)
-    activate(deref(current$children[[z_t]]), x, T.length)
-  }
-}
-
-activate.hhmm_enode <- function(current, x, T.length) {
-  parent <- deref(parent)
-  activate(parent, x, T.length)
-}
-
-activate.hhmm_pnode <- function(current, x, T.length) {
-  if (T.length == 0) { return(x) }
-  x[T.length] <- do.call(current$obs.mod, current$obs.par) #globals humph
-  activate(previous, x, T.length - 1)
-}
-
-# Top level of Fine & Singer
-
-# Create nodes
-q1 <- root_node(
-  children = list(NULL),
-  pi_d     = c(0.5, 0.5)
-)
+r   <- root_node(
+        children = list(NULL, NULL, NULL),
+        pi_d     = c(1.0, 0),
+        A_d      = matrix(c(0.0, 1.0, 0.0, 1.0),
+                          nrow = 2, ncol = 2,
+                          byrow = TRUE))
 
 q21 <- internal_node(
-  d = 2, i = 1,
-  parent   = NULL,
-  siblings = list(NULL, NULL, NULL),
-  children = list(NULL),
-  A_d      = c(0.0, 1.0, 0.0),
-  pi_d     = c(1))
-
-q22 <- internal_node(
-  d = 2, i = 2,
-  parent   = NULL,
-  siblings = list(NULL, NULL, NULL),
-  children = list(NULL),
-  A_d      = c(0.7, 0.0, 0.3),
-  pi_d     = c(1))
+        d = 2, i = 1,
+        parent   = NULL,
+        children = list(NULL, NULL, NULL),
+        pi_d     = c(0.5, 0.5, 0),
+        A_d      = matrix(c(0.9, 0.1, 0.0, 0.0, 0.9, 0.1, 0.0, 0.0, 1.0),
+                          nrow = 3, ncol = 3,
+                          byrow = TRUE))
 
 q2e <- end_node(
-  d = 2, i = 3,
-  parent   = list(NULL))
+        d = 2, i = 2,
+        parent   = NULL)
 
 q31 <- production_node(
-  d = 3, i = 1,
-  parent   = NULL,
-  siblings = list(NULL),
-  A_d      = c(1),
-  obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = -9, sigma = 1)
-)
+        d = 3, i = 1,
+        parent   = NULL,
+        obs.mod  = obsmodel_gaussian,
+        obs.par  = list(mu =  5, sigma = 1))
 
 q32 <- production_node(
-  d = 3, i = 2,
-  parent   = NULL,
-  siblings = list(NULL),
-  A_d      = c(1),
-  obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu =  9, sigma = 1)
-)
+        d = 3, i = 2,
+        parent   = NULL,
+        obs.mod  = obsmodel_gaussian,
+        obs.par  = list(mu = -5, sigma = 1))
 
-# Relate nodes (should check for constraints again)
-# q1$children  <- list(q21, q22, q2e)
-#
-# q21$parent   <- q1
-# q21$siblings <- list(q21, q22, q2e)
-# q21$children <- list(q31)
-#
-# q22$parent   <- q1
-# q22$siblings <- list(q21, q22, q2e)
-# q22$children <- list(q32)
-#
-# q2e$parent   <- q1
-# q2e$siblings <- list(q21, q22, q2e)
-# q2e$children <- list(NULL)
-#
-# q31$parent   <- q21
-# q31$siblings <- list(NULL)
-# q31$children <- list(NULL)
-#
-# q32$parent   <- q22
-# q32$siblings <- list(NULL)
-# q32$children <- list(NULL)
+q3e <- end_node(
+        d = 3, i = 3,
+        parent   = NULL)
 
-q1$children  <- list(ref("q21"), ref("q22"), ref("q2e"))
+r$children   <- list(as.ref(q21), as.ref(q2e))
 
-q21$parent   <- ref("q1")
-q21$siblings <- list(ref("q21"), ref("q22"), ref("q2e"))
-q21$children <- list(ref("q31"))
+q21$parent   <- as.ref(r)
+q21$children <- list(as.ref(q31), as.ref(q32), as.ref(q3e))
+q2e$parent   <- as.ref(r)
 
-q22$parent   <- ref("q1")
-q22$siblings <- list(ref("q21"), ref("q22"), ref("q2e"))
-q22$children <- list(ref("q32"))
+q31$parent   <- as.ref(q21)
+q32$parent   <- as.ref(q21)
+q3e$parent   <- as.ref(q21)
 
-q2e$parent   <- ref("q1")
-q2e$siblings <- list(ref("q21"), ref("q22"), ref("q2e"))
-q2e$children <- list(NULL)
+deref(deref(r$children[[1]])$parent)$pi_d
 
-q31$parent   <- ref("q21")
-q31$siblings <- list(NULL)
-q31$children <- list(NULL)
-
-q32$parent   <- ref("q22")
-q32$siblings <- list(NULL)
-q32$children <- list(NULL)
-
-# Run
-
-options(expressions = 5e5)
-activate(q1, T.length = 5)
-
-hist(activate(q1, T.length = 1000))
-
-# sprint.hhmm_rnode <- function(rnode, include.children = TRUE) {
-#   s1 <- sprintf(
-#     "Root: level %i with %i children.",
-#     rnode$d,
-#     length(rnode$children))
-#
-#   if (!include.children || is.null(unlist(rnode$children)))
-#     return(s1)
-#
-#   s2 <- paste(
-#     sapply(
-#       rnode$children,
-#       function(x){sprint(deref(x), include.children)}),
-#     collapse = '\n')
-#
-#   return(paste(s1, s2, collapse = '\n'))
-# }
-#
-# sprint.hhmm_inode <- function(inode, include.children = TRUE) {
-#   s1 <- sprintf(
-#     "Internal: level %i with %i children (initial probs %s).",
-#     inode$d,
-#     length(inode$children),
-#     paste(inode$pi_d, collapse = ', '))
-#
-#   if (!include.children || is.null(unlist(inode$children)))
-#     return(s1)
-#
-#   s2 <- paste(
-#     sapply(
-#       inode$children,
-#       function(x){sprint(deref(x), include.children)}),
-#     collapse = '\n')
-#
-#   return(paste(s1, s2, collapse = '\n'))
-# }
-#
-# sprint.hhmm_enode <- function(enode, include.children = TRUE) {
-#   sprintf("End: level %i.", enode$d)
-# }
-#
-# sprint.hhmm_pnode <- function(pnode, include.children = TRUE) {
-#   sprintf(
-#     paste0(
-#       paste(rep(" ", pnode$d), collapse = ''),
-#       "Production: level %i with parameters %s."),
-#     pnode$d,
-#     paste(pnode$obs.par, collapse = ', '))
-# }
-#
-# cat(sprint(q1))
+hist(activate(r, T.length = 200))
