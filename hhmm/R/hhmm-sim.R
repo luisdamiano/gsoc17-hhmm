@@ -1,27 +1,27 @@
 library(ref)
 
-root_node <- function(children, pi_d, A_d) {
+root_node <- function(pi_d, A_d) {
   structure(
-    list(children = children, A_d = A_d, pi_d = pi_d),
+    list(children = NULL, A_d = A_d, pi_d = pi_d),
     class = c("hhmm_rnode", "node"))}
 
-internal_node <- function(d, i, parent, children, pi_d, A_d) {
+internal_node <- function(d, i, pi_d, A_d) {
   structure(
     list(d = d, i = i,
-         parent = parent, children = children,
+         parent = NULL, children = NULL,
          A_d = A_d, pi_d = pi_d),
     class = c("hhmm_inode", "node"))}
 
-end_node <- function(d, i, parent) {
+end_node <- function(d, i) {
   structure(
     list(d = d, i = i,
-         parent = parent),
+         parent = NULL),
     class = c("hhmm_enode", "node"))}
 
-production_node <- function(d, i, parent, obs.mod, obs.par) {
+production_node <- function(d, i, obs.mod, obs.par) {
   structure(
     list(d = d, i = i,
-         parent = parent,
+         parent = NULL,
          obs.mod = obs.mod, obs.par = obs.par),
     class = c("hhmm_pnode", "node"))}
 
@@ -90,52 +90,3 @@ obsmodel_gaussian <- function(mu, sigma) {
   rnorm(1, mu, sigma)
 }
 
-r   <- root_node(
-        children = list(NULL, NULL, NULL),
-        pi_d     = c(1.0, 0),
-        A_d      = matrix(c(0.0, 1.0, 0.0, 1.0),
-                          nrow = 2, ncol = 2,
-                          byrow = TRUE))
-
-q21 <- internal_node(
-        d = 2, i = 1,
-        parent   = NULL,
-        children = list(NULL, NULL, NULL),
-        pi_d     = c(0.5, 0.5, 0),
-        A_d      = matrix(c(0.9, 0.1, 0.0, 0.0, 0.9, 0.1, 0.0, 0.0, 1.0),
-                          nrow = 3, ncol = 3,
-                          byrow = TRUE))
-
-q2e <- end_node(
-        d = 2, i = 2,
-        parent   = NULL)
-
-q31 <- production_node(
-        d = 3, i = 1,
-        parent   = NULL,
-        obs.mod  = obsmodel_gaussian,
-        obs.par  = list(mu =  5, sigma = 1))
-
-q32 <- production_node(
-        d = 3, i = 2,
-        parent   = NULL,
-        obs.mod  = obsmodel_gaussian,
-        obs.par  = list(mu = -5, sigma = 1))
-
-q3e <- end_node(
-        d = 3, i = 3,
-        parent   = NULL)
-
-r$children   <- list(as.ref(q21), as.ref(q2e))
-
-q21$parent   <- as.ref(r)
-q21$children <- list(as.ref(q31), as.ref(q32), as.ref(q3e))
-q2e$parent   <- as.ref(r)
-
-q31$parent   <- as.ref(q21)
-q32$parent   <- as.ref(q21)
-q3e$parent   <- as.ref(q21)
-
-deref(deref(r$children[[1]])$parent)$pi_d
-
-hist(activate(r, T.length = 200))

@@ -612,9 +612,14 @@ n.seed = 9000
 ### 20170709 Su 09 to 19 ###
 * Went on with the data simulation function, learning a lot about recursion
 
-### 20170710 Mo 19 to 20 ###
+### 20170710 Mo 19 to 23 ###
 * No paper describes a HHMM with enough generality, they all miss some details. Had to read all the papers and aggregate the rules of node activation.
-* 
+* Wrote the simulation function and got to test it with a simple 2-component gaussian mixture. It worked.
+
+### 20170711 Tu 22 to 01+1 ###
+* More testing for the simulation routine.
+* Tested on Fine (1998) and it seems to work.
+* To-do: Use the simulation routine to draw samples from Jangmin (2004)'s model.
 
 ---
 
