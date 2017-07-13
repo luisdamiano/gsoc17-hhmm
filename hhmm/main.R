@@ -197,3 +197,90 @@ p43e$parent  <- as.ref(q43)
 q4e$parent   <- as.ref(q31)
 
 hist(activate(r, T.length = 200))
+
+# Jangmin (2004) ----------------------------------------------------------
+r      <- root_node(
+  pi_d     = c(0.2, 0.3, 0.3, 0.1, 0.1),
+  A_d      = matrix(c(0.2, 0.4, 0.4, 0.0, 0.0,
+                      0.3, 0.2, 0.3, 0.2, 0.0,
+                      0.2, 0.2, 0.2, 0.2, 0.2,
+                      0.0, 0.2, 0.4, 0.3, 0.1,
+                      0.0, 0.0, 0.2, 0.3, 0.5),
+                    nrow = 5, ncol = 5,
+                    byrow = TRUE))
+
+qsb11  <- internal_node(
+  d = 2, i = 1,
+  pi_d     = c(0.2, 0.2, 0.2, 0.2, 0.2, 0.0),
+  A_d      = matrix(c(0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+                    nrow = 6, ncol = 6,
+                    byrow = TRUE))
+
+qsb111 <- internal_node(
+  d = 3, i = 1,
+  pi_d     = c(1.0, 0.0, 0.0, 0.0),
+  A_d      = matrix(c(0.0, 0.5, 0.0, 0.5,
+                      0.0, 0.0, 0.5, 0.5,
+                      0.0, 0.0, 0.0, 1.0,
+                      0.0, 0.0, 0.0, 1.0),
+                    nrow = 4, ncol = 4,
+                    byrow = TRUE))
+
+qsb1111<- internal_node(
+  d = 4, i = 1,
+  pi_d     = c(1.0, 0.0),
+  A_d      = matrix(c(0.0, 1.0,
+                      0.0, 1.0),
+                    nrow = 2, ncol = 2,
+                    byrow = TRUE))
+
+psb1111 <- production_node(
+  d = 5, i = 1,
+  obs.mod  = obsmodel_gaussian,
+  obs.par  = list(mu = 0, sigma = 1))
+
+psb111e<- end_node(
+  d = 5, i = 2)
+
+
+
+
+
+r$children   <- list(as.ref(q21), as.ref(q22), as.ref(q2e))
+
+q21$parent   <- as.ref(r)
+q21$children <- list(as.ref(p21), as.ref(p21e))
+p21$parent   <- as.ref(q21)
+p21e$parent  <- as.ref(q21)
+q22$parent   <- as.ref(r)
+q22$children <- list(as.ref(q31), as.ref(q32), as.ref(q3e))
+q2e$parent   <- as.ref(r)
+
+q31$parent   <- as.ref(q22)
+q31$children <- list(as.ref(q41), as.ref(q42), as.ref(q43), as.ref(q4e))
+q32$parent   <- as.ref(q22)
+q32$children <- list(as.ref(p32), as.ref(p32e))
+p32$parent   <- as.ref(q32)
+p32e$parent  <- as.ref(q32)
+q3e$parent   <- as.ref(q22)
+
+q41$parent   <- as.ref(q31)
+q41$children <- list(as.ref(p41), as.ref(p41e))
+p41$parent   <- as.ref(q41)
+p41e$parent  <- as.ref(q41)
+q42$parent   <- as.ref(q31)
+q42$children <- list(as.ref(p42), as.ref(p42e))
+p42$parent   <- as.ref(q42)
+p42e$parent  <- as.ref(q42)
+q43$parent   <- as.ref(q31)
+q43$children <- list(as.ref(p43), as.ref(p43e))
+p43$parent   <- as.ref(q43)
+p43e$parent  <- as.ref(q43)
+q4e$parent   <- as.ref(q31)
+
+hist(activate(r, T.length = 200))

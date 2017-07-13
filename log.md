@@ -621,6 +621,9 @@ n.seed = 9000
 * Tested on Fine (1998) and it seems to work.
 * To-do: Use the simulation routine to draw samples from Jangmin (2004)'s model.
 
+### 20170712 We 22 to 24 ###
+* Used the simulation routine to draw samples from Jangmin (2004)'s model.
+
 ---
 
 # Notes
