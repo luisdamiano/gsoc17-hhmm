@@ -624,6 +624,9 @@ n.seed = 9000
 ### 20170712 We 22 to 24 ###
 * Used the simulation routine to draw samples from Jangmin (2004)'s model.
 
+### 20170715 Sa 10 to 20 ###
+* Working on Jagmin replication (data adquisition and preprocessing).
+
 ---
 
 # Notes
