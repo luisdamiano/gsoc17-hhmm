@@ -5,6 +5,9 @@ library(quantmod)
 l1.Klab = c('Strong bear', 'Weak bear', 'Random walk', 'Weak bull', 'Strong bull')
 l1.W = 22
 
+l21.K = 5
+l23.K = 3
+
 # Data
 syms <- data.frame(
   symbol     = c("006400.KS", "006400.KS"),
@@ -40,18 +43,7 @@ for (i in 1:l1.Wlength) {
 }
 
 dataset$magrad_t <- diff(dataset$ma_t)
-dataset$z_1 <- rep(0, length(dataset$magrad_t))
-
-qinf <- quantile(dataset$magrad_t, 0.4)
-qsup <- quantile(dataset$magrad_t, 0.6)
-
-dataset$z_1[dataset$magrad_t > quantile(dataset$magrad_t, 0.4)
-            & dataset$magrad_t < quantile(dataset$magrad_t, 0.6)] <- 3
-
-
-
-
-dataset$z_1      <- kmeans(dataset$magrad_t, l1.K)$cluster
+dataset$z_1 <- kmeans(dataset$magrad_t, l1.K)$cluster
 
 # Relabelling (ugly hack edition)
 relabel <- function(data, old) {
@@ -66,12 +58,6 @@ relabel <- function(data, old) {
 
 dataset$z_1relab <- relabel(dataset$magrad_t, dataset$z_1)
 
-# rep.ord <- order(by(dataset$magrad_t, dataset$z_1, mean))
-#
-# dataset$z_1relab <- rep(0, l1.Wlength - 1)
-# for (k in 1:l1.K)
-#   dataset$z_1relab[which(dataset$z_1 == rep.ord[k])] <- k
-
 print("Label re-imputation (ascending order)")
 as.numeric(by(dataset$magrad_t, dataset$z_1relab, mean))
 
@@ -79,7 +65,7 @@ opar <- par(no.readonly = TRUE)
 
 layout(matrix(c(1, 2), nrow = 2, ncol = 1, byrow = TRUE), heights = c(0.95, 0.05))
 plot(x = 1:T.length, y = dataset$trainset,
-     main = bquote("Price (" * .(sym$symbol) * ")"),
+     main = bquote("Price (" * .(sym$name) * ")"),
      xlab = bquote(t), ylab = bquote(x[t]),
      type = 'p', pch = 21, cex = 0.7, col = 'lightgray', bg = 'lightgray')
 
@@ -122,5 +108,52 @@ legend(x = "center",
        pt.cex = 1.5, bty = 'n', horiz = TRUE)
 
 par(opar)
+
+# Level 2 - RC clustering -------------------------------------------------
+dataset$rc_r <- as.numeric(dailyReturn(prices[1:length(dataset$magrad_t), 4], type = 'arithmetic'))
+dataset$z_2 <- vector("numeric", length(dataset$magrad_t))
+for (k in 1:l1.K) {
+  if (k != 3) {
+    dataset$z_2[dataset$z_1relab == k] <-
+      kmeans(dataset$rc_r[dataset$z_1relab == k], l21.K)$cluster
+  } else {
+    dataset$z_2[dataset$z_1relab == k] <-
+      kmeans(dataset$rc_r[dataset$z_1relab == k], l23.K)$cluster
+  }
+}
+
+cols <- vector("numeric", length(dataset$magrad_t))
+cols <- 5 * dataset$z_1relab + dataset$z_2
+
+layout(matrix(c(1, 2), nrow = 2, ncol = 1, byrow = TRUE), heights = c(0.95, 0.05))
+plot(x = 1:length(dataset$rc_r), y = dataset$rc_r,
+     main = bquote("Price (" * .(sym$name) * ")"),
+     xlab = bquote(t), ylab = bquote(x[t]),
+     type = 'p', pch = 21, cex = 0.7, col = 'lightgray', bg = 'lightgray')
+
+segments(x0 = head(1:length(dataset$rc_r), -1), y0 = head(dataset$rc_r, -1),
+         x1 = 2:length(dataset$rc_r), y1 = tail(dataset$rc_r, -1),
+         col = dataset$z_1relab, lwd = 1)
+
+par(mai = c(0, 0, 0, 0))
+plot.new()
+
+legend(x = "center",
+       legend = l1.Klab,
+       lwd = 2, col = 1:5,
+       bty = 'n', horiz = TRUE)
+
+par(opar)
+
+lapply(1:max(dataset$z_1relab), function(z1) {
+  sapply(1:max(dataset$z_2[dataset$z_1relab == z1]), function(z2) {
+    c(
+      med = median(dataset$rc_r[dataset$z_1relab == z1 & dataset$z_2 == z2]),
+      sd  = sd(dataset$rc_r[dataset$z_1relab == z1 & dataset$z_2 == z2]),
+      p   = length(dataset$rc_r[dataset$z_1relab == z1 & dataset$z_2 == z2]) / length(dataset$rc_r)
+    )
+  })
+})
+
 
 

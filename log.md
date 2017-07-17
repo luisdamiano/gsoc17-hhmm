@@ -627,6 +627,9 @@ n.seed = 9000
 ### 20170715 Sa 10 to 20 ###
 * Working on Jagmin replication (data adquisition and preprocessing).
 
+### 20170716 Su 10 to WIP ###
+* Working on Jagmin replication (data adquisition and preprocessing).
+
 ---
 
 # Notes

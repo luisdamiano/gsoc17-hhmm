@@ -2,14 +2,17 @@ source('hhmm/R/hhmm-sim.R')
 
 # Jangmin (2004) ----------------------------------------------------------
 r      <- root_node(
-  pi_d     = c(0.2, 0.3, 0.3, 0.1, 0.1, 0.0),
-  A_d      = matrix(c(0.2, 0.4, 0.4, 0.0, 0.0, 1.0,
-                      0.3, 0.2, 0.3, 0.2, 0.0, 1.0,
-                      0.2, 0.2, 0.2, 0.2, 0.2, 1.0,
-                      0.0, 0.2, 0.4, 0.3, 0.1, 1.0,
-                      0.0, 0.0, 0.2, 0.3, 0.5, 1.0),
+  pi_d     = c(0.1, 0.1, 0.5, 0.1, 0.2, 0.0),
+  A_d      = matrix(c(0.2, 0.4, 0.4, 0.0, 0.0, 0.0,
+                      0.3, 0.2, 0.3, 0.2, 0.0, 0.0,
+                      0.2, 0.2, 0.2, 0.2, 0.2, 0.0,
+                      0.0, 0.2, 0.4, 0.3, 0.1, 0.0,
+                      0.0, 0.0, 0.2, 0.3, 0.5, 0.0,
+                      0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
                     nrow = 6, ncol = 6,
                     byrow = TRUE))
+
+re   <- end_node(d = 1, i = 2)
 
 # - SB
 qsb    <- internal_node(
@@ -49,7 +52,7 @@ qsb11  <- internal_node(
 psb11   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
 esb11   <- end_node(d = 5, i = 2)
 
@@ -65,7 +68,7 @@ qsb12  <- internal_node(
 psb12   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
 esb12   <- end_node(d = 5, i = 1)
 
@@ -81,7 +84,7 @@ qsb13  <- internal_node(
 psb13   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
 esb13   <- end_node(d = 5, i = 1)
 
@@ -111,7 +114,7 @@ qsb21  <- internal_node(
 psb21   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.03, sigma = 1.5 * 0.02))
 
 esb21   <- end_node(d = 5, i = 2)
 
@@ -127,7 +130,7 @@ qsb22  <- internal_node(
 psb22   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
 esb22   <- end_node(d = 5, i = 1)
 
@@ -143,7 +146,7 @@ qsb23  <- internal_node(
 psb23   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
 esb23   <- end_node(d = 5, i = 1)
 
@@ -173,7 +176,7 @@ qsb31  <- internal_node(
 psb31   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.02))
 
 esb31   <- end_node(d = 5, i = 2)
 
@@ -189,7 +192,7 @@ qsb32  <- internal_node(
 psb32   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.02))
 
 esb32   <- end_node(d = 5, i = 1)
 
@@ -205,7 +208,7 @@ qsb33  <- internal_node(
 psb33   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
 esb33   <- end_node(d = 5, i = 1)
 
@@ -235,7 +238,7 @@ qsb41  <- internal_node(
 psb41   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.05, sigma = 1.5 * 0.02))
 
 esb41   <- end_node(d = 5, i = 2)
 
@@ -251,7 +254,7 @@ qsb42  <- internal_node(
 psb42   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
 esb42   <- end_node(d = 5, i = 1)
 
@@ -267,7 +270,7 @@ qsb43  <- internal_node(
 psb43   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
 esb43   <- end_node(d = 5, i = 1)
 
@@ -297,7 +300,7 @@ qsb51  <- internal_node(
 psb51   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.01, sigma = 1.5 * 0.01))
 
 esb51   <- end_node(d = 5, i = 2)
 
@@ -313,7 +316,7 @@ qsb52  <- internal_node(
 psb52   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.01))
 
 esb52   <- end_node(d = 5, i = 1)
 
@@ -329,7 +332,7 @@ qsb53  <- internal_node(
 psb53   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 esb53   <- end_node(d = 5, i = 1)
 
@@ -341,7 +344,7 @@ set_children(qsb,
              list(as.ref(qsb1), as.ref(qsb2), as.ref(qsb3), as.ref(qsb4), as.ref(qsb5), as.ref(qsbe)))
 
 set_parent(qsb, as.ref(r))
-set_parent(qsbe, as.ref(r))
+set_parent(qsbe, as.ref(qsb))
 
 set_children(qsb1,
              list(as.ref(qsb11), as.ref(qsb12), as.ref(qsb13), as.ref(qsb1e)))
@@ -486,7 +489,7 @@ qwb11  <- internal_node(
 pwb11   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
 ewb11   <- end_node(d = 5, i = 2)
 
@@ -502,7 +505,7 @@ qwb12  <- internal_node(
 pwb12   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.02))
 
 ewb12   <- end_node(d = 5, i = 1)
 
@@ -518,7 +521,7 @@ qwb13  <- internal_node(
 pwb13   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
 ewb13   <- end_node(d = 5, i = 1)
 
@@ -548,7 +551,7 @@ qwb21  <- internal_node(
 pwb21   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.05, sigma = 1.5 * 0.02))
 
 ewb21   <- end_node(d = 5, i = 2)
 
@@ -564,7 +567,7 @@ qwb22  <- internal_node(
 pwb22   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
 ewb22   <- end_node(d = 5, i = 1)
 
@@ -580,7 +583,7 @@ qwb23  <- internal_node(
 pwb23   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
 ewb23   <- end_node(d = 5, i = 1)
 
@@ -610,7 +613,7 @@ qwb31  <- internal_node(
 pwb31   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
 ewb31   <- end_node(d = 5, i = 2)
 
@@ -626,7 +629,7 @@ qwb32  <- internal_node(
 pwb32   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.07, sigma = 1.5 * 0.02))
 
 ewb32   <- end_node(d = 5, i = 1)
 
@@ -642,7 +645,7 @@ qwb33  <- internal_node(
 pwb33   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.05, sigma = 1.5 * 0.02))
 
 ewb33   <- end_node(d = 5, i = 1)
 
@@ -672,7 +675,7 @@ qwb41  <- internal_node(
 pwb41   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
 ewb41   <- end_node(d = 5, i = 2)
 
@@ -688,7 +691,7 @@ qwb42  <- internal_node(
 pwb42   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
 ewb42   <- end_node(d = 5, i = 1)
 
@@ -704,7 +707,7 @@ qwb43  <- internal_node(
 pwb43   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
 ewb43   <- end_node(d = 5, i = 1)
 
@@ -734,7 +737,7 @@ qwb51  <- internal_node(
 pwb51   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 ewb51   <- end_node(d = 5, i = 2)
 
@@ -750,7 +753,7 @@ qwb52  <- internal_node(
 pwb52   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
 ewb52   <- end_node(d = 5, i = 1)
 
@@ -766,7 +769,7 @@ qwb53  <- internal_node(
 pwb53   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 ewb53   <- end_node(d = 5, i = 1)
 
@@ -778,7 +781,7 @@ set_children(qwb,
              list(as.ref(qwb1), as.ref(qwb2), as.ref(qwb3), as.ref(qwb4), as.ref(qwb5), as.ref(qwbe)))
 
 set_parent(qwb, as.ref(r))
-set_parent(qwbe, as.ref(r))
+set_parent(qwbe, as.ref(qwb))
 
 set_children(qwb1,
              list(as.ref(qwb11), as.ref(qwb12), as.ref(qwb13), as.ref(qwb1e)))
@@ -923,7 +926,7 @@ qsu11  <- internal_node(
 psu11   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
 esu11   <- end_node(d = 5, i = 2)
 
@@ -939,7 +942,7 @@ qsu12  <- internal_node(
 psu12   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.08, sigma = 1.5 * 0.02))
 
 esu12   <- end_node(d = 5, i = 1)
 
@@ -955,7 +958,7 @@ qsu13  <- internal_node(
 psu13   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 esu13   <- end_node(d = 5, i = 1)
 
@@ -985,7 +988,7 @@ qsu21  <- internal_node(
 psu21   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.07, sigma = 1.5 * 0.02))
 
 esu21   <- end_node(d = 5, i = 2)
 
@@ -1001,7 +1004,7 @@ qsu22  <- internal_node(
 psu22   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
 esu22   <- end_node(d = 5, i = 1)
 
@@ -1017,7 +1020,7 @@ qsu23  <- internal_node(
 psu23   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.08, sigma = 1.5 * 0.02))
 
 esu23   <- end_node(d = 5, i = 1)
 
@@ -1047,7 +1050,7 @@ qsu31  <- internal_node(
 psu31   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
 esu31   <- end_node(d = 5, i = 2)
 
@@ -1063,7 +1066,7 @@ qsu32  <- internal_node(
 psu32   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
 esu32   <- end_node(d = 5, i = 1)
 
@@ -1079,7 +1082,7 @@ qsu33  <- internal_node(
 psu33   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.03, sigma = 1.5 * 0.02))
 
 esu33   <- end_node(d = 5, i = 1)
 
@@ -1109,7 +1112,7 @@ qsu41  <- internal_node(
 psu41   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.03))
 
 esu41   <- end_node(d = 5, i = 2)
 
@@ -1125,7 +1128,7 @@ qsu42  <- internal_node(
 psu42   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
 esu42   <- end_node(d = 5, i = 1)
 
@@ -1141,7 +1144,7 @@ qsu43  <- internal_node(
 psu43   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
 esu43   <- end_node(d = 5, i = 1)
 
@@ -1171,7 +1174,7 @@ qsu51  <- internal_node(
 psu51   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.01))
 
 esu51   <- end_node(d = 5, i = 2)
 
@@ -1187,7 +1190,7 @@ qsu52  <- internal_node(
 psu52   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.02))
 
 esu52   <- end_node(d = 5, i = 1)
 
@@ -1203,7 +1206,7 @@ qsu53  <- internal_node(
 psu53   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
 esu53   <- end_node(d = 5, i = 1)
 
@@ -1215,7 +1218,7 @@ set_children(qsu,
              list(as.ref(qsu1), as.ref(qsu2), as.ref(qsu3), as.ref(qsu4), as.ref(qsu5), as.ref(qsue)))
 
 set_parent(qsu, as.ref(r))
-set_parent(qsue, as.ref(r))
+set_parent(qsue, as.ref(qsu))
 
 set_children(qsu1,
              list(as.ref(qsu11), as.ref(qsu12), as.ref(qsu13), as.ref(qsu1e)))
@@ -1360,7 +1363,7 @@ qwu11  <- internal_node(
 pwu11   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
 ewu11   <- end_node(d = 5, i = 2)
 
@@ -1376,7 +1379,7 @@ qwu12  <- internal_node(
 pwu12   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.07, sigma = 1.5 * 0.01))
 
 ewu12   <- end_node(d = 5, i = 1)
 
@@ -1392,7 +1395,7 @@ qwu13  <- internal_node(
 pwu13   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
 ewu13   <- end_node(d = 5, i = 1)
 
@@ -1422,7 +1425,7 @@ qwu21  <- internal_node(
 pwu21   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
 ewu21   <- end_node(d = 5, i = 2)
 
@@ -1438,7 +1441,7 @@ qwu22  <- internal_node(
 pwu22   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
 ewu22   <- end_node(d = 5, i = 1)
 
@@ -1454,7 +1457,7 @@ qwu23  <- internal_node(
 pwu23   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
 ewu23   <- end_node(d = 5, i = 1)
 
@@ -1484,7 +1487,7 @@ qwu31  <- internal_node(
 pwu31   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.01))
 
 ewu31   <- end_node(d = 5, i = 2)
 
@@ -1500,7 +1503,7 @@ qwu32  <- internal_node(
 pwu32   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
 ewu32   <- end_node(d = 5, i = 1)
 
@@ -1516,7 +1519,7 @@ qwu33  <- internal_node(
 pwu33   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
 ewu33   <- end_node(d = 5, i = 1)
 
@@ -1546,7 +1549,7 @@ qwu41  <- internal_node(
 pwu41   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.03))
 
 ewu41   <- end_node(d = 5, i = 2)
 
@@ -1562,7 +1565,7 @@ qwu42  <- internal_node(
 pwu42   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
 ewu42   <- end_node(d = 5, i = 1)
 
@@ -1578,7 +1581,7 @@ qwu43  <- internal_node(
 pwu43   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.02))
 
 ewu43   <- end_node(d = 5, i = 1)
 
@@ -1608,7 +1611,7 @@ qwu51  <- internal_node(
 pwu51   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 ewu51   <- end_node(d = 5, i = 2)
 
@@ -1624,7 +1627,7 @@ qwu52  <- internal_node(
 pwu52   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
 ewu52   <- end_node(d = 5, i = 1)
 
@@ -1640,7 +1643,7 @@ qwu53  <- internal_node(
 pwu53   <- production_node(
   d = 5, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
 ewu53   <- end_node(d = 5, i = 1)
 
@@ -1652,7 +1655,7 @@ set_children(qwu,
              list(as.ref(qwu1), as.ref(qwu2), as.ref(qwu3), as.ref(qwu4), as.ref(qwu5), as.ref(qwue)))
 
 set_parent(qwu, as.ref(r))
-set_parent(qwue, as.ref(r))
+set_parent(qwue, as.ref(qwu))
 
 set_children(qwu1,
              list(as.ref(qwu11), as.ref(qwu12), as.ref(qwu13), as.ref(qwu1e)))
@@ -1784,7 +1787,7 @@ qr1   <- internal_node(
 pr1    <- production_node(
   d = 4, i = 1,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.03))
 
 er1    <- end_node(d = 4, i = 2)
 
@@ -1800,7 +1803,7 @@ qr2   <- internal_node(
 pr2    <- production_node(
   d = 4, i = 2,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
 er2    <- end_node(d = 4, i = 2)
 
@@ -1816,7 +1819,7 @@ qr3   <- internal_node(
 pr3    <- production_node(
   d = 4, i = 3,
   obs.mod  = obsmodel_gaussian,
-  obs.par  = list(mu = 0, sigma = 1))
+  obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.03))
 
 er3    <- end_node(d = 4, i = 2)
 
@@ -1825,10 +1828,10 @@ set_children(qr,
              list(as.ref(qr1), as.ref(qr2), as.ref(qr3), as.ref(qre)))
 
 set_parent(qr, as.ref(r))
-set_parent(qr1, as.ref(r))
-set_parent(qr2, as.ref(r))
-set_parent(qr3, as.ref(r))
-set_parent(qre, as.ref(r))
+set_parent(qr1, as.ref(qr))
+set_parent(qr2, as.ref(qr))
+set_parent(qr3, as.ref(qr))
+set_parent(qre, as.ref(qr))
 
 set_children(qr1, list(as.ref(pr1), as.ref(er1)))
 set_parent(pr1, as.ref(qr1))
@@ -1844,7 +1847,9 @@ set_parent(er3, as.ref(qr3))
 
 # --- Root: Family tree
 set_children(r,
-             list(as.ref(qsb), as.ref(qwb), as.ref(qr), as.ref(qwu), as.ref(qsu), as.ref(qsbe)))
+             list(as.ref(qsb), as.ref(qwb), as.ref(qr), as.ref(qwu), as.ref(qsu), as.ref(re)))
+
+set_parent(re, as.ref(r))
 
 # Check no orphans
 for (i in 1:length(ls())) {
@@ -1860,5 +1865,9 @@ for (i in 1:length(ls())) {
 
 set.seed(9000)
 options(expressions = 1e4)
-activate(r, T.length = 200)
+sim.rc_t <- activate(r, T.length = 200)
+sim.x_t  <- cumprod(1 + sim.rc_t)
 
+par(mfrow = c(1, 2))
+plot(sim.rc_t, type = 'l')
+plot(sim.x_t, type = 'l')
