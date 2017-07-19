@@ -630,9 +630,12 @@ n.seed = 9000
 ### 20170716 Su 10 to 20 ###
 * Working on Jagmin replication (data adquisition and preprocessing).
 
-### 20170717 Mo 21 to WIP ###
+### 20170717 Mo 21 to 21 ###
 * Started working on Stan code.
 * Each node has it's own initial distribution vector and transition matrix with sizes varying along nodes. Stan doesn't allow for ragged arrays. I'll have to work with a full database (or long) format and then apply softmax to force a subset into a simplex. This may lead to some problems since posterior could easily become improper when priors are uniform (see)[https://groups.google.com/forum/#!topic/stan-users/6QLSOM3ySYA]. In consequence, I'll need to specify (some vague) prior information on the softmax parameters.
+
+### 20170718 Tu 21 to 02+1 ###
+* After staring at the appendix of Fine (1998) for hours, I *think* I may know how to implement the recursive algorithm. Will give it a go tomorrow. Will use an adjacent matrix for node identification.
 
 ---
 
