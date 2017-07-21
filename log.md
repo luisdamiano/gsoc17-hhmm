@@ -637,6 +637,11 @@ n.seed = 9000
 ### 20170718 Tu 21 to 02+1 ###
 * After staring at the appendix of Fine (1998) for hours, I *think* I may know how to implement the recursive algorithm. Will give it a go tomorrow. Will use an adjacent matrix for node identification.
 
+### 20170720 Th 20 to 24 ###
+* I'm stuck. Can't device a way to program the node dynamics without objects/structs/arrays or other non-primitives.
+* Fired an SOS email to the mentors and (created a thread on Stan forums)[http://discourse.mc-stan.org/t/transversing-up-a-graph-hierarchical-hidden-markov-model/1304]. Hopefully I'll get some input that will get me on the move again.
+* I (created a thread on Stan forums)[http://discourse.mc-stan.org/t/identifiability-and-convergence-input-output-hidden-markov-model/1305] about Hanssan replication, hoping to get some feedback to improve convergence.
+
 ---
 
 # Notes
