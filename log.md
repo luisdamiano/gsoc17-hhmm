@@ -642,6 +642,10 @@ n.seed = 9000
 * Fired an SOS email to the mentors and (created a thread on Stan forums)[http://discourse.mc-stan.org/t/transversing-up-a-graph-hierarchical-hidden-markov-model/1304]. Hopefully I'll get some input that will get me on the move again.
 * I (created a thread on Stan forums)[http://discourse.mc-stan.org/t/identifiability-and-convergence-input-output-hidden-markov-model/1305] about Hanssan replication, hoping to get some feedback to improve convergence.
 
+### 20170722 Sa 10 to WIP ###
+* Trying a few ideas originated in the discussion at the the Stan forums.
+
+
 ---
 
 # Notes

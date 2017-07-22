@@ -1,14 +1,5 @@
-functions {
-  vector alpha_D(int t, int k, int i) {
-    return x / sum(x);
-  }
-}
-
 data {
   int N;                    // Number of nodes
-  matrix[N, N] m;           // adjency matrix m[i, j] from i to j
-  // initial state prob
-  // tranisiton prob
 }
 
 parameters{

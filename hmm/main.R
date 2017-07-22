@@ -26,7 +26,7 @@ dataset <- hmm_sim(T.length, K, A, p1, obs.model)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'hmm-ex/stan/hmm.stan'
+stan.model = 'hmm/stan/hmm.stan'
 stan.data = list(
   T = T.length,
   K = K,
