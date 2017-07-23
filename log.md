@@ -646,8 +646,11 @@ n.seed = 9000
 * Trying a few ideas originated in the discussion at the the Stan forums.
 * I created a very simple graph model, a toy example with most of the main features of our real model. Wrote a simulation routine in R, coded the model in Stan and it seems to recover the parameters right. It's a good lead. I'll increase the complexity in view of the real one.
 
-### 20170723 Su 9 to WIP ###
+### 20170723 Su 9 to 21 ###
 * Adding semisupervision to the toy model.
+* Improved part of the code using tips provided by (Bob Carpenter)[http://discourse.mc-stan.org/t/identifiability-and-convergence-input-output-hidden-markov-model/1305/4]. Code speed improved by a factor of 3, the man is a genius!
+* With calibration by simulation I could confirm that semisupervised hhmm works for a hierarchical 2x2 gaussian mixture. I'm almost there to check if it works for data simulated from the graph presented in jangmin.
+* Check-in email.
 
 ---
 
