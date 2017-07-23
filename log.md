@@ -642,9 +642,12 @@ n.seed = 9000
 * Fired an SOS email to the mentors and (created a thread on Stan forums)[http://discourse.mc-stan.org/t/transversing-up-a-graph-hierarchical-hidden-markov-model/1304]. Hopefully I'll get some input that will get me on the move again.
 * I (created a thread on Stan forums)[http://discourse.mc-stan.org/t/identifiability-and-convergence-input-output-hidden-markov-model/1305] about Hanssan replication, hoping to get some feedback to improve convergence.
 
-### 20170722 Sa 10 to WIP ###
+### 20170722 Sa 10 to 17 ###
 * Trying a few ideas originated in the discussion at the the Stan forums.
+* I created a very simple graph model, a toy example with most of the main features of our real model. Wrote a simulation routine in R, coded the model in Stan and it seems to recover the parameters right. It's a good lead. I'll increase the complexity in view of the real one.
 
+### 20170723 Su 9 to WIP ###
+* Adding semisupervision to the toy model.
 
 ---
 

@@ -107,6 +107,7 @@ set.seed(n.seed)
 options(expressions = 1e4)
 x_t    <- do.call(c, lapply(1:(T.length / 100), function(i) {activate(r, T.length = 100)}))
 K      <- sum(sapply(ls(), function(l){"hhmm_pnode" %in% class(get(l))}))
+l1K    <- length(get_children(r)) - 1
 z.true <- kmeans(scale(x_t, TRUE, TRUE), K, nstart = 10)$cluster
 
 # Exploratory data analysis -----------------------------------------------
@@ -122,40 +123,155 @@ for (i in 1:K)
        col  = i)
 
 # Semisupervised model estimation -----------------------------------------
-# Soon to come!
-# rstan_options(auto_write = TRUE)
-# options(mc.cores = parallel::detectCores())
-#
-# stan.model = 'hhmm/stan/hhmm-2x2semisup.stan'
-# stan.data = list(
-#   T = T.length,
-#   K = K,
-#   x_t = x_t
-# )
-#
-# # Chains are initialized close to k-means to speed up convergence
-# init_fun <- function(stan.data, k) {
-#   list(
-#     mu_k = as.vector(by(stan.data$x, k, mean)),
-#     sigma_k = as.vector(by(stan.data$x, k, sd))
-#   )
-# }
-#
-# stan.fit <- stan(file = stan.model,
-#                  model_name = stan.model,
-#                  data = stan.data, verbose = T,
-#                  iter = n.iter, warmup = n.warmup,
-#                  thin = n.thin, chains = n.chains,
-#                  cores = n.cores, seed = n.seed,
-#                  init = function() {init_fun(stan.data, z.true)})
-#
-# n.samples = (n.iter - n.warmup) * n.chains
-#
-# # MCMC Diagnostics --------------------------------------------------------
-# summary(stan.fit,
-#         pars = c('p_1k', 'A_ij', 'mu_k', 'sigma_k'),
-#         probs = c(0.50))$summary
-# launch_shinystan(stan.fit)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+stan.model = 'hhmm/stan/hhmm-2x2semisup.stan'
+stan.data = list(
+  T = T.length,
+  K = K,
+  x_t = x_t,
+  l1K = l1K,
+  l1z_t = ifelse(x_t >= 0, 1, 2),
+  l1index = matrix(c(1, 2, 3, 4),
+                   nrow = l1K, ncol = 2,
+                   byrow = TRUE))
+
+# Chains are initialized close to k-means to speed up convergence
+init_fun <- function(stan.data) {
+  ret <- matrix(0, nrow = stan.data$K, ncol = 2)
+  for (l in 1:stan.data$l1K) {
+    cl <- kmeans(scale(stan.data$x_t[stan.data$l1z_t == l], TRUE, TRUE),
+                 stan.data$l1index[l, 2] - stan.data$l1index[l, 1] + 1,
+                 nstart = 10)$cluster
+
+    ret[stan.data$l1index[l, 1]:stan.data$l1index[l, 2], 1] <-
+      as.vector(by(stan.data$x_t[stan.data$l1z_t == l], cl, mean))
+    ret[stan.data$l1index[l, 1]:stan.data$l1index[l, 2], 2] <-
+      as.vector(by(stan.data$x_t[stan.data$l1z_t == l], cl, sd))
+  }
+
+  list(
+    mu_k = as.vector(ret[, 1]),
+    sigma_k = as.vector(ret[, 2])
+  )
+}
+
+stan.fit <- stan(file = stan.model,
+                 model_name = stan.model,
+                 data = stan.data, verbose = T,
+                 iter = n.iter, warmup = n.warmup,
+                 thin = n.thin, chains = n.chains,
+                 cores = n.cores, seed = n.seed,
+                 init = function() {init_fun(stan.data)})
+
+n.samples = (n.iter - n.warmup) * n.chains
+
+# MCMC Diagnostics --------------------------------------------------------
+summary(stan.fit,
+        pars = c('p_1k', 'A_ij', 'mu_k', 'sigma_k'),
+        probs = c(0.50))$summary
+launch_shinystan(stan.fit)
+
+# Estimates ---------------------------------------------------------------
+
+# Extraction
+mu_k <- extract(stan.fit, pars = 'mu_k')[[1]]
+alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar_t <- extract(stan.fit, pars = 'zstar_t')[[1]]
+A_ij <- extract(stan.fit, pars = 'A_ij')[[1]]
+
+# Relabelling (ugly hack edition) -----------------------------------------
+z.relab <- rep(0, T.length)
+
+hard <- sapply(1:T.length, function(t, med) {
+  which.max(med[t, ])
+}, med = apply(alpha_tk, c(2, 3),
+               function(x) {
+                 quantile(x, c(0.50)) }))
+
+tab <- table(hard = hard, original = z.true)
+for (k in 1:(K - 1)) {
+  ptab <- prop.table(tab, 1)
+  ind.swap <- which(ptab == max(ptab), arr.ind = T)[1, ]
+
+  a <- as.numeric(dimnames(tab)$original[ind.swap[2]])
+  b <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+  z.relab[z.true == a] <- b
+
+  if (k == K - 1) {
+    ind.swap[1] <- if (ind.swap[1] == 1) 2 else 1
+    ind.swap[2] <- if (ind.swap[2] == 1) 2 else 1
+
+    a <- as.numeric(dimnames(tab)$original[ind.swap[2]])
+    b <- as.numeric(dimnames(tab)$hard[ind.swap[1]])
+    z.relab[z.true == a] <- b
+  }
+
+  tab <- tab[-ind.swap[1], -ind.swap[2]]
+}
+
+print("Label re-imputation (relabelling due to switching labels)")
+table(new = z.relab, original = z.true)
+
+# Inference plots
+print("Estimated hidden states (hard naive classification using filtered prob)")
+print(table(
+  estimated = apply(round(apply(alpha_tk, c(2, 3),
+                                function(x) {
+                                  quantile(x, c(0.50)) })), 1, which.max),
+  real = z.relab))
+plot_stateprobability(alpha_tk, gamma_tk, 0.8, z.relab)
+
+# Most likely hidden path (Viterbi decoding) - joint states
+round(table(rep(z.relab - 1, each = n.samples), zstar_t) / n.samples, 0)
+plot_statepath(zstar_t, z.relab)
+
+# Observation model parameters
+hier1.true <- c(1, 2)
+hier2.true <- c(3, 4)
+hier1.star <- c(1, 2)
+hier2.star <- c(3, 4)
+
+data.frame(
+  true = as.vector(by(x_t, z.relab, mean)),
+  star = colMeans(mu_k)
+)
+
+# Marginal probabilities
+data.frame(
+  desc = c("Hierarchy 1", "Hierarchy 2"),
+  true =
+    c(sum(z.true %in% hier1.true) / T.length,
+      sum(z.true %in% hier2.true) / T.length),
+  star =
+    c(sum(apply(alpha_tk[, , hier1.star], c(1, 2), sum) > 0.5) / (n.samples*T.length),
+      sum(apply(alpha_tk[, , hier2.star], c(1, 2), sum) > 0.5) / (n.samples*T.length))
+)
+
+for (i in 1:K)
+  cat(sprintf("Production node %i \t True %0.4f \t Estimate %0.4f \n",
+                i,
+                sum(z.true == i) / T.length,
+                sum(apply(alpha_tk[, , i], c(1, 2), sum) > 0.5) / (n.samples*T.length)))
+
+## Transition probabilities
+zstar_med <- apply(zstar_t, 2, median)
+zstar_lag <- tail(zstar_med, -1)
+
+print("Transition matrix (true)")
+sapply(1:K, function(j) {
+  sapply(1:K, function(i) {
+    sum(tail(z.relab, -1) == j & head(z.relab, -1) == i) / sum(head(z.relab, -1) == i)
+  })
+})
+
+print("Transition matrix (estimated)")
+apply(A_ij, c(2, 3), median)
+
+print("Hard classification")
+apply(apply(alpha_tk, c(1, 2), which.max), 2, function(x) {as.numeric(names(table(x))[1])})
 
 # Unsupervised model estimation -------------------------------------------
 rstan_options(auto_write = TRUE)
@@ -191,61 +307,3 @@ summary(stan.fit,
         pars = c('p_1k', 'A_ij', 'mu_k', 'sigma_k'),
         probs = c(0.50))$summary
 launch_shinystan(stan.fit)
-
-# Estimates ---------------------------------------------------------------
-
-# Extraction
-mu_k <- extract(stan.fit, pars = 'mu_k')[[1]]
-alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
-gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
-zstar_t <- extract(stan.fit, pars = 'zstar_t')[[1]]
-A_ij <- extract(stan.fit, pars = 'A_ij')[[1]]
-
-# Inference plots
-print("Estimated hidden states (hard naive classification using filtered prob)")
-print(table(
-  estimated = apply(round(apply(alpha_tk, c(2, 3),
-                                function(x) {
-                                  quantile(x, c(0.50)) })), 1, which.max),
-  real = z.true))
-plot_stateprobability(alpha_tk, gamma_tk, 0.8, z.true)
-
-# Most likely hidden path (Viterbi decoding) - joint states
-round(table(rep(z.true - 1, each = n.samples), zstar_t) / n.samples, 0)
-plot_statepath(zstar_t, z.true)
-
-# Marginal probabilities
-hier1.true <- c(2, 4)
-hier2.true <- c(3, 1)
-hier1.star <- c(2, 4)
-hier2.star <- c(3, 1)
-
-data.frame(
-  desc = c("Hierarchy 1", "Hierarchy 2"),
-  true =
-    c(sum(z.true %in% hier1.true) / T.length,
-      sum(z.true %in% hier2.true) / T.length),
-  star =
-    c(sum(apply(alpha_tk[, , hier1], c(1, 2), sum) > 0.5) / (n.samples*T.length),
-      sum(apply(alpha_tk[, , hier2], c(1, 2), sum) > 0.5) / (n.samples*T.length))
-)
-
-for (i in 1:K)
-  cat(sprintf("Production node %i \t True %0.4f \t Estimate %0.4f \n",
-                i,
-                sum(z.true == i) / T.length,
-                sum(apply(alpha_tk[, , i], c(1, 2), sum) > 0.5) / (n.samples*T.length)))
-
-## Transition probabilities
-zstar_med <- apply(zstar_t, 2, median)
-zstar_lag <- tail(zstar_med, -1)
-
-print("Transition matrix (true)")
-sapply(1:K, function(j) {
-  sapply(1:K, function(i) {
-    sum(tail(z.true, -1) == j & head(z.true, -1) == i) / sum(head(z.true, -1) == i)
-  })
-})
-
-print("Transition matrix (estimated)")
-apply(A_ij, c(2, 3), median)
