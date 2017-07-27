@@ -61,6 +61,7 @@ model {
   target += log_sum_exp(unalpha_tk[T]); // Note: update based only on last unalpha_tk
 }
 
+/* Comment out the whole block if you need speed */
 generated quantities {
   vector[K] unbeta_tk[T];
   vector[K] ungamma_tk[T];

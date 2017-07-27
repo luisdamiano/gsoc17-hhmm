@@ -6,10 +6,10 @@ source('hhmm/R/hhmm-sim.R')
 # Scroll doooown (line ~1850 or so) to see the real magic
 
 # Set up! -----------------------------------------------------------------
-T.length = 800
+T.length = 100
 
-n.iter = 500
-n.warmup = 250
+n.iter = 200
+n.warmup = 100
 n.chains = 1
 n.cores = 1
 n.thin = 1
@@ -1886,8 +1886,7 @@ options(expressions = 1e4)
 x_t    <- do.call(c, lapply(1:(T.length / 100), function(i) {activate(r, T.length = 100)}))
 K      <- sum(sapply(ls(), function(l){"hhmm_pnode" %in% class(get(l))}))
 l1K    <- length(get_children(r)) - 1
-l1z_t  <- ifelse(x_t >= 0, 1, 2)
-
+# l1z_t  <- ifelse(x_t >= 0, 1, 2)
 
 # Data preprocessing ------------------------------------------------------
 p_t    <- cumprod(1 + x_t)
@@ -1948,14 +1947,16 @@ par(opar)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
+l1index <- c(1, 15, 16, 30, 31, 33, 34, 48, 49, 63)
+
 stan.model = 'hhmm/stan/hhmm-semisup.stan'
 stan.data = list(
-  T = T.length,
+  T = length(l1z_t),
   K = K,
-  x_t = x_t,
+  x_t = head(x_t, length(l1z_t)),
   l1K = l1K,
   l1z_t = l1z_t,
-  l1index = matrix(c(1, 2, 3, 4),
+  l1index = matrix(l1index,
                    nrow = l1K, ncol = 2,
                    byrow = TRUE))
 
@@ -1978,6 +1979,16 @@ init_fun <- function(stan.data) {
     sigma_k = as.vector(ret[, 2])
   )
 }
+
+# stan.data = list(
+#   T = length(l1z_t),
+#   K = 23,
+#   x_t = head(x_t, length(l1z_t)),
+#   l1K = l1K,
+#   l1z_t = l1z_t,
+#   l1index = matrix(c(1, 5, 6, 10, 11, 13, 14, 18, 19, 23),
+#                    nrow = l1K, ncol = 2,
+#                    byrow = TRUE))
 
 stan.fit <- stan(file = stan.model,
                  model_name = stan.model,

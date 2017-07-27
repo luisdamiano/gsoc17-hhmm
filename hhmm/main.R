@@ -4,7 +4,7 @@ source('common/R/plots.R')
 source('hhmm/R/hhmm-sim.R')
 
 # Set up! -----------------------------------------------------------------
-T.length = 800
+T.length = 200
 
 n.iter = 500
 n.warmup = 250

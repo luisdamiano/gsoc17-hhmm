@@ -652,6 +652,13 @@ n.seed = 9000
 * With calibration by simulation I could confirm that semisupervised hhmm works for a hierarchical 2x2 gaussian mixture. I'm almost there to check if it works for data simulated from the graph presented in jangmin.
 * Check-in email.
 
+### 20170727 We 22 to WIP ###
+* Trying to fit my Stan code to simulated data following Jangmin graph.
+* 100 obs + 200 samples (including 100 burn-in) + 23 states = 25 minutes.
+* Simplification I: reduce from 63 to 23 states by treating observations in groups of three.
+* Simplification II: force zeroes in production nodes that aren't connected (ex. node inside sb from node inside su).
+* Check-in email.
+
 ---
 
 # Notes
