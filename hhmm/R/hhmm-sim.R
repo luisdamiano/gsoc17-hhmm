@@ -99,6 +99,7 @@ activate.hhmm_enode <- function(n, x, i) {
 }
 
 activate.hhmm_pnode <- function(n, x, i) {
+  print(sprintf("prod = %2i", n$i))
   deref(x)[deref(i)] <- do.call(n$obs.mod, n$obs.par)
 
   if (deref(i) == length(deref(x)))

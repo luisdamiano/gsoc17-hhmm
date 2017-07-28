@@ -6,7 +6,7 @@ source('hhmm/R/hhmm-sim.R')
 # Scroll doooown (line ~1850 or so) to see the real magic
 
 # Set up! -----------------------------------------------------------------
-T.length = 100
+T.length = 200
 
 n.iter = 200
 n.warmup = 100
@@ -83,7 +83,7 @@ qsb12  <- internal_node(
                     byrow = TRUE))
 
 psb12   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 2,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
@@ -99,7 +99,7 @@ qsb13  <- internal_node(
                     byrow = TRUE))
 
 psb13   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 3,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
@@ -129,7 +129,7 @@ qsb21  <- internal_node(
                     byrow = TRUE))
 
 psb21   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 4,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.03, sigma = 1.5 * 0.02))
 
@@ -145,7 +145,7 @@ qsb22  <- internal_node(
                     byrow = TRUE))
 
 psb22   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 5,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
@@ -161,7 +161,7 @@ qsb23  <- internal_node(
                     byrow = TRUE))
 
 psb23   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 6,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
@@ -191,7 +191,7 @@ qsb31  <- internal_node(
                     byrow = TRUE))
 
 psb31   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 7,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.02))
 
@@ -207,7 +207,7 @@ qsb32  <- internal_node(
                     byrow = TRUE))
 
 psb32   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 8,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.02))
 
@@ -223,7 +223,7 @@ qsb33  <- internal_node(
                     byrow = TRUE))
 
 psb33   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 9,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
@@ -253,7 +253,7 @@ qsb41  <- internal_node(
                     byrow = TRUE))
 
 psb41   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 10,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.05, sigma = 1.5 * 0.02))
 
@@ -269,7 +269,7 @@ qsb42  <- internal_node(
                     byrow = TRUE))
 
 psb42   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 11,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
@@ -285,7 +285,7 @@ qsb43  <- internal_node(
                     byrow = TRUE))
 
 psb43   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 12,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
@@ -315,7 +315,7 @@ qsb51  <- internal_node(
                     byrow = TRUE))
 
 psb51   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 13,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.01, sigma = 1.5 * 0.01))
 
@@ -331,7 +331,7 @@ qsb52  <- internal_node(
                     byrow = TRUE))
 
 psb52   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 14,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.01))
 
@@ -347,7 +347,7 @@ qsb53  <- internal_node(
                     byrow = TRUE))
 
 psb53   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 15,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -504,7 +504,7 @@ qwb11  <- internal_node(
                     byrow = TRUE))
 
 pwb11   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 16,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
@@ -520,7 +520,7 @@ qwb12  <- internal_node(
                     byrow = TRUE))
 
 pwb12   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 17,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.02))
 
@@ -536,7 +536,7 @@ qwb13  <- internal_node(
                     byrow = TRUE))
 
 pwb13   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 18,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
@@ -566,7 +566,7 @@ qwb21  <- internal_node(
                     byrow = TRUE))
 
 pwb21   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 19,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.05, sigma = 1.5 * 0.02))
 
@@ -582,7 +582,7 @@ qwb22  <- internal_node(
                     byrow = TRUE))
 
 pwb22   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 20,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.02))
 
@@ -598,7 +598,7 @@ qwb23  <- internal_node(
                     byrow = TRUE))
 
 pwb23   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 21,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
@@ -628,7 +628,7 @@ qwb31  <- internal_node(
                     byrow = TRUE))
 
 pwb31   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 22,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
@@ -644,7 +644,7 @@ qwb32  <- internal_node(
                     byrow = TRUE))
 
 pwb32   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 23,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.07, sigma = 1.5 * 0.02))
 
@@ -660,7 +660,7 @@ qwb33  <- internal_node(
                     byrow = TRUE))
 
 pwb33   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 24,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.05, sigma = 1.5 * 0.02))
 
@@ -690,7 +690,7 @@ qwb41  <- internal_node(
                     byrow = TRUE))
 
 pwb41   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 25,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
@@ -706,7 +706,7 @@ qwb42  <- internal_node(
                     byrow = TRUE))
 
 pwb42   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 26,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
@@ -722,7 +722,7 @@ qwb43  <- internal_node(
                     byrow = TRUE))
 
 pwb43   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 27,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.00, sigma = 1.5 * 0.02))
 
@@ -752,7 +752,7 @@ qwb51  <- internal_node(
                     byrow = TRUE))
 
 pwb51   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 28,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -768,7 +768,7 @@ qwb52  <- internal_node(
                     byrow = TRUE))
 
 pwb52   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 29,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
@@ -784,7 +784,7 @@ qwb53  <- internal_node(
                     byrow = TRUE))
 
 pwb53   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 30,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -941,7 +941,7 @@ qsu11  <- internal_node(
                     byrow = TRUE))
 
 psu11   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 31,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
@@ -957,7 +957,7 @@ qsu12  <- internal_node(
                     byrow = TRUE))
 
 psu12   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 32,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.08, sigma = 1.5 * 0.02))
 
@@ -973,7 +973,7 @@ qsu13  <- internal_node(
                     byrow = TRUE))
 
 psu13   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 33,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -1003,7 +1003,7 @@ qsu21  <- internal_node(
                     byrow = TRUE))
 
 psu21   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 34,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.07, sigma = 1.5 * 0.02))
 
@@ -1019,7 +1019,7 @@ qsu22  <- internal_node(
                     byrow = TRUE))
 
 psu22   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 35,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.06, sigma = 1.5 * 0.02))
 
@@ -1035,7 +1035,7 @@ qsu23  <- internal_node(
                     byrow = TRUE))
 
 psu23   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 36,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.08, sigma = 1.5 * 0.02))
 
@@ -1065,7 +1065,7 @@ qsu31  <- internal_node(
                     byrow = TRUE))
 
 psu31   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 37,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
@@ -1081,7 +1081,7 @@ qsu32  <- internal_node(
                     byrow = TRUE))
 
 psu32   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 38,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.02))
 
@@ -1097,7 +1097,7 @@ qsu33  <- internal_node(
                     byrow = TRUE))
 
 psu33   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 39,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.03, sigma = 1.5 * 0.02))
 
@@ -1127,7 +1127,7 @@ qsu41  <- internal_node(
                     byrow = TRUE))
 
 psu41   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 40,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.03))
 
@@ -1143,7 +1143,7 @@ qsu42  <- internal_node(
                     byrow = TRUE))
 
 psu42   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 41,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
@@ -1159,7 +1159,7 @@ qsu43  <- internal_node(
                     byrow = TRUE))
 
 psu43   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 42,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
@@ -1189,7 +1189,7 @@ qsu51  <- internal_node(
                     byrow = TRUE))
 
 psu51   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 43,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.01))
 
@@ -1205,7 +1205,7 @@ qsu52  <- internal_node(
                     byrow = TRUE))
 
 psu52   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 44,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.02))
 
@@ -1221,7 +1221,7 @@ qsu53  <- internal_node(
                     byrow = TRUE))
 
 psu53   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 45,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
@@ -1378,7 +1378,7 @@ qwu11  <- internal_node(
                     byrow = TRUE))
 
 pwu11   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 46,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
@@ -1394,7 +1394,7 @@ qwu12  <- internal_node(
                     byrow = TRUE))
 
 pwu12   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 47,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.07, sigma = 1.5 * 0.01))
 
@@ -1410,7 +1410,7 @@ qwu13  <- internal_node(
                     byrow = TRUE))
 
 pwu13   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 48,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.06, sigma = 1.5 * 0.02))
 
@@ -1440,7 +1440,7 @@ qwu21  <- internal_node(
                     byrow = TRUE))
 
 pwu21   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 49,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
@@ -1456,7 +1456,7 @@ qwu22  <- internal_node(
                     byrow = TRUE))
 
 pwu22   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 50,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
@@ -1472,7 +1472,7 @@ qwu23  <- internal_node(
                     byrow = TRUE))
 
 pwu23   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 51,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.03, sigma = 1.5 * 0.01))
 
@@ -1502,7 +1502,7 @@ qwu31  <- internal_node(
                     byrow = TRUE))
 
 pwu31   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 52,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.01))
 
@@ -1518,7 +1518,7 @@ qwu32  <- internal_node(
                     byrow = TRUE))
 
 pwu32   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 53,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
@@ -1534,7 +1534,7 @@ qwu33  <- internal_node(
                     byrow = TRUE))
 
 pwu33   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 54,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.02, sigma = 1.5 * 0.02))
 
@@ -1564,7 +1564,7 @@ qwu41  <- internal_node(
                     byrow = TRUE))
 
 pwu41   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 55,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.03))
 
@@ -1580,7 +1580,7 @@ qwu42  <- internal_node(
                     byrow = TRUE))
 
 pwu42   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 56,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.08, sigma = 1.5 * 0.03))
 
@@ -1596,7 +1596,7 @@ qwu43  <- internal_node(
                     byrow = TRUE))
 
 pwu43   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 57,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.09, sigma = 1.5 * 0.02))
 
@@ -1626,7 +1626,7 @@ qwu51  <- internal_node(
                     byrow = TRUE))
 
 pwu51   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 58,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -1642,7 +1642,7 @@ qwu52  <- internal_node(
                     byrow = TRUE))
 
 pwu52   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 59,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.02, sigma = 1.5 * 0.01))
 
@@ -1658,7 +1658,7 @@ qwu53  <- internal_node(
                     byrow = TRUE))
 
 pwu53   <- production_node(
-  d = 5, i = 1,
+  d = 5, i = 60,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.01, sigma = 1.5 * 0.01))
 
@@ -1802,7 +1802,7 @@ qr1   <- internal_node(
                     byrow = TRUE))
 
 pr1    <- production_node(
-  d = 4, i = 1,
+  d = 4, i = 61,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *  -0.04, sigma = 1.5 * 0.03))
 
@@ -1818,7 +1818,7 @@ qr2   <- internal_node(
                     byrow = TRUE))
 
 pr2    <- production_node(
-  d = 4, i = 2,
+  d = 4, i = 62,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.00, sigma = 1.5 * 0.01))
 
@@ -1834,7 +1834,7 @@ qr3   <- internal_node(
                     byrow = TRUE))
 
 pr3    <- production_node(
-  d = 4, i = 3,
+  d = 4, i = 63,
   obs.mod  = obsmodel_gaussian,
   obs.par  = list(mu = 0.2 *   0.04, sigma = 1.5 * 0.03))
 
@@ -1883,7 +1883,21 @@ for (i in 1:length(ls())) {
 # Simulate ----------------------------------------------------------------
 set.seed(n.seed)
 options(expressions = 1e4)
-x_t    <- do.call(c, lapply(1:(T.length / 100), function(i) {activate(r, T.length = 100)}))
+capture.output(
+x_t    <- do.call(c, lapply(1:(T.length / 100), function(i) {activate(r, T.length = 100)})),
+file = "out.txt")
+
+con  <- file('out.txt', open = "r")
+lin  <- readLines(con, warn = FALSE)
+tmp <- as.vector(do.call(cbind, sapply(lin, function(l) {
+  if (substr(l, 1, 12) == substr(lin[1], 1, 12)) {
+    as.character(substr(l, 13, 14))
+  }
+})))
+close(con)
+
+table(head(tmp, -1), tail(tmp, -1))
+
 K      <- sum(sapply(ls(), function(l){"hhmm_pnode" %in% class(get(l))}))
 l1K    <- length(get_children(r)) - 1
 # l1z_t  <- ifelse(x_t >= 0, 1, 2)
