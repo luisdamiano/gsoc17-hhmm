@@ -652,12 +652,25 @@ n.seed = 9000
 * With calibration by simulation I could confirm that semisupervised hhmm works for a hierarchical 2x2 gaussian mixture. I'm almost there to check if it works for data simulated from the graph presented in jangmin.
 * Check-in email.
 
-### 20170727 We 22 to WIP ###
+### 20170726 We 22 to WIP ###
 * Trying to fit my Stan code to simulated data following Jangmin graph.
 * 100 obs + 200 samples (including 100 burn-in) + 23 states = 25 minutes.
 * Simplification I: reduce from 63 to 23 states by treating observations in groups of three.
 * Simplification II: force zeroes in production nodes that aren't connected (ex. node inside sb from node inside su).
 * Check-in email.
+
+### 20170728 Fr 16 to 17 ###
+* Hangout session with Michael.
+* Summary of the discussion.
+
+### 20170729 Sa 10 to WIP ###
+* Reading Tayal(2009) in great detail:
+  * DBN representation
+  * HHMM representation
+  * Characteristics and strategies that could help improve computational times (ex. conditional independence)
+  * Estimation algo
+  * Rewriting the model in probabilistic terms (in the form of P(z_1 | z_2, ...) ~ )
+* Should start with Gold (TSE:G). It's the stock described in most of the figures of the original work. It's also in the group with most volume and the model and the model works best for high volume trends.
 
 ---
 
