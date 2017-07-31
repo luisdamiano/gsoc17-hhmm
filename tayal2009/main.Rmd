@@ -88,74 +88,97 @@ There are several quantities of interest to be estimated via different algorithm
 
 ...
 
+In the end, we arrive at a $L$-long feature vector space $\mat{O} = \left\{... \right\}$
+
 ## Model
 
-We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM model with hidden states to model the discrete feature vector. The graph starts with the root node $z^0$ and two top level states $z_1^1$ and $z_2^1$ representing bear markets (or runs) and bull markets (or reversals). States can be learnt from data and labelled ex-post based on sample characteristics. Otherwise, prior information such as parameter ordering can be used to break symmetry and mitigate identification issues.
+We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM to learn the sequence of discrete features extracted from a high-frequency time series of stock prices and traded volume. The figure below summarises the model structure in the form of a Dynamic Bayesian Network.
 
-Each top node activates a probabilistic model in the form of a HMM. These two conditionally independent models 
+The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints to determine beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
 
-HHMM can be rearranged into an equivalent (possibly sparse) HMM. As this model has a relatively simple structure, it can be expanded into a HMM feasible in terms of computational times with the initial probability vector
+![Graph from Tayal (2009). Will make my own figure when time comes. $q_1^1$ is equivalent to $z_1^1$ in our notation.](graph.PNG)
+
+Each top node activates a probabilistic HMM with two latent states for negative and positive zig-zag legs. The sub-model activated by the node $z_1^1$ always starts with the node $z_1^2$ producing an observation from the distribution of negative zig-zag $\mat{D} = \{D_1, \dots, D_9 \}$. Next, it transitions to (a) the node $z_2^2$ producing a positive zig-zag leg $\mat{U} = \{U_1, \dots, U_9 \}$, (b) the end node which may, in turn, transition back to $z_1^1$ emitting a new negative zig-zag leg, or (c) the end node and switches to the second sub-model, landing on node $z_3^2$ and producing a positive zig-zag leg. Restricting transitions to this limited set of movements force alternation between positive and negative zig-zag legs, thus guaranteeing that all possible observation sequences are well behaved. The sub-model belonging to $z_2^1$ has similar but symmetrical behaviour. These two inner models are conditionally independent, an advantage we will take for computational time.
+
+Theoretically, all HHMM can be expressed as an equivalent HMM with possibly sparse initial probability vector and transition matrix. Although learning from this representation may prove less efficient in terms of computational complexity, the relatively simple structure and many restrictions of the model under study make estimation and inference feasible. The equivalent "expanded" HMM has the following initial probability vector
 
 \[
-\mat{\pi} = \left[\pi_1, 0, \pi_2, 0\right].
+\mat{\pi} = 
+  \begin{bmatrix}
+  \pi_1 & 0 & 1 - \pi_1 & 0 \\
+  \end{bmatrix}
 \]
 
-The transition matrix is given by
+and transition matrix
 
 \[
 \mat{A} =
-  \begin{matrix}
-    p_{11} & p_{12} & p_{13} & 0      \\
-    p_{21} & 0      & 0      & 0      \\
-    p_{31} & 0      & p_{33} & p_{34} \\
-    0      & 0      & p_{43} & 0,     \\
-  \end{matrix}
+  \begin{bmatrix}
+    p_{11} & p_{12} & 1 - p_{11} - p_{12} & 0                   \\
+    1      & 0      & 0                   & 0                   \\
+    p_{31} & 0      & p_{33}              & 1 - p_{31} - p_{33} \\
+    0      & 0      & 1                   & 0                   \\
+  \end{bmatrix},
 \]
 
-where each element $p_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix sum to $1$, there are five free parameters in the hidden state dynamics.
+where each element $p_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only five free parameters.
 
-Emissions are categorical with $18$ possible values
+Does this representation "lose" the hierarchical interpretation of the states? Do transition probabilities summarize all possible paths from one node to the other? In this case I believe there's a 1-to-1 map from the HHMM arrows to the HMM matrix.
 
-
-
-
-
-
-
-PLOT ** Make plot **
-
-with $K = 4$ hidden states to forecast stock prices. The hidden dynamics are driven by a multinomial (softmax) regression with $R = 4$ inputs, namely opening, closing, highest and lowest prices from the previous time step. The univariate output is the stock closing price for the current time step. The observation model is a Gaussian mixture with $L = 3$ components per state,
+Production nodes emit one observation from the finite sets of possible outputs $\mat{O}_D$ (for $z_1^2$ and $z_4^2$) and $\mat{O}_U$ (for $z_2^2$ and $z_3^2$). Conditional probability distributions are given by output probability vectors of length $L_U$ and $L_D$ subject to sum-to-one constraints:
 
 \[
-p(x_t | z_{t} = j) = \sum_{l = 1}^{L}{\lambda_{jl} \ \NN(x_t | \mu_{jl}, \sigma_{jl})},
+\mat{B}^1 = p(\mat{x}_t | z_1^2) = \left[b^{1}_{D_1}, \dots, b^{1}_{D_9} \right], \\
+\mat{B}^2 = p(\mat{x}_t | z_2^2) = \left[b^{2}_{U_1}, \dots, b^{2}_{U_9} \right], \\
+\mat{B}^3 = p(\mat{x}_t | z_3^2) = \left[b^{3}_{U_1}, \dots, b^{3}_{U_9} \right], \\
+\mat{B}^4 = p(\mat{x}_t | z_4^2) = \left[b^{4}_{D_1}, \dots, b^{4}_{D_9} \right]. \\
 \]
 
-where $\lambda_{jl}$ is the component weight for the $l$-th component within the $j$-th state, $0 \le \lambda_{jl} \le 1 \ \forall \ l, j$ and $\sum_{l=1}^{L}{\lambda_{jl}} = 1 \ \forall \ j$.
+The observation model has 32 free parameters.
 
-The vector parameter then becomes $\mat{\theta} = (\mat{\pi}_1, \mat{w}_k, \lambda_{kl}, \mu_{kl}, \sigma_{kl})$ for $k \in \{1, \dots, K\}$ and $l \in \{1, \dots, L\}$.
+On the whole, the parameter vector for the HMM representation reduces to 
 
-```{r}
-K = 4
-L = 3
-```
+\[
+\mat{\theta} = (\pi_1, p_{11}, p_{12}, p_{31}, p_{33}, b^1_{D_l}, b^2_{U_l}, b^3_{U_l}, b^4_{D_l}),
+\]
+
+with $l \in \{1, \dots, L-1\}$.
 
 ## The sampler
 
 ...
 
-## Dataset & data transformation
+## Dataset
 
-We use daily OHLC prices for the stocks and time spans listed in the original paper. The data is downloaded from Yahoo Finance via Quantmod. We omit two delisted stocks as the series are not avaliable anymore in public sources such as Yahoo and Google Finance.
+The original work presents results for both simulated and real data. The latter is based on historical high-frequency time series for the 60 stocks listed in the S&P/TSE60 index. The dataset consists of all 22 business days of May 2007. The author excludes three days due to significant errors without disclosing the exact dates.
 
-...
+We focus on GoldCorp Inc (TSE:G), the series best detailed in the original work, to confirm that our results are consistent with the original work.
 
 ## Feature extraction
+
+Note that we do not model prices directly. Instead, non-linear transforms are appleid on the price and traded volume high-frequency series to produce the sequence of observations fed to the proposed model.
 
 ...
 
 ## Methodology
 
-...
+Model parameters are estimated on a rolling window with five days each. Since top nodes are symmetrical, states are labeled ex-post based on the order of the in-sample mean of the percentage change in the initial and final price before the top level state switch. The state with larger and smaller returns are marked as bullish (a run) and bearish (a reversal) respectively.
+
+<!-- The conditional distribution of the features are studied to confirm that they differ from the unconditional distribution, ie the price process can be split into two regimes. Additionally, the differences are examinated to confirm that they differ in the expected way, ie the bullish state is more likely to have observations with price increases supported by volume increases and price drecreases are not supported by volumen decreases. -->
+
+After learning and labelling, two out of sample inference procedures are run on the sixth day. First, offline smoothing infers the hidden state at time $t$ based on the full evidence of the sixth day. Although this quantity is not useful for trading because of its look-ahead bias, it provides an upper bound benchmark for the model. Second, online filtering is used as a trading rule.
+
+Most of the diagnostics are based on trade returns. For the $l$-th top-level state switch, the percentage return is defined as
+
+\[
+R_l = \frac{p^e_l - p^s_l}{p^s_l},
+\]
+
+where $p^s_l$ and $p^e_l$ are the price at the start and end of the switch. 
+
+The information content of learning the top-level state is assessed by comparing the unconditional empirical distribution of trade returns versus their empirical distribution conditioned on the top-level state. Additionaly, regime return characteristics are validated: mean trade returns are expected to be higher for bullish regimes compared to bearish regimes, and they are expected to be positive and negative for runs and reversals respectively. In the original work, most of these analysis are run both in-sample and out-of-sample. We focus on out-of-sample results only.
+
+Finally, a trading strategy is tested. After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). Trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias.
 
 ## GoldCorp Inc (TSE:G)
 
