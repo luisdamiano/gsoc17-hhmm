@@ -7,8 +7,21 @@ functions {
 data {
   int<lower=1> T;                   // number of observations (length)
   int<lower=1> K;                   // number of hidden states
-  real x[T];                        // observations
+  int<lower=1> L;                   // number of possible outputs in each state
+  int<lower=1, upper=L> x[T];       // observations
 }
+
+// transformed data {
+//   int<lower=0> trans_count;
+//   int<lower=0> emission_count;
+//
+//   for(k1 in 1:K)
+//     for(k2 in 1:K)
+//       trans_count[k1, k2] = 0;
+//
+//   for(t in 2:T)
+//     trans_count[]
+// }
 
 parameters {
   // Discrete state model
@@ -16,9 +29,8 @@ parameters {
   simplex[K] A_ij[K];               // transition probabilities
                                     // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
 
-  // Continuous observation model
-  ordered[K] mu_k;                  // observation means
-  real<lower=0.0001> sigma_k[K];    // observation standard deviations
+  // Discrete observation model
+  simplex[L] phi_k[K];              // event probabilities
 }
 
 transformed parameters {
@@ -27,14 +39,16 @@ transformed parameters {
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
 
-    unalpha_tk[1] = log(p_1k) + normal_lpdf(x[1] | mu_k, sigma_k);
+    for (j in 1:K) {
+      unalpha_tk[1] = log(p_1k) + log(phi_k[j, x[1]]);
+    }
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
                          // Murphy (2012) Eq. 17.48
                          // belief state      + transition prob + local evidence at t
-          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
+          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[i, j]) + log(phi_k[j, x[t]]);
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
@@ -76,7 +90,7 @@ generated quantities {
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
                          // backwards t    + transition prob + local evidence at t
-          accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + normal_lpdf(x[t] | mu_k[i], sigma_k[i]);
+          accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + log(phi_k[i, x[t]]);
           }
         unbeta_tk[t-1, j] = log_sum_exp(accumulator);
       }
@@ -101,14 +115,14 @@ generated quantities {
                                     // with final output from state k for time t
 
     for (j in 1:K)
-      delta_tk[1, K] = normal_lpdf(x[1] | mu_k[j], sigma_k[j]);
+      delta_tk[1, K] = log(phi_k[j, x[1]]);
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         delta_tk[t, j] = negative_infinity();
         for (i in 1:K) { // i = previous (t-1)
           real logp;
-          logp = delta_tk[t-1, i] + log(A_ij[i, j]) + normal_lpdf(x[t] | mu_k[j], sigma_k[j]);
+          logp = delta_tk[t-1, i] + log(A_ij[i, j]) + log(phi_k[j, x[t]]);
           if (logp > delta_tk[t, j]) {
             a_tk[t, j] = i;
             delta_tk[t, j] = logp;

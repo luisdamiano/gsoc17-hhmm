@@ -663,7 +663,7 @@ n.seed = 9000
 * Hangout session with Michael.
 * Summary of the discussion.
 
-### 20170729 Sa 10 to WIP ###
+### 20170729 Sa 10 to 18 ###
 * Reading Tayal(2009) in great detail:
   * DBN representation
   * HHMM representation
@@ -671,6 +671,15 @@ n.seed = 9000
   * Estimation algo
   * Rewriting the model in probabilistic terms (in the form of P(z_1 | z_2, ...) ~ )
 * Should start with Gold (TSE:G). It's the stock described in most of the figures of the original work. It's also in the group with most volume and the model and the model works best for high volume trends.
+
+### 20170730 Su 10 to 21 ###
+* ...
+
+### 20170731 Mo 19 to 22 ###
+* ...
+
+### 20170801 Tu 21 to 24 ###
+* ...
 
 ---
 
