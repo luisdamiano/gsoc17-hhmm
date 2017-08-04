@@ -684,6 +684,9 @@ n.seed = 9000
 ### 20170802 We 21 to 01+ ###
 * ...
 
+### 20170803 Th 18 to 01+ ###
+* Finally! The Stan code for the hmm representation of Tayal's hhmm works.
+
 ---
 
 # Notes

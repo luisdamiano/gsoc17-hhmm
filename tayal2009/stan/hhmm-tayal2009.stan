@@ -7,22 +7,40 @@ functions {
 data {
   int<lower=1> T;                   // number of observations (length)
   int<lower=1> K;                   // number of hidden states
-  int<lower=1> L;                   // number of possible outputs in each state
+  int<lower=1> L;                   // number of possible outputs in a feature set
   int<lower=1, upper=L> x[T];       // observations
 }
 
 parameters {
   // Discrete state model
-  simplex[K] p_1k;                  // initial state probabilities
-  simplex[K] A_ij[K];               // transition probabilities
-                                    // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
+  real<lower=0,upper=1> p_11;
+  simplex[2] A_row[2];
 
   // Discrete observation model
-  simplex[L] phi_k[K];              // event probabilities
+  simplex[L] phi_k[K];             // event probabilities
 }
 
 transformed parameters {
+  vector[K] p_1k;                  // initial state probabilities
+  matrix[K, K] A_ij;               // transition probabilities
+                                   // A_ij[i][j] = p(z_t = j | z_{t-1} = i)
   vector[K] unalpha_tk[T];
+
+  p_1k = rep_vector(0, K);
+  p_1k[1] = p_11;
+  p_1k[3] = 1 - p_11;
+
+  A_ij = rep_matrix(0, K, K);
+
+  A_ij[1, 2] = A_row[1, 1];
+  A_ij[1, 3] = A_row[1, 2];
+
+  A_ij[2, 1] = 1;
+
+  A_ij[3, 1] = A_row[2, 1];
+  A_ij[3, 4] = A_row[2, 2];
+
+  A_ij[4, 3] = 1;
 
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
@@ -34,9 +52,9 @@ transformed parameters {
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
+          accumulator[i] = unalpha_tk[t-1, i] + log(phi_k[j, x[t]]) + log(A_ij[i, j]);
                          // Murphy (2012) Eq. 17.48
                          // belief state      + transition prob + local evidence at t
-          accumulator[i] = unalpha_tk[t-1, i] + log(A_ij[i, j]) + log(phi_k[j, x[t]]);
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
@@ -128,6 +146,5 @@ generated quantities {
     for (t in 1:(T - 1)) {
       zstar_t[T - t] = a_tk[T - t + 1, zstar_t[T - t + 1]];
     }
-
   }
 }

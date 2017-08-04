@@ -4,58 +4,28 @@ source('common/R/plots.R')
 source('hmm/R/hmm-sim.R')
 
 # Set up ------------------------------------------------------------------
-T.length = 1000
-K = 3
-L = 5
-G = 1
-g = rep(1, K)
-A = matrix(c(0.10, 0.70, 0.20,
-             0.20, 0.10, 0.70,
-             0.70, 0.20, 0.10),
+T.length = 500
+K = 4
+L = 9
+p1 = c(0.50, 0.00, 0.50, 0.00)
+A = matrix(c(0.00, 0.80, 0.20, 0.00,
+             1.00, 0.00, 0.00, 0.00,
+             0.35, 0.00, 0.00, 0.65,
+             0.00, 0.00, 1.00, 0.00),
            K, K, TRUE)
-p1 = c(0.50, 0.50, 0.00)
-O = matrix(1:L, G, L, TRUE)
-B = matrix(c(0.8, 0.2, 0.0, 0.0, 0.0,
-             0.0, 0.0, 0.8, 0.2, 0.0,
-             0.0, 0.0, 0.0, 0.0, 1.0),
+
+O = matrix(1:L, 1, L, TRUE)
+B = matrix(c(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # g1 -
+             0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # g2 +
+             0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # g3 +
+             0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0), # g4 -
            K, L, TRUE)
 
 obs.model <- function(z, g, B, O) {
   sapply(1:length(z), function(i) {
-    O[g[z[i]], which.max(rmultinom(1, 1, B[z[i], ]))]
+    O[which.max(rmultinom(1, 1, B[z[i], ]))]
   })
 }
-
-# T.length = 500
-# K = 4
-# L = 9
-# G = 2
-# g = c(1, 2, 2, 1) # 1 = D, 2 = U
-# p1 = c(0.20, 0.20, 0.20, 0.40)
-# A = matrix(c(0.10, 0.20, 0.30, 0.40,
-#              0.30, 0.20, 0.40, 0.10,
-#              0.20, 0.10, 0.30, 0.40,
-#              0.40, 0.30, 0.20, 0.10),
-#            K, K, TRUE)
-# O = matrix(1:18, G, L, TRUE)
-# B = matrix(c(1:L / sum(1:L),  # g1 -
-#              1:L / sum(1:L),  # g2 +
-#              L:1 / sum(1:L),  # g3 +
-#              L:1 / sum(1:L)), # g4 -
-#            K, L, TRUE)
-#
-#
-# B = matrix(c(1.00, 0.00, 0.00, 0.00, 0, 0, 0, 0, 0,  # g1 -
-#              0.00, 1.00, 0.00, 0.00, 0, 0, 0, 0, 0,  # g2 +
-#              0.00, 0.00, 0.00, 0.00, 0, 0.0, 0.0, 1.0, 0.0,  # g3 +
-#              0.00, 0.00, 0.00, 0.00, 0, 0.0, 0.0, 0.0, 1.0), # g4 -
-#            K, L, TRUE)
-#
-# obs.model <- function(z, g, B, O) {
-#   sapply(1:length(z), function(i) {
-#     O[g[z[i]], which.max(rmultinom(1, 1, B[z[i], ]))]
-#   })
-# }
 
 n.iter = 500
 n.warmup = 250
@@ -73,23 +43,15 @@ dataset <- hmm_sim(T.length, K, A, p1, function(z) {obs.model(z, g, B, O)})
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'hmm/stan/hmm-multinom.stan'
+stan.model = 'tayal2009/stan/hhmm-tayal2009.stan'
 stan.data = list(
   T = T.length,
   K = K,
   L = L,
-  x = dataset$x
+  G = G,
+  g = g[dataset$z],
+  x = ifelse(dataset$x < 10, dataset$x, dataset$x - 9)
 )
-
-# stan.model = 'hmm/stan/hmm-multinom.stan'
-# stan.data = list(
-#   T = T.length,
-#   K = K,
-#   L = L,
-#   G = G,
-#   g = ifelse(dataset$x < 10, 1, 2),
-#   x = ifelse(dataset$x < 10, dataset$x, dataset$x - 9)
-# )
 
 stan.fit <- stan(file = stan.model,
                  model_name = stan.model,
@@ -125,6 +87,10 @@ summary(stan.fit,
         pars = c('A_ij'),
         probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
+matrix(summary(stan.fit,
+               pars = c('A_ij'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4], 4, 4, TRUE)
+
 print("Estimated event probabilities in each state")
 summary(stan.fit,
         pars = c('phi_k'),
@@ -134,9 +100,6 @@ summary(stan.fit,
 print("Estimated hidden states (hard naive classification using filtered prob)")
 print(table(
   estimated = apply(apply(alpha_tk, c(2, 3), median), 1, which.max),
-  # estimated = apply(round(apply(alpha_tk, c(2, 3),
-  #                               function(x) {
-  #                                 quantile(x, c(0.50)) })), 1, which.max),
   real = dataset$z))
 plot_stateprobability(alpha_tk, gamma_tk, 0.8, dataset$z)
 
@@ -145,16 +108,3 @@ zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
 round(table(rep(dataset$z, each = n.samples), zstar) / n.samples, 0)
 
 plot_statepath(zstar, dataset$z)
-
-
-# a <- apply(alpha_tk, c(2, 3), median)
-# a1 <- apply(alpha_tk, c(2, 3), median)[, 1] + apply(alpha_tk, c(2, 3), median)[, 4]
-# a2 <- apply(alpha_tk, c(2, 3), median)[, 2] + apply(alpha_tk, c(2, 3), median)[, 3]
-# plot(a1, a2)
-# plot(dataset$z, a1)
-# plot(dataset$z, a2)
-#
-# table(dataset$z, apply(a, 1, which.max))
-#
-
-
