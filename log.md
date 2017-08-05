@@ -687,6 +687,15 @@ n.seed = 9000
 ### 20170803 Th 18 to 01+ ###
 * Finally! The Stan code for the hmm representation of Tayal's hhmm works.
 
+### 20170904 Fr 11 to 12 ###
+* Short email to mentors.
+* Speed tests.
+
+### 20170905 Fr 11 to 12 ###
+* Started writing the feature extraction code.
+* Using some example data from highfrequency while we fetch real data.
+* I'll try to write this in a way that it'll be easier to submit as a PR for highfrequency later.
+
 ---
 
 # Notes
