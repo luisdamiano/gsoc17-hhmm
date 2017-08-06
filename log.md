@@ -691,10 +691,14 @@ n.seed = 9000
 * Short email to mentors.
 * Speed tests.
 
-### 20170905 Fr 11 to 12 ###
+### 20170905 Sa 10 to 18 ###
 * Started writing the feature extraction code.
 * Using some example data from highfrequency while we fetch real data.
 * I'll try to write this in a way that it'll be easier to submit as a PR for highfrequency later.
+
+### 20170906 Su 9 to WIP ###
+* Continued with the feature extraction code.
+
 
 ---
 

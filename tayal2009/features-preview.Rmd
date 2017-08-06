@@ -1,3 +1,19 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+[Feature extraction procedure here] Remember, no trend considered without volume!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 10, fig.height = 7)
+```
+
+# Some set up code
+
+```{r}
 library(highfrequency)
 
 # Constants
@@ -266,7 +282,6 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
   }
 
   # Legend
-  print(legend.list)
   do.call(legend, legend.list)
 
   # Plot 2 Volume
@@ -296,7 +311,11 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
          horiz = TRUE)
   par(opar)
 }
+```
 
+Now grab some sample data:
+
+```{r}
 # Won't be needed when we get the real data
 data("sample_tdata")
 tdata <- sample_tdata[, 3:4]
@@ -305,10 +324,28 @@ storage.mode(tdata) <- "numeric"
 zig <- extract_zigzag(tdata, 0.25)
 
 ss <- "2008-01-04 09:31:00/2008-01-04 09:41:00"
-# ss <- "2008-01-04 09:31:00/2008-01-04 12:00:00"
-plot_features(tdata[ss], zig[ss], which.features = 'extrema')
-plot_features(tdata[ss], zig[ss], which.features = 'trend')
-plot_features(tdata[ss], zig[ss], which.features = 'all')
+```
 
+First plot prices and local extrema:
+```{r}
+plot_features(tdata[ss], zig[ss], which.features = 'extrema')
+```
+
+Now plot the trends marked as bear/bull/lateral:
+
+```{r}
+plot_features(tdata[ss], zig[ss], which.features = 'trend')
+```
+
+Plot all data (unreadable)
+
+```{r}
+plot_features(tdata[ss], zig[ss], which.features = 'all')
+```
+
+Finally, my favourite plot!
+
+```{r}
 # My favourite setting!
 plot_features(tdata[ss], zig[ss], which.features = c('actual', 'extrema', 'trend'))
+```
