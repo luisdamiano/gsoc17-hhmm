@@ -699,6 +699,13 @@ n.seed = 9000
 ### 20170906 Su 9 to WIP ###
 * Continued with the feature extraction code.
 
+### 20170918 Tu 23 to 02+1 ###
+* Working on the write-up about feature extraction.
+* Searching entries with JabRef.
+* Read related works, Wisebourt (2011) and Sandoval & Hernández (2015), looking for details behind the feature engineering process.
+* Reviewed GSoC final submission guidelines.
+* Sent a check-in email.
+* Interaction on Stan list.
 
 ---
 

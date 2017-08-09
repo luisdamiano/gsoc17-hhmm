@@ -17,7 +17,7 @@ trend.lt =  0
 trend.dn = -1
 
 # tdata has to be a xts with two columns price and size
-extract_zigzag <- function(tdata, alpha = 0.25) {
+extract_features <- function(tdata, alpha = 0.25) {
   # 1. Initial checks
   tdata <- highfrequency:::.check_data(tdata)
   highfrequency:::tdatacheck(tdata)
@@ -143,16 +143,22 @@ extract_zigzag <- function(tdata, alpha = 0.25) {
   zigzag
 }
 
-plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema', 'trend', 'all')) {
+plot_features <- function(tdata, zigzag = extract_features(tdata),
+                          which.features = c('actual', 'extrema', 'trend', 'all')) {
   # 1. Initial checks
   tdata <- highfrequency:::.check_data(tdata)
   highfrequency:::tdatacheck(tdata)
   if (is.null(tdata$PRICE) | is.null(tdata$SIZE))
     stop("tdata must include PRICE and SIZE.")
 
-  # 2. Preparing for legend
+  # 2. Data extraction
+  price <- tdata$PRICE
+  size  <- tdata$SIZE
+
+  # 3. Plotting preamble
   # Sorry for the ugly global!
-  legend.list <- list(x = "bottomright", horiz = TRUE, bty = 'n', cex = 0.6)
+  legend.list <- list(x = "bottomright", bty = 'n',
+                      horiz = TRUE, text.width = 20.0, cex = 0.6)
 
   list_add <- function(current, ...) {
     dots <- list(...)
@@ -164,27 +170,22 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
     current
   }
 
-  # 2. Data extraction
-  price <- tdata$PRICE
-  size  <- tdata$SIZE
-
-  # 3. Plots
   opar <- par(no.readonly = TRUE)
   layout(matrix(1:2, nrow = 2, ncol = 1), heights = c(0.75, 0.25))
 
-  # 3. Plot I: Prices, extrema and features
-  x.id <- index(tdata)
-  y.pr <- as.vector(price)
+  # 4. Plot I: Prices, extrema and features
+  price.x <- index(tdata)
+  price.y <- as.vector(price)
   x.at <- axTicksByTime(tdata, format.labels = "%H:%M:%S")
 
   # Price
   par(mar = c(0.0, 5.0, 4.1, 2.1))
-  plot(x = x.id, y = y.pr, type = 'l',
-       ylab = expression("Price" ~ p[t]), cex.axis = 0.80,
+  plot(x = price.x, y = price.y, type = 'l',
+       ylab = expression("Price" ~ p[t]), cex.axis = 0.70,
        cex.lab = 0.85, xaxt = 'n', yaxt = 's',
        lwd = 2.0, col = "lightgray")
 
-  axis(3, at = xy.coords(x.id, y.pr)$x[x.at],
+  axis(3, at = xy.coords(price.x, price.y)$x[x.at],
        labels = names(x.at), cex.axis = 0.75, las = 2)
 
   legend.list <- list_add(legend.list,
@@ -195,7 +196,7 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
                           pt.bg = NA)
 
   if ('actual' %in% which.features) {
-    points(x = x.id, y = y.pr,
+    points(x = price.x, y = price.y,
            pch = 21, cex = 0.8,
            col = NULL, bg = 'black')
 
@@ -208,11 +209,11 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
   }
 
   # Features
-  z.id <- index(zigzag)
+  zigzag.x <- index(zigzag)
 
   # Extrema
   if ('extrema' %in% which.features) {
-    points(x = z.id, y = zigzag$price,
+    points(x = zigzag.x, y = zigzag$price,
            pch = 21, cex = 0.8,
            col = NULL, bg = ifelse(zigzag$extrema == extrema.min, 'red', 'green3'))
 
@@ -225,24 +226,40 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
   }
 
   if ('trend' %in% which.features) {
-    trend     <- zigzag$trend
-    ltrend    <- lag(zigzag$trend)
-    trend.chg <- trend != ltrend
-    trend.chg[1] <- TRUE
-    trend.id  <- z.id[trend.chg]
-    trend.zz  <- zigzag[trend.chg]
+    # trend.chg <- zigzag$trend != lag(zigzag$trend)
+    # trend.chg[1] <- TRUE
+    trend.chg <- rep(TRUE, nrow(zigzag))
+    trend.x   <- zigzag.x[trend.chg]
+    trend.y   <- zigzag[trend.chg] # zigzag[trend.chg]
 
-    segments(head(trend.id, -1), head(trend.zz$price, -1),
-             tail(trend.id, -1), tail(trend.zz$price, -1),
-             col = ifelse(trend.zz$trend == trend.up, 'green3',
-                          ifelse(trend.zz$trend == trend.dn, 'red',
-                                 'blue')),
-             lwd = 1)
+    segments(head(trend.x, -1), head(trend.y$price, -1),
+             tail(trend.x, -1), tail(trend.y$price, -1),
+             # col = tail(ifelse(trend.y$trend == trend.up, 'green3',
+             #              ifelse(trend.y$trend == trend.dn, 'red',
+             #                     'blue')), -1),
+             col = ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
+                               ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
+                                      'blue')),
+             lwd = 2)
+
+    print(paste(tail(trend.y$trend, -1), as.vector(ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
+                                                          ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
+                                                                 'blue')))))
+
+    print(table(tail(trend.y$trend, -1), as.vector(ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
+                                                          ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
+                                                                 'blue')))))
+
+    points(x = trend.x, y = trend.y$price,
+           pch = 21, cex = 0.8,
+           col = NULL, bg = ifelse(trend.y$trend == trend.up, 'green3',
+                                   ifelse(trend.y$trend == trend.dn, 'red',
+                                          'blue')))
 
     legend.list <- list_add(legend.list,
                             legend = c('Bullish', 'Lateral', 'Bearish'),
                             pch = c(NA, NA, NA),
-                            lwd = c( 1,  1,  1),
+                            lwd = c( 2,  2,  2),
                             col = c('green3', 'blue', 'red'),
                             pt.bg = c(NA, NA, NA))
   }
@@ -250,49 +267,50 @@ plot_features <- function(tdata, zigzag, which.features = c('actual', 'extrema',
   if ('all' %in% which.features) {
     all.palette <- colorRampPalette(c('lightgreen', 'darkred'))(18)
 
-    segments(head(z.id, -1), head(zigzag$price, -1),
-             tail(z.id, -1), tail(zigzag$price, -1),
-             col = all.palette[zigzag$feature],
-             lwd = 1)
+    segments(head(zigzag.x, -1), head(zigzag$price, -1),
+             tail(zigzag.x, -1), tail(zigzag$price, -1),
+             col = tail(all.palette[zigzag$feature], -1),
+             lwd = 2)
 
     legend.list <- list_add(legend.list,
                             legend = c(paste("Bull", 1:9), paste("Bear", 1:9)),
                             pch = rep(NA, 18),
-                            lwd = rep( 1, 18),
+                            lwd = rep( 2, 18),
                             col = all.palette,
                             pt.bg = rep(NA, 18),
-                            cex = rep(NA, 0.75))
+                            cex = rep(NA, 0.75),
+                            ncol = 3)
     legend.list$horiz <- FALSE
   }
 
   # Legend
-  print(legend.list)
   do.call(legend, legend.list)
 
   # Plot 2 Volume
-  y.vo <- as.vector(size)
-  vo.ext <- na.locf(cbind(size, zigzag$f2))
+  volume.y <- as.vector(size)
+  volume.x <- na.locf(cbind(size, zigzag$f2))
 
   par(mar = c(3.1, 5.0, 0.0, 2.1))
   par(mgp = c(3.0, 1.0, 0.0))
-  barplot(height = y.vo,
-       # xlab = expression("Time" ~ t),
+  barplot(height = volume.y,
        ylab = expression("Volume" ~ v[t]),
-       cex.axis = 0.80,
+       cex.axis = 0.70,
        cex.lab = 0.85, xaxt = 'n', yaxt = 's',
        border = 'lightgray',
-       col = ifelse(vo.ext$f2 == volume.up, 'green3',
-                    ifelse(vo.ext$f2 == volume.dn, 'red',
+       col = ifelse(volume.x$f2 == volume.up, 'green3',
+                    ifelse(volume.x$f2 == volume.dn, 'red',
                            'blue')))
   box()
 
   title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
 
-  legend(x = "top",
+  legend(x = "topleft",
          legend = c('Upward trend', 'Downward trend', 'Lateral trend'),
-         lwd = c(4,  4,  4),
+         lwd = c(2,  2,  2),
          col = c('green3', 'red', 'blue'),
-         bty = 'n', cex = 0.9,
+         bty = 'n', cex = 0.6,
+         y.intersp	= 0.0, x.intersp = 0.2,
+         text.width = 20.0,
          horiz = TRUE)
   par(opar)
 }
@@ -302,10 +320,9 @@ data("sample_tdata")
 tdata <- sample_tdata[, 3:4]
 storage.mode(tdata) <- "numeric"
 
-zig <- extract_zigzag(tdata, 0.25)
+zig <- extract_features(tdata, 0.25)
 
-ss <- "2008-01-04 09:31:00/2008-01-04 09:41:00"
-# ss <- "2008-01-04 09:31:00/2008-01-04 12:00:00"
+ss <- "2008-01-04 09:31:00/2008-01-04 09:45:00"
 plot_features(tdata[ss], zig[ss], which.features = 'extrema')
 plot_features(tdata[ss], zig[ss], which.features = 'trend')
 plot_features(tdata[ss], zig[ss], which.features = 'all')

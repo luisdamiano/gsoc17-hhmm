@@ -86,6 +86,10 @@ There are several quantities of interest to be estimated via different algorithm
 
 ## Feature extraction
 
+Based on 
+
+@wisebourt2011hierarchical propose a modification for the volume based on the ... Then, @xx proposes a two simple-smoothed exponential distance-weighted average volume series.
+
 ...
 
 In the end, we arrive at a $L$-long feature vector space $\mat{O} = \left\{... \right\}$
