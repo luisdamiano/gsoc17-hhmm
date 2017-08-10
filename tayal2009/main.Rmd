@@ -86,9 +86,94 @@ There are several quantities of interest to be estimated via different algorithm
 
 ## Feature extraction
 
+### Input series
+
+Tick series are a sequence of triples $\{y_k\}$ with $y_k = (t_k, p_k, v_k)$, where $t_k \le t_{k+1}$ is the time stamp in seconds, $p_k$ is the trade price and $v_k$ is the trade volume. The sequence is ordered by the occurence of trades. There can be more than one trade within a second.
+
+As proposed by @tayal2009, we derive zig-zags that capture the bid-ask bounce $\{z_k\}$ with $z_k = (i_n, j_n, e_n, \phi_n)$, where $i_n \le i_j$ are indices to the tick series representing the starting and ending point of the extrema, $e_n = p_k \forall \ k : i_n \le k \le j_n$ is the price at the local extrema, and $\phi_m$ measures the average volume per second during the zig-zag leg ending at $e_n$:
+
+\[
+\phi_n = \frac{1}{t_{j_n} - t_i_{n-1} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
+\]
+
+We note that $p_{i_n} < e_n < p_{j_n + 1}$ for local maxima and $p_{i_n} > e_n > p_{j_n + 1}$ for local minima. The average volume, which includes the end-point extrema, is normalized by $t_{j_n} - t_i_{n-1} + 1$ to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the $n$-th zig-zag point $z_n$ is realized only after observing the $(j_n + 1)$-th tick point $y_{j_n + 1}$. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.
+
+### Processing rules
+
+Discrete features are created based on the zig-zag series $\{z_n\}$. We first create an auxiliary series $\{O_n\}$ with $O_n = (f_n^0, f_n^1, f_n^2)$, where $f_n^0$ represents the direction of the zig-zag, $f_n^1$ indicates the existence of a trend and $f_n^2$ indicates whether average volume increased or decreased.
+
+Formally,
+
+\[
+f_n^0 =
+\begin{cases}
++1 & \text{if $e_n$ is a local maximum (positive zig-zag leg)} \\
+-1 & \text{if $e_n$ is a local minimum (negative zig-zag leg),} \\
+\end{cases}
+\]
+
+and
+
+\[
+f_n^0 =
+\begin{cases}
++1 & \text{if $e_{n-4} < e_{n-2} < e_{n} \wedge e_{n-3} < e_{n-1}$ (up-trend)} \\
+-1 & \text{if $e_{n-4} > e_{n-2} > e_{n} \wedge e_{n-3} > e_{n-1}$ (down-trend)} \\
+ 0 & \text{otherwise (no trend).}
+\end{cases}
+\]
+
+For the third indicator function, we compute the average volume ratios,
+
+\[
+\nu_n^1 = \frac{\phi_n}{\phi_{n-1}}, \quad \nu_n^2 = \frac{\phi_n}{\phi_{n-2}}, \quad \nu_n^1 = \frac{\phi_{n-1}}{\phi_{n-2}},
+\]
+
+we transform the ratios into a discrete variable using an arbitrary threshold $alpha$,
+
+\[
+\tilde{\nu}_n^j =
+\begin{cases}
++1 & \text{if $\nu_n^j - 1 > \alpha$} \\
+-1 & \text{if $1 - \nu_n^j > \alpha$} \\
+ 0 & \text{if $|\nu_n^j - 1| \le \alpha$}, \\
+\end{cases}
+\]
+
+and we finallly define
+
+\[
+f_n^2 =
+\begin{cases}
++1 & \text{if $\tilde{\nu}_n^1 = 1, \tilde{\nu}_n^2 > -1, \tilde{\nu}_n^3 < 1$ (volume strengthens)} \\
+-1 & \text{if $\tilde{\nu}_n^1 = -1, \tilde{\nu}_n^2 < -1, \tilde{\nu}_n^3 > -1$ (volume weakens)} \\
+ 0 & \text{otherwise (volume is indeterminant)}. \\
+\end{cases}
+\]
+
+The features are then creased using the following table.
+
+| Feature           |          $U_1$ |          $U_2$ |           $U_3$ |          $U_4$ |            $U_5$ |      $U_6$ |           $U_7$ |       $U_8$ |         $U_9$ |
+|-------------------|---------------:|---------------:|----------------:|---------------:|-----------------:|-----------:|----------------:|------------:|--------------:|
+| Zig-zag direction |     Upwards +1 |     Upwards +1 |      Upwards +1 |     Upwards +1 |       Upwards +1 | Upwards +1 |      Upwards +1 |  Upwards +1 |    Upwards +1 |
+| Price trend       |    Up-trend +1 |  Down-trend -1 |     Up-trend +1 |     No trend 0 |       No trend 0 | No trend 0 |   Down-trend -1 | Up-trend +1 | Down-trend -1 |
+| Change in volume  | Strengthens +1 | Strengthens +1 | Indeterminant 0 | Strengthens +1 |  Indeterminant 0 | Weakens -1 | Indeterminant 0 |  Weakens -1 |    Weakens -1 |
+| Market state      |        Bullish |        Bullish |         Bullish |        Bullish | Local volatility |    Bearish |         Bearish |     Bearish |       Bearish |
+
+| Feature           |        $D_1$ |         $D_2$ |           $D_3$ |          $D_4$ |            $D_5$ |          $D_6$ |           $D_7$ |          $D_8$ |          $D_9$ |
+|-------------------|-------------:|--------------:|----------------:|---------------:|-----------------:|---------------:|----------------:|---------------:|---------------:|
+| Zig-zag direction | Downwards -1 |  Downwards -1 |    Downwards -1 |   Downwards -1 |     Downwards -1 |   Downwards -1 |    Downwards -1 |   Downwards -1 |   Downwards -1 |
+| Price trend       |  Up-trend +1 | Down-trend -1 |     Up-trend +1 |     No trend 0 |       No trend 0 |     No trend 0 |   Down-trend -1 |    Up-trend +1 |  Down-trend -1 |
+| Change in volume  |   Weakens -1 |    Weakens -1 | Indeterminant 0 | Strengthens +1 |  Indeterminant 0 | Strengthens +1 | Indeterminant 0 | Strengthens +1 | Strengthens +1 |
+| Market state      |      Bullish |       Bullish |         Bullish |        Bullish | Local volatility |        Bearish |         Bearish |        Bearish |        Bearish |
+
+Table: Summary of feature space.
+
 Based on 
 
-@wisebourt2011hierarchical propose a modification for the volume based on the ... Then, @xx proposes a two simple-smoothed exponential distance-weighted average volume series.
+@wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time.
+
+for the volume based on the ... Then, @xx proposes a two simple-smoothed exponential distance-weighted average volume series.
 
 ...
 
@@ -103,6 +188,8 @@ The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ 
 ![Graph from Tayal (2009). Will make my own figure when time comes. $q_1^1$ is equivalent to $z_1^1$ in our notation.](graph.PNG)
 
 Each top node activates a probabilistic HMM with two latent states for negative and positive zig-zag legs. The sub-model activated by the node $z_1^1$ always starts with the node $z_1^2$ producing an observation from the distribution of negative zig-zag $\mat{D} = \{D_1, \dots, D_9 \}$. Next, it transitions to (a) the node $z_2^2$ producing a positive zig-zag leg $\mat{U} = \{U_1, \dots, U_9 \}$, (b) the end node which may, in turn, transition back to $z_1^1$ emitting a new negative zig-zag leg, or (c) the end node and switches to the second sub-model, landing on node $z_3^2$ and producing a positive zig-zag leg. Restricting transitions to this limited set of movements force alternation between positive and negative zig-zag legs, thus guaranteeing that all possible observation sequences are well behaved. The sub-model belonging to $z_2^1$ has similar but symmetrical behaviour. These two inner models are conditionally independent, an advantage we will take for computational time.
+
+![Graph from Wisebourt (2011). Will make my own figure when time comes. Explain why that positive zig-zags are short-term trend up, while top nodes are long term, etc.](graph2.PNG)
 
 Theoretically, all HHMM can be expressed as an equivalent HMM with possibly sparse initial probability vector and transition matrix. Although learning from this representation may prove less efficient in terms of computational complexity, the relatively simple structure and many restrictions of the model under study make estimation and inference feasible. The equivalent "expanded" HMM has the following initial probability vector
 

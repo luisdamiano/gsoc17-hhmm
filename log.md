@@ -687,25 +687,28 @@ n.seed = 9000
 ### 20170803 Th 18 to 01+ ###
 * Finally! The Stan code for the hmm representation of Tayal's hhmm works.
 
-### 20170904 Fr 11 to 12 ###
+### 20170804 Fr 11 to 12 ###
 * Short email to mentors.
 * Speed tests.
 
-### 20170905 Sa 10 to 18 ###
+### 20170805 Sa 10 to 18 ###
 * Started writing the feature extraction code.
 * Using some example data from highfrequency while we fetch real data.
 * I'll try to write this in a way that it'll be easier to submit as a PR for highfrequency later.
 
-### 20170906 Su 9 to WIP ###
+### 20170806 Su 9 to WIP ###
 * Continued with the feature extraction code.
 
-### 20170918 Tu 23 to 02+1 ###
+### 20170809 Tu 23 to 02+1 ###
 * Working on the write-up about feature extraction.
 * Searching entries with JabRef.
 * Read related works, Wisebourt (2011) and Sandoval & Hernández (2015), looking for details behind the feature engineering process.
 * Reviewed GSoC final submission guidelines.
 * Sent a check-in email.
 * Interaction on Stan list.
+
+### 20170810 We 21 to 02+1 ###
+* Working on the write-up about feature extraction.
 
 ---
 
