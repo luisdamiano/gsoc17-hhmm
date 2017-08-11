@@ -12,7 +12,7 @@
 
 <meta name="author" content="Luis Damiano, Brian Peterson, Michael Weylandt" />
 
-<meta name="date" content="2017-08-10" />
+<meta name="date" content="2017-08-11" />
 
 <title>Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets</title>
 
@@ -85,7 +85,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets</h1>
 <h4 class="author"><em>Luis Damiano, Brian Peterson, Michael Weylandt</em></h4>
-<h4 class="date"><em>2017-08-10</em></h4>
+<h4 class="date"><em>2017-08-11</em></h4>
 
 
 <div id="TOC">
@@ -192,9 +192,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>Tick series are a sequence of triples <span class="math inline">\(\{y_k\}\)</span> with <span class="math inline">\(y_k = (t_k, p_k, v_k)\)</span>, where <span class="math inline">\(t_k \le t_{k+1}\)</span> is the time stamp in seconds, <span class="math inline">\(p_k\)</span> is the trade price and <span class="math inline">\(v_k\)</span> is the trade volume. The sequence is ordered by the occurence of trades. There can be more than one trade within a second.</p>
 <p>As proposed by <span class="citation">(<span class="citeproc-not-found" data-reference-id="tayal2009"><strong>???</strong></span>)</span>, we derive zig-zags that capture the bid-ask bounce <span class="math inline">\(\{z_k\}\)</span> with <span class="math inline">\(z_k = (i_n, j_n, e_n, \phi_n)\)</span>, where <span class="math inline">\(i_n \le i_j\)</span> are indices to the tick series representing the starting and ending point of the extrema, <span class="math inline">\(e_n = p_k \forall \ k : i_n \le k \le j_n\)</span> is the price at the local extrema, and <span class="math inline">\(\phi_m\)</span> measures the average volume per second during the zig-zag leg ending at <span class="math inline">\(e_n\)</span>:</p>
 <p><span class="math display">\[
-\phi_n = \frac{1}{t_{j_n} - t_i_{n-1} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
+\phi_n = \frac{1}{t_{j_n} - t_{i_{n-1}} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
 \]</span></p>
-<p>We note that <span class="math inline">\(p_{i_n} &lt; e_n &lt; p_{j_n + 1}\)</span> for local maxima and <span class="math inline">\(p_{i_n} &gt; e_n &gt; p_{j_n + 1}\)</span> for local minima. The average volume, which includes the end-point extrema, is normalized by <span class="math inline">\(t_{j_n} - t_i_{n-1} + 1\)</span> to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the <span class="math inline">\(n\)</span>-th zig-zag point <span class="math inline">\(z_n\)</span> is realized only after observing the <span class="math inline">\((j_n + 1)\)</span>-th tick point <span class="math inline">\(y_{j_n + 1}\)</span>. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.</p>
+<p>We note that <span class="math inline">\(p_{i_n} &lt; e_n &lt; p_{j_n + 1}\)</span> for local maxima and <span class="math inline">\(p_{i_n} &gt; e_n &gt; p_{j_n + 1}\)</span> for local minima. The average volume, which includes the end-point extrema, is normalized by <span class="math inline">\(t_{j_{n}} - t_{i_{n-1}} + 1\)</span> to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the <span class="math inline">\(n\)</span>-th zig-zag point <span class="math inline">\(z_n\)</span> is realized only after observing the <span class="math inline">\((j_n + 1)\)</span>-th tick point <span class="math inline">\(y_{j_n + 1}\)</span>. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.</p>
 </div>
 <div id="processing-rules" class="section level3">
 <h3><span class="header-section-number">2.2.2</span> Processing rules</h3>
@@ -209,7 +209,7 @@ f_n^0 =
 \]</span></p>
 <p>and</p>
 <p><span class="math display">\[
-f_n^0 =
+f_n^1 =
 \begin{cases}
 +1 &amp; \text{if $e_{n-4} &lt; e_{n-2} &lt; e_{n} \wedge e_{n-3} &lt; e_{n-1}$ (up-trend)} \\
 -1 &amp; \text{if $e_{n-4} &gt; e_{n-2} &gt; e_{n} \wedge e_{n-3} &gt; e_{n-1}$ (down-trend)} \\
@@ -238,7 +238,7 @@ f_n^2 =
  0 &amp; \text{otherwise (volume is indeterminant)}. \\
 \end{cases}
 \]</span></p>
-<p>The features are then creased using the following table.</p>
+<p>The features or legs <span class="math inline">\(\mat{D} = \{D_1, \dots, D_9 \}\)</span>, <span class="math inline">\(\mat{U} = \{U_1, \dots, U_9 \}\)</span> are then created using the following table.</p>
 <table style="width:100%;">
 <colgroup>
 <col width="11%"></col>
@@ -375,7 +375,7 @@ f_n^2 =
 <td align="right">Weakens -1</td>
 <td align="right">Weakens -1</td>
 <td align="right">Indeterminant 0</td>
-<td align="right">Strengthens +1</td>
+<td align="right">Weakens -1</td>
 <td align="right">Indeterminant 0</td>
 <td align="right">Strengthens +1</td>
 <td align="right">Indeterminant 0</td>
@@ -396,64 +396,8 @@ f_n^2 =
 </tr>
 </tbody>
 </table>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">tab &lt;-<span class="st"> </span><span class="kw">data.frame</span>()</code></pre></div>
-<table>
-<colgroup>
-<col width="18%"></col>
-<col width="43%"></col>
-<col width="37%"></col>
-</colgroup>
-<thead>
-<tr class="header">
-<th></th>
-<th>Bullish <span class="math inline">\(i = \{1, 2, 3, 4\}\)</span></th>
-<th>Bearish <span class="math inline">\(i = \{6, 7, 8, 9\}\)</span></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><p>Positive Leg <span class="math inline">\(U_i\)</span></p></td>
-<td><p>Support</p></td>
-<td><p>No support</p></td>
-</tr>
-<tr class="even">
-<td><p>Negative Leg <span class="math inline">\(D_i\)</span></p></td>
-<td><p>No support</p></td>
-<td><p>Support</p></td>
-</tr>
-</tbody>
-</table>
-<p>The main goal of the feature extraction procedure is to design a metric that describes the state of the order book at any given moment in time.</p>
-<table>
-<caption>Features <span class="math inline">\(U_5\)</span> and <span class="math inline">\(D_5\)</span> capture local volatility noise.</caption>
-<colgroup>
-<col width="18%"></col>
-<col width="43%"></col>
-<col width="37%"></col>
-</colgroup>
-<thead>
-<tr class="header">
-<th></th>
-<th>Bullish <span class="math inline">\(i = \{1, 2, 3, 4\}\)</span></th>
-<th>Bearish <span class="math inline">\(i = \{6, 7, 8, 9\}\)</span></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><p>Positive Leg <span class="math inline">\(U_i\)</span></p></td>
-<td><p>Support</p></td>
-<td><p>No support</p></td>
-</tr>
-<tr class="even">
-<td><p>Negative Leg <span class="math inline">\(D_i\)</span></p></td>
-<td><p>No support</p></td>
-<td><p>Support</p></td>
-</tr>
-</tbody>
-</table>
-<p>Based on</p>
-<p><span class="citation">Wisebourt (2011)</span> proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time.</p>
-<p>for the volume based on the … Then, <span class="citation">(<span class="citeproc-not-found" data-reference-id="xx"><strong>???</strong></span>)</span> proposes a two simple-smoothed exponential distance-weighted average volume series.</p>
+<p><strong>Plot here showing some example</strong></p>
+<p><span class="citation">Wisebourt (2011)</span> proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, <span class="citation">Sandoval and Hernández (2015)</span> applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure volumen concentration in both sides of the book.</p>
 <p>…</p>
 <p>In the end, we arrive at a <span class="math inline">\(L\)</span>-long feature vector space <span class="math inline">\(\mat{O} = \left\{... \right\}\)</span></p>
 </div>
@@ -598,7 +542,7 @@ R_l = \frac{p^e_l - p^s_l}{p^s_l},
 ##  language (EN)                        
 ##  collate  Spanish_Argentina.1252      
 ##  tz       America/Buenos_Aires        
-##  date     2017-07-29</code></pre>
+##  date     2017-08-10</code></pre>
 <pre><code>## Packages -----------------------------------------------------------------</code></pre>
 <pre><code>##  package      * version   date       source        
 ##  BH             1.62.0-1  2016-11-19 CRAN (R 3.3.2)
@@ -640,6 +584,9 @@ R_l = \frac{p^e_l - p^s_l}{p^s_l},
 <div id="references" class="section level1 unnumbered">
 <h1>References</h1>
 <div id="refs" class="references">
+<div id="ref-sandoval2015computational">
+<p>Sandoval, Javier, and Germán Hernández. 2015. “Computational Visual Analysis of the Order Book Dynamics for Creating High-Frequency Foreign Exchange Trading Strategies.” <em>Procedia Computer Science</em> 51. Elsevier: 1593–1602.</p>
+</div>
 <div id="ref-wisebourt2011hierarchical">
 <p>Wisebourt, Shaul Sergey. 2011. “Hierarchical Hidden Markov Model of High-Frequency Market Regimes Using Trade Price and Limit Order Book Information.” Master’s thesis, University of Waterloo.</p>
 </div>

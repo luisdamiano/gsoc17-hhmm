@@ -8,13 +8,17 @@ direction.dn = -1
 extrema.min  = -1
 extrema.max  =  1
 
+trend.up =  1
+trend.lt =  0
+trend.dn = -1
+
 volume.up =  1
 volume.lt =  0
 volume.dn = -1
 
-trend.up =  1
-trend.lt =  0
-trend.dn = -1
+state.bull  =  1
+state.local =  0
+state.bear  = -1
 
 # tdata has to be a xts with two columns price and size
 extract_features <- function(tdata, alpha = 0.25) {
@@ -33,7 +37,7 @@ extract_features <- function(tdata, alpha = 0.25) {
   direction  <- ifelse(price > lprice, direction.up,
                        ifelse(price < lprice, direction.dn,
                               direction.lt))
-  direction[1,] <- direction.lt
+  direction[1, ] <- direction.lt
 
   ldirection    <- lag(direction)
   direction.chg <- direction != direction.lt & ldirection != direction.lt & direction != ldirection
@@ -41,7 +45,7 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag <- price[which(direction.chg) - 1, ]
   colnames(zigzag) <- 'price'
 
-  zigzag$start  <- (1:nrow(price))[direction.chg]
+  zigzag$start  <- c(1, head((1:nrow(price))[direction.chg], -1))
 
   zigzag$end <- lag(zigzag$start, -1) - 1
   zigzag$end[nrow(zigzag)] <- nrow(price)
@@ -98,14 +102,9 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag$f2 <- ifelse(zigzag$size_strength1 == 1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 < 1, volume.up,
                       ifelse(zigzag$size_strength1 == -1 & zigzag$size_strength2 < 1 & zigzag$size_strength3 > -1, volume.dn,
                              volume.lt))
-  zigzag$f2[1] <- volume.lt
+  zigzag$f2[1:2] <- volume.lt
 
-  # 7. Trend
-  zigzag$trend <- ifelse((zigzag$f2 == 1 & zigzag$f0 == 1) | (zigzag$f2 == -1 & zigzag$f0 == -1) | (zigzag$f1 == 1 & zigzag$f1 == -1), trend.up,
-                         ifelse((zigzag$f2 == 1 & zigzag$f0 == -1) | (zigzag$f2 == -1 & zigzag$f0 == 1) | (zigzag$f1 == 1 & zigzag$f1 == -1), trend.dn,
-                                trend.lt))
-
-  # 8. Legs
+  # 7. Legs
   legs <- matrix(c( 1,  1,  1,  1, # Up legs
                     1, -1,  1,  2,
                     1,  1,  0,  3,
@@ -126,6 +125,7 @@ extract_features <- function(tdata, alpha = 0.25) {
                    -1, -1,  1, 18),
                  nrow = 18, ncol = 4, byrow = TRUE)
 
+  # This function is the bottleneck, find a smarter implementation
   find_leg <- function(vec, legs) {
     i = 1
     while (i <= nrow(legs)) {
@@ -139,6 +139,11 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag$feature <- rollapply(zigzag, 1, function(z) {
     find_leg(z[, c("f0", "f1", "f2")], legs)
   }, by.column = FALSE)
+
+  # 8. Trend
+  zigzag$trend <- rep(trend.up, nrow(zigzag))
+  zigzag$trend[zigzag$feature %in% c(6:9, 15:18)] <- trend.dn
+  zigzag$trend[zigzag$feature %in% c(5, 14)] <- trend.lt
 
   zigzag
 }
@@ -226,29 +231,18 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   }
 
   if ('trend' %in% which.features) {
-    # trend.chg <- zigzag$trend != lag(zigzag$trend)
-    # trend.chg[1] <- TRUE
-    trend.chg <- rep(TRUE, nrow(zigzag))
+    trend.chg <- zigzag$trend != lag(zigzag$trend)
+    trend.chg[1] <- TRUE
+
     trend.x   <- zigzag.x[trend.chg]
-    trend.y   <- zigzag[trend.chg] # zigzag[trend.chg]
+    trend.y   <- zigzag[trend.chg]
 
     segments(head(trend.x, -1), head(trend.y$price, -1),
              tail(trend.x, -1), tail(trend.y$price, -1),
-             # col = tail(ifelse(trend.y$trend == trend.up, 'green3',
-             #              ifelse(trend.y$trend == trend.dn, 'red',
-             #                     'blue')), -1),
-             col = ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
-                               ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
-                                      'blue')),
+             col = tail(ifelse(trend.y$trend == trend.up, 'green3',
+                               ifelse(trend.y$trend == trend.dn, 'red',
+                                      'blue')), -1),
              lwd = 2)
-
-    print(paste(tail(trend.y$trend, -1), as.vector(ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
-                                                          ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
-                                                                 'blue')))))
-
-    print(table(tail(trend.y$trend, -1), as.vector(ifelse(tail(trend.y$trend, -1) == trend.up, 'green3',
-                                                          ifelse(tail(trend.y$trend, -1) == trend.dn, 'red',
-                                                                 'blue')))))
 
     points(x = trend.x, y = trend.y$price,
            pch = 21, cex = 0.8,
@@ -305,12 +299,12 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
 
   legend(x = "topleft",
-         legend = c('Upward trend', 'Downward trend', 'Lateral trend'),
+         legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
          lwd = c(2,  2,  2),
          col = c('green3', 'red', 'blue'),
          bty = 'n', cex = 0.6,
-         y.intersp	= 0.0, x.intersp = 0.2,
-         text.width = 20.0,
+         y.intersp	= 0.0, # x.intersp = 0.2,
+         # text.width = 20.0,
          horiz = TRUE)
   par(opar)
 }

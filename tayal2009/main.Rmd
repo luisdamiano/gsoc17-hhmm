@@ -93,10 +93,10 @@ Tick series are a sequence of triples $\{y_k\}$ with $y_k = (t_k, p_k, v_k)$, wh
 As proposed by @tayal2009, we derive zig-zags that capture the bid-ask bounce $\{z_k\}$ with $z_k = (i_n, j_n, e_n, \phi_n)$, where $i_n \le i_j$ are indices to the tick series representing the starting and ending point of the extrema, $e_n = p_k \forall \ k : i_n \le k \le j_n$ is the price at the local extrema, and $\phi_m$ measures the average volume per second during the zig-zag leg ending at $e_n$:
 
 \[
-\phi_n = \frac{1}{t_{j_n} - t_i_{n-1} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
+\phi_n = \frac{1}{t_{j_n} - t_{i_{n-1}} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
 \]
 
-We note that $p_{i_n} < e_n < p_{j_n + 1}$ for local maxima and $p_{i_n} > e_n > p_{j_n + 1}$ for local minima. The average volume, which includes the end-point extrema, is normalized by $t_{j_n} - t_i_{n-1} + 1$ to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the $n$-th zig-zag point $z_n$ is realized only after observing the $(j_n + 1)$-th tick point $y_{j_n + 1}$. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.
+We note that $p_{i_n} < e_n < p_{j_n + 1}$ for local maxima and $p_{i_n} > e_n > p_{j_n + 1}$ for local minima. The average volume, which includes the end-point extrema, is normalized by $t_{j_{n}} - t_{i_{n-1}} + 1$ to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the $n$-th zig-zag point $z_n$ is realized only after observing the $(j_n + 1)$-th tick point $y_{j_n + 1}$. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.
 
 ### Processing rules
 
@@ -115,7 +115,7 @@ f_n^0 =
 and
 
 \[
-f_n^0 =
+f_n^1 =
 \begin{cases}
 +1 & \text{if $e_{n-4} < e_{n-2} < e_{n} \wedge e_{n-3} < e_{n-1}$ (up-trend)} \\
 -1 & \text{if $e_{n-4} > e_{n-2} > e_{n} \wedge e_{n-3} > e_{n-1}$ (down-trend)} \\
@@ -151,7 +151,7 @@ f_n^2 =
 \end{cases}
 \]
 
-The features are then creased using the following table.
+The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, U_9 \}$ are then created using the following table.
 
 | Feature           |          $U_1$ |          $U_2$ |           $U_3$ |          $U_4$ |            $U_5$ |      $U_6$ |           $U_7$ |       $U_8$ |         $U_9$ |
 |-------------------|---------------:|---------------:|----------------:|---------------:|-----------------:|-----------:|----------------:|------------:|--------------:|
@@ -164,16 +164,14 @@ The features are then creased using the following table.
 |-------------------|-------------:|--------------:|----------------:|---------------:|-----------------:|---------------:|----------------:|---------------:|---------------:|
 | Zig-zag direction | Downwards -1 |  Downwards -1 |    Downwards -1 |   Downwards -1 |     Downwards -1 |   Downwards -1 |    Downwards -1 |   Downwards -1 |   Downwards -1 |
 | Price trend       |  Up-trend +1 | Down-trend -1 |     Up-trend +1 |     No trend 0 |       No trend 0 |     No trend 0 |   Down-trend -1 |    Up-trend +1 |  Down-trend -1 |
-| Change in volume  |   Weakens -1 |    Weakens -1 | Indeterminant 0 | Strengthens +1 |  Indeterminant 0 | Strengthens +1 | Indeterminant 0 | Strengthens +1 | Strengthens +1 |
+| Change in volume  |   Weakens -1 |    Weakens -1 | Indeterminant 0 | Weakens     -1 |  Indeterminant 0 | Strengthens +1 | Indeterminant 0 | Strengthens +1 | Strengthens +1 |
 | Market state      |      Bullish |       Bullish |         Bullish |        Bullish | Local volatility |        Bearish |         Bearish |        Bearish |        Bearish |
 
 Table: Summary of feature space.
 
-Based on 
+**Plot here showing some example**
 
-@wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time.
-
-for the volume based on the ... Then, @xx proposes a two simple-smoothed exponential distance-weighted average volume series.
+@wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure volumen concentration in both sides of the book.
 
 ...
 
