@@ -1,3 +1,4 @@
+library(xts)
 library(highfrequency)
 
 # Constants
@@ -40,7 +41,8 @@ extract_features <- function(tdata, alpha = 0.25) {
   direction[1, ] <- direction.lt
 
   ldirection    <- lag(direction)
-  direction.chg <- direction != direction.lt & ldirection != direction.lt & direction != ldirection
+  direction.chg <- direction != direction.lt & direction != ldirection
+  # direction.chg <- direction != direction.lt & ldirection != direction.lt & direction != ldirection
 
   zigzag <- price[which(direction.chg) - 1, ]
   colnames(zigzag) <- 'price'
@@ -63,7 +65,7 @@ extract_features <- function(tdata, alpha = 0.25) {
 
   # 4. Feature I: local extrema type
   zigzag$f0    <- ifelse(lag(zigzag$price) < zigzag$price, extrema.max, extrema.min)
-  zigzag$f0[1] <- if (zigzag$extrema[2] == extrema.max) extrema.min else extrema.max
+  zigzag$f0[1] <- if (zigzag$f0[2] == extrema.max) extrema.min else extrema.max
 
   # 5. Feature II: trend direction
   price.mat <- as.matrix(zigzag[, "price"])
@@ -97,25 +99,10 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag$size_strength2 <- discretize_sizeratio(zigzag$size.ratio2, alpha)
   zigzag$size_strength3 <- discretize_sizeratio(zigzag$size.ratio3, alpha)
 
-  o <- microbenchmark(a = function() {
-    zigzag$f2 <- rep(volume.lt, nrow(zigzag))
-    zigzag$f2[zigzag$size_strength1 ==  1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 <  1] <- volume.up
-    zigzag$f2[zigzag$size_strength1 == -1 & zigzag$size_strength2 <  1 & zigzag$size_strength3 > -1] <- volume.dn
-  },
-  b = function(){
-    zigzag$f2 <- ifelse(zigzag$size_strength1 == 1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 < 1, volume.up,
-                        ifelse(zigzag$size_strength1 == -1 & zigzag$size_strength2 < 1 & zigzag$size_strength3 > -1, volume.dn,
-                               volume.lt))
-    zigzag$f2[1:2] <- volume.lt
-  }, times = 100000)
-
   zigzag$f2 <- rep(volume.lt, nrow(zigzag))
   zigzag$f2[zigzag$size_strength1 ==  1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 <  1] <- volume.up
   zigzag$f2[zigzag$size_strength1 == -1 & zigzag$size_strength2 <  1 & zigzag$size_strength3 > -1] <- volume.dn
 
-  zigzag$f2 <- ifelse(zigzag$size_strength1 == 1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 < 1, volume.up,
-                      ifelse(zigzag$size_strength1 == -1 & zigzag$size_strength2 < 1 & zigzag$size_strength3 > -1, volume.dn,
-                             volume.lt))
   zigzag$f2[1:2] <- volume.lt
 
   # 7. Legs
@@ -177,7 +164,7 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   # 3. Plotting preamble
   # Sorry for the ugly global!
   legend.list <- list(x = "bottomright", bty = 'n',
-                      horiz = TRUE, text.width = 20.0, cex = 0.6)
+                      horiz = TRUE, cex = 0.6)
 
   list_add <- function(current, ...) {
     dots <- list(...)
@@ -234,7 +221,7 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   if ('extrema' %in% which.features) {
     points(x = zigzag.x, y = zigzag$price,
            pch = 21, cex = 0.8,
-           col = NULL, bg = ifelse(zigzag$extrema == extrema.min, 'red', 'green3'))
+           col = NULL, bg = ifelse(zigzag$f0 == extrema.min, 'red', 'green3'))
 
     legend.list <- list_add(legend.list,
                             legend = c('Local min', 'Local max'),
@@ -296,18 +283,20 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
 
   # Plot 2 Volume
   volume.y <- as.vector(size)
-  volume.x <- na.locf(cbind(size, zigzag$f2))
+  volume.x <- na.locf(cbind(size, zigzag$f2), fromLast = TRUE)
+  volume.palette <- ifelse(volume.x$f2 == volume.up, 'green3',
+                           ifelse(volume.x$f2 == volume.dn, 'red',
+                                  'blue'))
 
   par(mar = c(3.1, 5.0, 0.0, 2.1))
   par(mgp = c(3.0, 1.0, 0.0))
   barplot(height = volume.y,
        ylab = expression("Volume" ~ v[t]),
+       ylim = c(0, quantile(volume.y, 0.9999)),
        cex.axis = 0.70,
        cex.lab = 0.85, xaxt = 'n', yaxt = 's',
-       border = 'lightgray',
-       col = ifelse(volume.x$f2 == volume.up, 'green3',
-                    ifelse(volume.x$f2 == volume.dn, 'red',
-                           'blue')))
+       border = volume.palette,
+       col = volume.palette)
   box()
 
   title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
@@ -323,17 +312,19 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   par(opar)
 }
 
-# Won't be needed when we get the real data
-data("sample_tdata")
-tdata <- sample_tdata[, 3:4]
-storage.mode(tdata) <- "numeric"
+if (FALSE) {
+  # Won't be needed when we get the real data
+  data("sample_tdata")
+  tdata <- sample_tdata[, 3:4]
+  storage.mode(tdata) <- "numeric"
 
-zig <- extract_features(tdata, 0.25)
+  zig <- extract_features(tdata, 0.25)
 
-ss <- "2008-01-04 09:31:00/2008-01-04 09:45:00"
-plot_features(tdata[ss], zig[ss], which.features = 'extrema')
-plot_features(tdata[ss], zig[ss], which.features = 'trend')
-plot_features(tdata[ss], zig[ss], which.features = 'all')
+  ss <- "2008-01-04 09:31:00/2008-01-04 09:45:00"
+  plot_features(tdata[ss], zig[ss], which.features = 'extrema')
+  plot_features(tdata[ss], zig[ss], which.features = 'trend')
+  plot_features(tdata[ss], zig[ss], which.features = 'all')
 
-# My favourite setting!
-plot_features(tdata[ss], zig[ss], which.features = c('actual', 'extrema', 'trend'))
+  # My favourite setting!
+  plot_features(tdata[ss], zig[ss], which.features = c('actual', 'extrema', 'trend'))
+}

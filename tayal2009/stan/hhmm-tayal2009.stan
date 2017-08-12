@@ -9,6 +9,7 @@ data {
   int<lower=1> K;                   // number of hidden states
   int<lower=1> L;                   // number of possible outputs in a feature set
   int<lower=1, upper=L> x[T];       // observations
+  int<lower=1, upper=2> sign[T];    // 1 = up, 2 = down
 }
 
 parameters {
@@ -46,15 +47,21 @@ transformed parameters {
     real accumulator[K];
 
     for (j in 1:K) {
-      unalpha_tk[1] = log(p_1k) + log(phi_k[j, x[1]]);
+      if(((j == 1 || j == 4) && (sign[1] == 2)) || ((j == 2 || j == 3) && (sign[1] == 1))) {
+        unalpha_tk[1][j] = log(p_1k[j]) + log(phi_k[j, x[1]]);
+      } else {
+        unalpha_tk[1][j] = log(0);
+      }
     }
 
     for (t in 2:T) {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
-          accumulator[i] = unalpha_tk[t-1, i] + log(phi_k[j, x[t]]) + log(A_ij[i, j]);
-                         // Murphy (2012) Eq. 17.48
-                         // belief state      + transition prob + local evidence at t
+          accumulator[i] = unalpha_tk[t-1, i] + log(phi_k[j, x[t]]);
+
+          if(((j == 1 || j == 4) && (sign[t] == 2)) || ((j == 2 || j == 3) && (sign[t] == 1))) {
+            accumulator[i] = accumulator[i] + log(A_ij[i, j]);
+          }
         }
         unalpha_tk[t, j] = log_sum_exp(accumulator);
       }

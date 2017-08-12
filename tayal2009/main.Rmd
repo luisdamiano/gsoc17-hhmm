@@ -181,7 +181,7 @@ In the end, we arrive at a $L$-long feature vector space $\mat{O} = \left\{... \
 
 We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM to learn the sequence of discrete features extracted from a high-frequency time series of stock prices and traded volume. The figure below summarises the model structure in the form of a Dynamic Bayesian Network.
 
-The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints to determine beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
+The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints to determine beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Althought the original author does not mention this possibility, prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
 
 ![Graph from Tayal (2009). Will make my own figure when time comes. $q_1^1$ is equivalent to $z_1^1$ in our notation.](graph.PNG)
 
