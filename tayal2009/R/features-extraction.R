@@ -50,9 +50,6 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag$end <- lag(zigzag$start, -1) - 1
   zigzag$end[nrow(zigzag)] <- nrow(price)
 
-  zigzag$extrema    <- ifelse(lag(zigzag$price) < zigzag$price, extrema.max, extrema.min)
-  zigzag$extrema[1] <- if (zigzag$extrema[2] == extrema.max) extrema.min else extrema.max
-
   pos.mat  <- as.matrix(zigzag[, c("start", "end")])
   size.mat <- as.vector(size)
   size.ind <- index(size)
@@ -65,25 +62,26 @@ extract_features <- function(tdata, alpha = 0.25) {
   })
 
   # 4. Feature I: local extrema type
-  zigzag$f0 <- ifelse(zigzag$extrema == extrema.max, 1, -1)
+  zigzag$f0    <- ifelse(lag(zigzag$price) < zigzag$price, extrema.max, extrema.min)
+  zigzag$f0[1] <- if (zigzag$extrema[2] == extrema.max) extrema.min else extrema.max
 
   # 5. Feature II: trend direction
   price.mat <- as.matrix(zigzag[, "price"])
   zigzag$f1 <- sapply(1:nrow(zigzag), function(n) {
     if (n <= 4)
-      return(0)
+      return(trend.lt)
 
     e_n <- price.mat[(n - 4):n]
 
     if (e_n[1] < e_n[3] & e_n[3] < e_n[5]
         & e_n[2] < e_n[4])
-      return(1)
+      return(trend.up)
 
     if (e_n[1] > e_n[3] & e_n[3] > e_n[5]
         & e_n[2] > e_n[4])
-      return(-1)
+      return(trend.dn)
 
-    return(0)
+    return(trend.lt)
   })
 
   # 6. Feature III: volume strength
@@ -98,6 +96,22 @@ extract_features <- function(tdata, alpha = 0.25) {
   zigzag$size_strength1 <- discretize_sizeratio(zigzag$size.ratio1, alpha)
   zigzag$size_strength2 <- discretize_sizeratio(zigzag$size.ratio2, alpha)
   zigzag$size_strength3 <- discretize_sizeratio(zigzag$size.ratio3, alpha)
+
+  o <- microbenchmark(a = function() {
+    zigzag$f2 <- rep(volume.lt, nrow(zigzag))
+    zigzag$f2[zigzag$size_strength1 ==  1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 <  1] <- volume.up
+    zigzag$f2[zigzag$size_strength1 == -1 & zigzag$size_strength2 <  1 & zigzag$size_strength3 > -1] <- volume.dn
+  },
+  b = function(){
+    zigzag$f2 <- ifelse(zigzag$size_strength1 == 1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 < 1, volume.up,
+                        ifelse(zigzag$size_strength1 == -1 & zigzag$size_strength2 < 1 & zigzag$size_strength3 > -1, volume.dn,
+                               volume.lt))
+    zigzag$f2[1:2] <- volume.lt
+  }, times = 100000)
+
+  zigzag$f2 <- rep(volume.lt, nrow(zigzag))
+  zigzag$f2[zigzag$size_strength1 ==  1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 <  1] <- volume.up
+  zigzag$f2[zigzag$size_strength1 == -1 & zigzag$size_strength2 <  1 & zigzag$size_strength3 > -1] <- volume.dn
 
   zigzag$f2 <- ifelse(zigzag$size_strength1 == 1 & zigzag$size_strength2 > -1 & zigzag$size_strength3 < 1, volume.up,
                       ifelse(zigzag$size_strength1 == -1 & zigzag$size_strength2 < 1 & zigzag$size_strength3 > -1, volume.dn,

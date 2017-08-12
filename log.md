@@ -696,10 +696,13 @@ n.seed = 9000
 * Using some example data from highfrequency while we fetch real data.
 * I'll try to write this in a way that it'll be easier to submit as a PR for highfrequency later.
 
-### 20170806 Su 9 to WIP ###
+### 20170806 Su 9 to 20 ###
 * Continued with the feature extraction code.
 
-### 20170809 Tu 23 to 02+1 ###
+### 20170808 Tu 23 to 02+1 ###
+* ...
+
+### 20170809 We 23 to 02+1 ###
 * Working on the write-up about feature extraction.
 * Searching entries with JabRef.
 * Read related works, Wisebourt (2011) and Sandoval & Hernández (2015), looking for details behind the feature engineering process.
@@ -707,8 +710,13 @@ n.seed = 9000
 * Sent a check-in email.
 * Interaction on Stan list.
 
-### 20170810 We 21 to 02+1 ###
+### 20170810 Th 21 to 02+1 ###
 * Working on the write-up about feature extraction.
+
+### 20170811 Fr 19 to WIP ###
+* Spun up an ubuntu box (virtualbox) to run financialinstrument's parser.
+* Parsed data.
+* First inspection says data will be of much help.
 
 ---
 
