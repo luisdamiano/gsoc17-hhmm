@@ -12,6 +12,9 @@ files <- c('../data/2007.05.01.G.TO.RData',
            '../data/2007.05.04.G.TO.RData',
            '../data/2007.05.07.G.TO.RData')
 
+files <- c('../data/2007.05.01.G.TO.RData',
+           '../data/2007.05.02.G.TO.RData')
+
 series <- do.call(rbind, lapply(files, function(f) {
   load(f)
   indexTZ(G.TO) <- 'America/Toronto'
@@ -30,6 +33,7 @@ plot_features(tdata, zig, which.features = 'all')
 
 # Model estimation --------------------------------------------------------
 ss <- '2007-05-02 09:30:00/2007-05-02 12:00:00/'
+ss <- ''
 T.length = nrow(zig[ss])
 K = 4
 L = 9
@@ -77,6 +81,7 @@ alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 
 class.fil <- apply(apply(alpha_tk, c(2, 3), median), 1, which.max)
+class.smo <- apply(apply(gamma_tk, c(2, 3), median), 1, which.max)
 
 # Summary -----------------------------------------------------------------
 options(digits = 2)
@@ -118,6 +123,9 @@ rbind(
 table(observed = zig[ss]$feature,
       filtered = class.fil)
 
+table(observed = zig[ss]$feature,
+      filtered = class.smo)
+
 table(observed = stan.data$sign,
       filtered = class.fil)
 # there's some inconsistency in here as node can't have both pos and neg zigzags
@@ -132,6 +140,23 @@ phik_med <- matrix(summary(stan.fit,
                           pars = c('phi_k'),
                           probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
                   K, L, TRUE)
+
+table(stan.data$x[stan.data$sign == 1])
+opar <- par(no.readonly = TRUE)
+par(mfrow = c(2, 2))
+barplot()
+
+
+par(opar)
+table(stan.data$sign, stan.data$x, class.fil)
+
+opar <- par(no.readonly = TRUE)
+par(mfrow = c(2, 2))
+for (i in 1:4) {
+  barplot(phik_med[i, ])
+  # hist(stan.data$x[class.fil == i], breaks = "FD")
+}
+par(opar)
 
 print("Probability that bullish (Top Node I: States 1 and 2) remains bullish")
 Aij_med

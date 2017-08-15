@@ -46,6 +46,9 @@ transformed parameters {
   { // Forward algorithm log p(z_t = j | x_{1:t})
     real accumulator[K];
 
+    // for (j in 1:K)
+    //   unalpha_tk[1][j] = log(p_1k[j]) + log(phi_k[j, x[1]]);
+
     for (j in 1:K) {
       if(((j == 1 || j == 4) && (sign[1] == 2)) || ((j == 2 || j == 3) && (sign[1] == 1))) {
         unalpha_tk[1][j] = log(p_1k[j]) + log(phi_k[j, x[1]]);
@@ -62,8 +65,10 @@ transformed parameters {
           if(((j == 1 || j == 4) && (sign[t] == 2)) || ((j == 2 || j == 3) && (sign[t] == 1))) {
             accumulator[i] = accumulator[i] + log(A_ij[i, j]);
           }
+          // accumulator[i] = unalpha_tk[t-1, i] + log(phi_k[j, x[t]]);
         }
-        unalpha_tk[t, j] = log_sum_exp(accumulator);
+
+      unalpha_tk[t, j] = log_sum_exp(accumulator);
       }
     }
   } // Forward
@@ -103,7 +108,15 @@ generated quantities {
         for (i in 1:K) { // i = next (t)
                          // Murphy (2012) Eq. 17.58
                          // backwards t    + transition prob + local evidence at t
-            accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + log(phi_k[i, x[t]]);
+            // accumulator[i] = unbeta_tk[t, i] + log(A_ij[j, i]) + log(phi_k[i, x[t]]);
+
+            accumulator[i] = unbeta_tk[t, i] + log(phi_k[i, x[t]]);
+
+            if(((j == 1 || j == 4) && (sign[t] == 2)) || ((j == 2 || j == 3) && (sign[t] == 1))) {
+              accumulator[i] = accumulator[i] + log(A_ij[j, i]);
+            }
+
+
           }
         unbeta_tk[t-1, j] = log_sum_exp(accumulator);
       }
