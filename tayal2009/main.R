@@ -79,9 +79,11 @@ launch_shinystan(stan.fit)
 # Extraction
 alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
+zstar_t  <- extract(stan.fit, pars = 'zstar_t')[[1]]
 
 class.fil <- apply(apply(alpha_tk, c(2, 3), median), 1, which.max)
 class.smo <- apply(apply(gamma_tk, c(2, 3), median), 1, which.max)
+class.vit <- apply(zstar_t, 2, function(z) { which.max(tabulate(z)) })
 
 # Summary -----------------------------------------------------------------
 options(digits = 2)
@@ -126,42 +128,16 @@ table(observed = zig[ss]$feature,
 table(observed = zig[ss]$feature,
       filtered = class.smo)
 
-table(observed = stan.data$sign,
-      filtered = class.fil)
+table(observed = zig[ss]$feature,
+      viterbi  = class.vit)
+
+table(observed = zig[ss]$feature,
+      viterbi  = class.vit)
 # there's some inconsistency in here as node can't have both pos and neg zigzags
 
 print("Some applied analysis")
-Aij_med <- matrix(summary(stan.fit,
-                          pars = c('A_ij'),
-                          probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-                  K, K, TRUE)
-
-phik_med <- matrix(summary(stan.fit,
-                          pars = c('phi_k'),
-                          probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-                  K, L, TRUE)
-
-table(stan.data$x[stan.data$sign == 1])
-opar <- par(no.readonly = TRUE)
-par(mfrow = c(2, 2))
-barplot()
-
-
-par(opar)
-table(stan.data$sign, stan.data$x, class.fil)
-
-opar <- par(no.readonly = TRUE)
-par(mfrow = c(2, 2))
-for (i in 1:4) {
-  barplot(phik_med[i, ])
-  # hist(stan.data$x[class.fil == i], breaks = "FD")
-}
-par(opar)
-
-print("Probability that bullish (Top Node I: States 1 and 2) remains bullish")
-Aij_med
-
-
+apply(alpha_tk, c(2, 3), median)[stan.data$sign == 1, ]
+summary(rowSums(apply(alpha_tk, c(2, 3), median)[stan.data$sign == 1, 2:3]))
 
 # Inference plots
 print("Estimated hidden states (hard naive classification using filtered prob)")
@@ -170,50 +146,5 @@ print(table(
 plot_stateprobability(alpha_tk, gamma_tk, 0.8)
 
 # Most likely hidden path (Viterbi decoding) - joint states
-zstar <- extract(stan.fit, pars = 'zstar_t')[[1]]
 round(table(zstar) / n.samples, 0)
-
 plot_statepath(zstar)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-price <- G.TO['T09:35:00/T09:36:30', 1]
-price   <- na.omit(price)
-price.x <- difftime(index(price), "2007-05-02 09:30:00",
-                    tz = 'America/Toronto', units = "min")
-price.y <- as.vector(price)
-
-plot(price.x, price.y, type = 'p',
-     xlab = "Time in mins from 2007-05-02 09:30:00",
-     ylab = "Transaction price",
-     pch = 21, bg = "lightgray", col = "black", cex = 0.8)
-
-plot(G.TO['2007-05-02 09:30:00/2007-05-02 10:00:00'])
-
-G.TO['T09:30:00/T09:40:00']
-
-
