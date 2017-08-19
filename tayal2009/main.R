@@ -10,10 +10,11 @@ files <- c('../data/2007.05.01.G.TO.RData',
            '../data/2007.05.02.G.TO.RData',
            '../data/2007.05.03.G.TO.RData',
            '../data/2007.05.04.G.TO.RData',
-           '../data/2007.05.07.G.TO.RData')
+           '../data/2007.05.07.G.TO.RData',
+           '../data/2007.05.08.G.TO.RData')
 
 # files <- c('../data/2007.05.01.G.TO.RData',
-           '../data/2007.05.02.G.TO.RData')
+#            '../data/2007.05.02.G.TO.RData')
 
 series <- do.call(rbind, lapply(files, function(f) {
   load(f)
@@ -32,13 +33,16 @@ plot_features(tdata, zig, which.features = 'trend')
 plot_features(tdata, zig, which.features = 'all')
 
 # Model estimation --------------------------------------------------------
-ss <- '2007-05-02 09:30:00/2007-05-02 12:00:00/'
-ss <- ''
-T.length = nrow(zig[ss])
+ins <- '2007-05-01 09:30:00/2007-05-07 23:59:59/'
+T.length = nrow(zig[ins])
 K = 4
 L = 9
 O = matrix(1:L, 1, L, TRUE)
-x = as.vector(zig[ss]$feature)
+x = as.vector(zig[ins]$feature)
+
+oos <- '2007-05-08 09:30:00/2007-05-08 23:59:59/'
+T.oos = nrow(zig[oos])
+x.oos = as.vector(zig[oos]$feature)
 
 n.iter = 500
 n.warmup = 250
@@ -50,13 +54,17 @@ n.seed = 9000
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'tayal2009/stan/hhmm-tayal2009-lite.stan'
+stan.model = 'tayal2009/stan/hhmm-tayal2009-oos.stan'
 stan.data = list(
   T = T.length,
   K = K,
   L = L,
   sign = ifelse(x < L + 1, 1, 2),
-  x = ifelse(x < L + 1, x, x - L))
+  x = ifelse(x < L + 1, x, x - L),
+  T_oos = T.oos,
+  sign_oos = ifelse(x.oos < L + 1, 1, 2),
+  x_oos = ifelse(x.oos < L + 1, x.oos, x.oos - L)
+)
 
 stan.fit <- stan(file = stan.model,
                  model_name = stan.model,
@@ -76,7 +84,72 @@ launch_shinystan(stan.fit)
 # Estimates ---------------------------------------------------------------
 
 # Extraction
-alpha_tk <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+alpha_tk      <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+alpha_tk_oos  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+class.fil     <- apply(apply(alpha_tk, c(2, 3), median), 1, which.max)
+class.fil_oos <- apply(apply(alpha_tk_oos, c(2, 3), median), 1, which.max)
+
+# Summary -----------------------------------------------------------------
+options(digits = 2)
+
+print("Estimated initial state probabilities")
+summary(stan.fit,
+        pars = c('p_1k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated probabilities in the transition matrix")
+matrix(summary(stan.fit,
+               pars = c('A_ij'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, K, TRUE)
+
+print("Estimated event probabilities in each state")
+matrix(summary(stan.fit,
+               pars = c('phi_k'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, L, TRUE)
+
+# In-sample analysis ------------------------------------------------------
+plot_stateprobability(alpha_tk, alpha_tk, 0.8)
+
+zig.in <- zig[ins]
+zig.in$topstate     <- ifelse(class.fil == 1 | class.fil == 4, 1, -1)
+zig.in$topstate.chg <- zig.in$topstate != lag(zig.in$topstate)
+zig.in$topstate.chg[1] <- TRUE
+
+top     <- zig.in[zig.in$topstate.chg == TRUE, ]
+top$end <- c(as.numeric(tail(top$start, -1)) - 1, 1)
+top$ret <- (as.numeric(tdata[top$end, 1]) - as.numeric(tdata[top$start, 1])) / as.numeric(tdata[top$start, 1])
+
+par(mfrow = c(1, 2))
+for (i in unique(top$topstate)) {
+  hist(top$ret[top$topstate == i], xlim = c(min(top$ret), max(top$ret)))
+}
+
+# in-sample expected trade return of runs and reversals
+# Average percentage return per run/reversal switch
+# Assign meaning bull R1 > R2
+
+# hist(features) per top node
+
+
+# Out-of-sample analysis --------------------------------------------------
+# Viterbi most likely path
+# 1. Average percentage return per run/reversal switch after zigzag is complete (uses initial price of the zigzag)
+# 2. Chisq to compare if distributions of two states are similar
+
+
+
+
+
+
+
+
+
+
+# Extraction
+alpha_tk     <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+alpha_tk_oos <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 # gamma_tk <- extract(stan.fit, pars = 'gamma_tk')[[1]]
 # zstar_t  <- extract(stan.fit, pars = 'zstar_t')[[1]]
 
@@ -133,20 +206,17 @@ zigzag$end[nrow(zigzag)] <- nrow(price)
 
 top <-
 
-# in-sample expected trade return of runs and reversals
-# Average percentage return per run/reversal switch
-# Assign meaning bull R1 > R2
+  # in-sample expected trade return of runs and reversals
+  # Average percentage return per run/reversal switch
+  # Assign meaning bull R1 > R2
 
-# hist(features) per top node
+  # hist(features) per top node
 
 
-# Out-of-sample analysis --------------------------------------------------
+  # Out-of-sample analysis --------------------------------------------------
 # Viterbi most likely path
 # 1. Average percentage return per run/reversal switch after zigzag is complete (uses initial price of the zigzag)
 # 2. Chisq to compare if distributions of two states are similar
-
-
-
 
 
 

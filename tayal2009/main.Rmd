@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 7.2)
 ```
 
 ```{r echo = FALSE, results="asis"}
-cat("<style>img{border: 0px !important;}</style>")
+cat("<style>img{border: 0px !important;} tbody{font-size:9px;}</style>")
 ```
 
 This work aims at ... .
@@ -55,26 +55,7 @@ Save for the top, each level $d \in \{2, \dots, D\}$ has a final state that term
 
 ## Parameter estimation
 
-The parameters of the models are $\mat{\theta} = \left\{ \left\{ \mat{A}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\pi}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\theta}_o \right\} \right\}$. The form of $\mat{\theta}_o$ depends on the specification of the production states.
-
-## Inference
-There are several quantities of interest to be estimated via different algorithms. In this section, the discussion assumes that model parameters are known.
-
-### Filtering
-
-...
-
-### Smoothing
-
-...
-
-### Most likely hidden path
-
-...
-
-## Parameter estimation
-
-...
+The parameters of the models are $\mat{\theta} = \left\{ \left\{ \mat{A}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\pi}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\theta}_o \right\} \right\}$. The form of $\mat{\theta}_o$ depends on the specification of the production states. We refer the read to @fine1998hierarchical for a detailed treatment of estimation and inference procedures.
 
 ---
 
@@ -90,13 +71,13 @@ There are several quantities of interest to be estimated via different algorithm
 
 Tick series are a sequence of triples $\{y_k\}$ with $y_k = (t_k, p_k, v_k)$, where $t_k \le t_{k+1}$ is the time stamp in seconds, $p_k$ is the trade price and $v_k$ is the trade volume. The sequence is ordered by the occurence of trades. There can be more than one trade within a second.
 
-As proposed by @tayal2009, we derive zig-zags that capture the bid-ask bounce $\{z_k\}$ with $z_k = (i_n, j_n, e_n, \phi_n)$, where $i_n \le i_j$ are indices to the tick series representing the starting and ending point of the extrema, $e_n = p_k \forall \ k : i_n \le k \le j_n$ is the price at the local extrema, and $\phi_m$ measures the average volume per second during the zig-zag leg ending at $e_n$:
+Following @tayal2009regime, who in turns drew inspiration from the technical analysis techniques proposed by @ord2008secret, we derive a zig-zag sequence that captures the bid-ask bounce $\{z_k\}$ with $z_k = (i_n, j_n, e_n, \phi_n)$, where $i_n \le i_j$ are indices to the tick series representing the starting and ending point of the extrema, $e_n = p_k \ \forall \ k : i_n \le k \le j_n$ is the price at the local extrema, and $\phi_m$ measures the average volume per second during the zig-zag leg ending at $e_n$:
 
 \[
 \phi_n = \frac{1}{t_{j_n} - t_{i_{n-1}} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
 \]
 
-We note that $p_{i_n} < e_n < p_{j_n + 1}$ for local maxima and $p_{i_n} > e_n > p_{j_n + 1}$ for local minima. The average volume, which includes the end-point extrema, is normalized by $t_{j_{n}} - t_{i_{n-1}} + 1$ to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the $n$-th zig-zag point $z_n$ is realized only after observing the $(j_n + 1)$-th tick point $y_{j_n + 1}$. The one tick lag between leg completion and the time of detection should be carefully considered to avoid look-ahead bias in out of sample.
+We note that $p_{i_n} < e_n < p_{j_n + 1}$ for local maxima and $p_{i_n} > e_n > p_{j_n + 1}$ for local minima. The average volume, which includes the end-point extrema, is normalized by $t_{j_{n}} - t_{i_{n-1}} + 1$ to avoid division by zero when the zig-zag leg occurs within the same time period. Most importantly, we underline that the $n$-th zig-zag point $z_n$ is realized only after observing the $(j_n + 1)$-th tick point $y_{j_n + 1}$. Failing to consider the one tick lag between leg completion and the time of detection would cause look-ahead bias in the out of sample forecasts.
 
 ### Processing rules
 
@@ -129,7 +110,7 @@ For the third indicator function, we compute the average volume ratios,
 \nu_n^1 = \frac{\phi_n}{\phi_{n-1}}, \quad \nu_n^2 = \frac{\phi_n}{\phi_{n-2}}, \quad \nu_n^1 = \frac{\phi_{n-1}}{\phi_{n-2}},
 \]
 
-we transform the ratios into a discrete variable using an arbitrary threshold $alpha$,
+we transform the ratios into a discrete variable using an arbitrary threshold $\alpha$,
 
 \[
 \tilde{\nu}_n^j =
@@ -155,27 +136,23 @@ The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, 
 
 | Feature           |          $U_1$ |          $U_2$ |           $U_3$ |          $U_4$ |            $U_5$ |      $U_6$ |           $U_7$ |       $U_8$ |         $U_9$ |
 |-------------------|---------------:|---------------:|----------------:|---------------:|-----------------:|-----------:|----------------:|------------:|--------------:|
-| Zig-zag direction |     Upwards +1 |     Upwards +1 |      Upwards +1 |     Upwards +1 |       Upwards +1 | Upwards +1 |      Upwards +1 |  Upwards +1 |    Upwards +1 |
-| Price trend       |    Up-trend +1 |  Down-trend -1 |     Up-trend +1 |     No trend 0 |       No trend 0 | No trend 0 |   Down-trend -1 | Up-trend +1 | Down-trend -1 |
-| Change in volume  | Strengthens +1 | Strengthens +1 | Indeterminant 0 | Strengthens +1 |  Indeterminant 0 | Weakens -1 | Indeterminant 0 |  Weakens -1 |    Weakens -1 |
+| Zig-zag direction |     Upwards<br />+1 |     Upwards<br />+1 |      Upwards<br />+1 |     Upwards<br />+1 |       Upwards<br />+1 | Upwards<br />+1 |      Upwards<br />+1 |  Upwards<br />+1 |    Upwards<br />+1 |
+| Price trend       |    Up-trend<br/>+1 |  Down-trend<br/>-1 |     Up-trend<br/>+1 |     No trend<br />0 |       No trend<br />0 | No trend<br />0 |   Down-trend<br/>-1 | Up-trend<br/>+1 | Down-trend<br/>-1 |
+| Change in volume  | Strengthens<br/>+1 | Strengthens<br/>+1 | Indeterminant<br/>0 | Strengthens<br/>+1 |  Indeterminant<br/>0 | Weakens<br/>-1 | Indeterminant<br/>0 |  Weakens<br/>-1 |    Weakens<br/>-1 |
 | Market state      |        Bullish |        Bullish |         Bullish |        Bullish | Local volatility |    Bearish |         Bearish |     Bearish |       Bearish |
 
 | Feature           |        $D_1$ |         $D_2$ |           $D_3$ |          $D_4$ |            $D_5$ |          $D_6$ |           $D_7$ |          $D_8$ |          $D_9$ |
 |-------------------|-------------:|--------------:|----------------:|---------------:|-----------------:|---------------:|----------------:|---------------:|---------------:|
-| Zig-zag direction | Downwards -1 |  Downwards -1 |    Downwards -1 |   Downwards -1 |     Downwards -1 |   Downwards -1 |    Downwards -1 |   Downwards -1 |   Downwards -1 |
-| Price trend       |  Up-trend +1 | Down-trend -1 |     Up-trend +1 |     No trend 0 |       No trend 0 |     No trend 0 |   Down-trend -1 |    Up-trend +1 |  Down-trend -1 |
-| Change in volume  |   Weakens -1 |    Weakens -1 | Indeterminant 0 | Weakens     -1 |  Indeterminant 0 | Strengthens +1 | Indeterminant 0 | Strengthens +1 | Strengthens +1 |
+| Zig-zag direction | Downwards<br />-1 |  Downwards<br />-1 |    Downwards<br />-1 |   Downwards<br />-1 |     Downwards<br />-1 |   Downwards<br />-1 |    Downwards<br />-1 |   Downwards<br />-1 |   Downwards<br />-1 |
+| Price trend       |  Up-trend<br/>+1 | Down-trend<br/>-1 |     Up-trend<br/>+1 |     No trend<br />0 |       No trend<br />0 |     No trend<br />0 |   Down-trend<br/>-1 |    Up-trend<br/>+1 |  Down-trend<br/>-1 |
+| Change in volume  |   Weakens<br/>-1 |    Weakens<br/>-1 | Indeterminant<br/>0 | Weakens</br>-1 |  Indeterminant<br/>0 | Strengthens<br/>+1 | Indeterminant<br/>0 | Strengthens<br/>+1 | Strengthens<br/>+1 |
 | Market state      |      Bullish |       Bullish |         Bullish |        Bullish | Local volatility |        Bearish |         Bearish |        Bearish |        Bearish |
 
 Table: Summary of feature space.
 
 **Plot here showing some example**
 
-@wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spreed between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure volumen concentration in both sides of the book.
-
-...
-
-In the end, we arrive at a $L$-long feature vector space $\mat{O} = \left\{... \right\}$
+Defining appropiate rules that capture trade volume dynamics and identify trends in volume despite high-frequency noise is the most challenging aspect of this design. @wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spread between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure trade volume concentration in both sides of the book.
 
 ## Model
 
@@ -239,9 +216,7 @@ with $l \in \{1, \dots, L-1\}$.
 
 ## Dataset
 
-The original work presents results for both simulated and real data. The latter is based on historical high-frequency time series for the 60 stocks listed in the S&P/TSE60 index. The dataset consists of all 22 business days of May 2007. The author excludes three days due to significant errors without disclosing the exact dates.
-
-We focus on GoldCorp Inc (TSE:G), the series best detailed in the original work, to confirm that our results are consistent with the original work.
+The original work presents results for both simulated and real data. The latter is based on historical high-frequency time series for the 60 stocks listed in the S&P/TSE60 index. The dataset consists of all 22 business days of May 2007. The author excludes three days due to significant errors without disclosing the exact dates. We confirm that our results are consistent with the original work by focusing on GoldCorp Inc (TSE:G), the only series described exhaustively in the original work.
 
 ## Feature extraction
 
