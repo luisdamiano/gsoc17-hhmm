@@ -17,7 +17,16 @@ bibliography: ../common/references.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 7.2)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 16, fig.height = 8)
+```
+
+```{r, echo = FALSE, message = FALSE}
+library(moments)
+library(xts)
+library(rstan)
+library(shinystan)
+source('../common/R/plots.R')
+source('R/feature-extraction.R')
 ```
 
 ```{r echo = FALSE, results="asis"}
@@ -220,7 +229,7 @@ The original work presents results for both simulated and real data. The latter 
 
 ## Feature extraction
 
-Note that we do not model prices directly. Instead, non-linear transforms are appleid on the price and traded volume high-frequency series to produce the sequence of observations fed to the proposed model.
+Note that we do not model prices directly. Instead, non-linear transforms are applied on the price and traded volume high-frequency series to produce the sequence of observations fed to the proposed model.
 
 ...
 
@@ -248,21 +257,231 @@ Finally, a trading strategy is tested. After a zig-zag leg is completed, the tra
 
 We present an in-depth study of one stock, TSE:G, to assess the strengths and weaknesses of the model.
 
+**[MW] Data is very similar to Tayal**
+
 ### Data exploration
+
+```{r, echo = FALSE, message = FALSE}
+files <- c('../../data/2007.05.01.G.TO.RData',
+           '../../data/2007.05.02.G.TO.RData',
+           '../../data/2007.05.03.G.TO.RData',
+           '../../data/2007.05.04.G.TO.RData',
+           '../../data/2007.05.07.G.TO.RData',
+           '../../data/2007.05.08.G.TO.RData')
+
+series <- do.call(rbind, lapply(files, function(f) {
+  load(f)
+  indexTZ(G.TO) <- 'America/Toronto'
+  G.TO
+}))
+
+tdata <- na.omit(series[, 1:2])
+colnames(tdata) <- c("PRICE", "SIZE")
+
+# Feature extraction ------------------------------------------------------
+system.time(zig <- extract_features(tdata, 0.25))
+```
+
+We pick an arbitrary day to explore the data. **[MW] This day is also plotted in Tayal's work. **
+
+We plot the extrema:
+
+```{r}
+ss <- '2007-05-02 10:30:00/2007-05-02 11:30:00/'
+plot_features(tdata[ss ], zig, which.features = 'extrema')
+```
+
+We plot the "trend" component (not very useful):
+
+```{r}
+plot_features(tdata[ss ], zig, which.features = 'trend')
+```
+
+We plot the features:
+```{r}
+plot_features(tdata[ss ], zig, which.features = 'all')
+```
+
+**[MW] The features look OK, similar to Tayal.**
 
 ...
 
 ### Estimation
 
+**[MW] The sampler takes 10 mins, but you can use the file in the dropbox folder**
+
+```{r}
+ins <- '2007-05-01 09:30:00/2007-05-07 23:59:59/'
+T.length = nrow(zig[ins])
+K = 4
+L = 9
+O = matrix(1:L, 1, L, TRUE)
+x = as.vector(zig[ins]$feature)
+
+oos <- '2007-05-08 09:30:00/2007-05-08 23:59:59/'
+T.oos = nrow(zig[oos])
+x.oos = as.vector(zig[oos]$feature)
+
+use.cache = TRUE
+
+n.iter = 500
+n.warmup = 250
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+stan.model = 'stan/hhmm-tayal2009-oos.stan'
+stan.cache = 'stan_cache/hhmm-tayal2009-oos.RDS'
+
+stan.data = list(
+  T = T.length,
+  K = K,
+  L = L,
+  sign = ifelse(x < L + 1, 1, 2),
+  x = ifelse(x < L + 1, x, x - L),
+  T_oos = T.oos,
+  sign_oos = ifelse(x.oos < L + 1, 1, 2),
+  x_oos = ifelse(x.oos < L + 1, x.oos, x.oos - L)
+)
+
+if (use.cache & file.exists(stan.cache)) {
+  stan.fit <- readRDS(stan.cache)
+} else {
+  stan.fit <- stan(file = stan.model,
+                   model_name = stan.model,
+                   data = stan.data, verbose = T,
+                   iter = n.iter, warmup = n.warmup,
+                   thin = n.thin, chains = n.chains,
+                   cores = n.cores, seed = n.seed)
+
+  if (use.cache)
+    saveRDS(stan.fit, stan.cache)
+}
+
+n.samples = (n.iter - n.warmup) * n.chains
+```
+
 ...
 
 ### Convergence
+
+```{r, echo = FALSE}
+summary(stan.fit,
+        pars = c('p_1k', 'A_ij', 'phi_k'),
+        probs = c(0.50))$summary
+```
+
+Converge is fine. Try shinystan if you need to see more.
+
 ...
 
 ### State probability
+
+Estimated parameters:
+
+```{r, echo = FALSE}
+options(digits = 2)
+
+print("Estimated initial state probabilities")
+summary(stan.fit,
+        pars = c('p_1k'),
+        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+print("Estimated probabilities in the transition matrix")
+matrix(summary(stan.fit,
+               pars = c('A_ij'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, K, TRUE)
+
+print("Estimated event probabilities in each state")
+matrix(summary(stan.fit,
+               pars = c('phi_k'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, L, TRUE)
+```
+
+**[MW] It's very suspicious that only two states switch (one for negative and the other for positive zig-zags). In the end, it's just "classifying" all negatives to one hidden state, all positives to the other. All negative zig-zags are "bear" and all positive zig-zags are "bulls". **
+
 ...
 
 ### Fitted output
+
+```{r}
+# Extraction
+alpha_tk      <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+alpha_tk_oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
+class.fil     <- apply(apply(alpha_tk, c(2, 3), median), 1, which.max)
+class.fil_oos <- apply(apply(alpha_tk_oos, c(2, 3), median), 1, which.max)
+```
+
+Now, look how at how the features are classified:
+
+```{r}
+table(x, class.fil)
+```
+
+The model has four production/emission states: 1, 2, 3 and 4. 1 and 3 for negative legs and 2 and 4 for positive legs. States 1 and 2 belong to the "bull" state while 3 and 4 belong to "bear" state. There can be negative legs in bull states (they're negative but with little volume) and positive legs in bear states (positive but, again, with little volume).
+
+Our sampler, tho, maps each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated.
+
+```{r, echo = FALSE}
+plot_state_returns <- function(x, top, state.labels = c('Bull', 'Bear'), qs = c(0.05, 0.50, 0.95), ...) {
+  opar <- par(TRUE)
+
+  par(mfrow = c(1, 2))
+  my.xlim <- c(min(x), max(x))
+  for (i in c(state.bear, state.bull)) {
+    rx <- x[top == i]
+    lb <- if (i == state.bear) {state.labels[2]} else {state.labels[1]}
+
+    h <- hist(rx, plot = FALSE)
+
+    plot(h, xlim = my.xlim,
+         main = bquote("Returns in " * .(lb) * " top state"),
+         xlab = bquote(R),
+         col = 'lightgray', border = 'gray')
+
+    if (!is.null(qs)) {
+      qx <- quantile(rx, c(0.05, 0.50, 0.95))
+      abline(v = qx, lwd = 1, lty = 2, col = 'gray')
+      legend(x = "topright", bty = 'n', cex = 0.60, xjust = 1, yjust = 1,
+             legend = bquote(.(sprintf("q[%s] ~ \"=\" ~ %0.3f%%", names(qx), 100 * qx))))
+    }
+  }
+  invisible(par(opar))
+}
+```
+
+1. Look at forward probabilities (the two columns are repeated since I don't compute smoothed probabilities to improve computational time)
+
+```{r}
+plot_stateprobability(alpha_tk, alpha_tk, 0.8)
+```
+
+2. Then the distribution of returns inside each "top state" (either bull or bear). These top states should have two children state for positive/negative legs each. States 1 and 2 = Bull (greater mean return), states 3 and 4 = bear (smaller mean return).
+
+```{r}
+zig.in <- zig[ins]
+zig.in$topstate     <- ifelse(class.fil == 1 | class.fil == 2, state.bull, state.bear)
+zig.in$topstate.chg <- zig.in$topstate != lag(zig.in$topstate)
+zig.in$topstate.chg[1] <- TRUE
+
+top.in     <- zig.in[zig.in$topstate.chg == TRUE, ]
+top.in$end <- c(as.numeric(tail(top.in$start, -1)) - 1, last(zig.in$end))
+top.in$ret <- (as.numeric(tdata[top.in$end, 1]) - as.numeric(tdata[top.in$start, 1])) / as.numeric(tdata[top.in$start, 1])
+
+plot_state_returns(top.in$ret, top.in$topstate)
+```
+
+<!-- Plotting ** TITLE SAYS RETURNS BUT IT'S TOP STATE LENGTH!** (ie how many ticks until the top state switches). -->
+
+<!-- ```{r} -->
+<!-- plot_state_returns(top.in$end - top.in$start, top.in$topstate, qs = NULL) -->
+<!-- ``` -->
 
 ...
 
