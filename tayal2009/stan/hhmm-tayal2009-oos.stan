@@ -79,19 +79,13 @@ model {
 }
 
 generated quantities {
-  // vector[K] unbeta_tk[T];
-  // vector[K] ungamma_tk[T];
-
   vector[K] unalpha_tk_oos[T_oos];
   vector[K] alpha_tk_oos[T_oos];
-  //
   vector[K] alpha_tk[T];
-  // vector[K] beta_tk[T];
-  // vector[K] gamma_tk[T];
-  //
-  // int<lower=1, upper=K> zstar_t[T];
-  // real logp_zstar_t;
-  //
+
+  int<lower=1, upper=K> zstar_t[T_oos];
+  real logp_zstar_t;
+
   { // Forward algortihm
     for (t in 1:T)
       alpha_tk[t] = softmax(unalpha_tk[t]);
@@ -101,7 +95,7 @@ generated quantities {
     real accumulator[K];
 
     for (j in 1:K) {
-      unalpha_tk_oos[1][j] = log(phi_k[j, x[1]]);
+      unalpha_tk_oos[1][j] = log(phi_k[j, x_oos[1]]);
         if((sign_oos[1] == 1 && j == 3) || (sign_oos[1] == 2 && j == 1)) {
           unalpha_tk_oos[1][j] = unalpha_tk_oos[1][j] + log(p_1k[j]);
         }
@@ -111,7 +105,7 @@ generated quantities {
       for (j in 1:K) { // j = current (t)
         for (i in 1:K) { // i = previous (t-1)
 
-          accumulator[i] = unalpha_tk_oos[t-1, i] + log(phi_k[j, x[t]]);
+          accumulator[i] = unalpha_tk_oos[t-1, i] + log(phi_k[j, x_oos[t]]);
 
           if((sign_oos[t] == 1 && (j == 2 || j == 3)) || (sign_oos[t] == 2 && (j == 1 || j == 4))) {
             accumulator[i] = accumulator[i] + log(A_ij[i, j]);
@@ -124,80 +118,42 @@ generated quantities {
 
     for (t in 1:T_oos)
       alpha_tk_oos[t] = softmax(unalpha_tk_oos[t]);
-  }
+  } // Forward
 
-  //
-  // { // Backward algorithm log p(x_{t+1:T} | z_t = j)
-  //   real accumulator[K];
-  //
-  //   for (j in 1:K)
-  //     unbeta_tk[T, j] = 1;
-  //
-  //   for (tforward in 0:(T-2)) {
-  //     int t;
-  //     t = T - tforward;
-  //
-  //     for (j in 1:K) { // j = previous (t-1)
-  //       for (i in 1:K) { // i = next (t)
-  //                        // Murphy (2012) Eq. 17.58
-  //                        // backwards t    + transition prob + local evidence at t
-  //           accumulator[i] = unbeta_tk[t, i] + log(phi_k[i, x[t]]);
-  //
-  //           if((sign[t] == 1 && (j == 2 || j == 3)) || (sign[t] == 2 && (j == 1 || j == 4))) {
-  //             accumulator[i] = accumulator[i] + log(A_ij[j, i]);
-  //           }
-  //         }
-  //       unbeta_tk[t-1, j] = log_sum_exp(accumulator);
-  //     }
-  //   }
-  //
-  //   for (t in 1:T)
-  //     beta_tk[t] = softmax(unbeta_tk[t]);
-  // } // Backward
-  //
-  // { // Forwards-backwards algorithm log p(z_t = j | x_{1:T})
-  //   for(t in 1:T) {
-  //       ungamma_tk[t] = alpha_tk[t] .* beta_tk[t];
-  //   }
-  //
-  //   for(t in 1:T)
-  //     gamma_tk[t] = normalize(ungamma_tk[t]);
-  // } // Forwards-backwards
-  //
-  // { // Viterbi algorithm
-  //   int a_tk[T, K];                 // backpointer to the most likely previous state on the most probable path
-  //   real delta_tk[T, K];            // max prob for the seq up to t
-  //                                   // with final output from state k for time t
-  //
-  //   for (j in 1:K)
-  //     delta_tk[1, K] = log(phi_k[j, x[1]]);
-  //
-  //   for (t in 2:T) {
-  //     for (j in 1:K) { // j = current (t)
-  //       delta_tk[t, j] = negative_infinity();
-  //       for (i in 1:K) { // i = previous (t-1)
-  //         real logp;
-  //         logp = delta_tk[t-1, i] + log(phi_k[j, x[t]]);
-  //         if((sign[t] == 1 && (j == 2 || j == 3)) || (sign[t] == 2 && (j == 1 || j == 4))) {
-  //           logp = logp + log(A_ij[i, j]);
-  //         }
-  //
-  //         if (logp > delta_tk[t, j]) {
-  //           a_tk[t, j] = i;
-  //           delta_tk[t, j] = logp;
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  //   logp_zstar_t = max(delta_tk[T]);
-  //
-  //   for (j in 1:K)
-  //     if (delta_tk[T, j] == logp_zstar_t)
-  //       zstar_t[T] = j;
-  //
-  //   for (t in 1:(T - 1)) {
-  //     zstar_t[T - t] = a_tk[T - t + 1, zstar_t[T - t + 1]];
-  //   }
-  // }
+  { // Viterbi algorithm
+    int a_tk[T_oos, K];             // backpointer to the most likely previous state on the most probable path
+    real delta_tk[T_oos, K];        // max prob for the seq up to t
+                                    // with final output from state k for time t
+
+    for (j in 1:K)
+      delta_tk[1, K] = log(phi_k[j, x_oos[1]]);
+
+    for (t in 2:T_oos) {
+      for (j in 1:K) { // j = current (t)
+        delta_tk[t, j] = negative_infinity();
+        for (i in 1:K) { // i = previous (t-1)
+          real logp;
+          logp = delta_tk[t-1, i] + log(phi_k[j, x_oos[t]]);
+          if((sign_oos[t] == 1 && (j == 2 || j == 3)) || (sign_oos[t] == 2 && (j == 1 || j == 4))) {
+            logp = logp + log(A_ij[i, j]);
+          }
+
+          if (logp > delta_tk[t, j]) {
+            a_tk[t, j] = i;
+            delta_tk[t, j] = logp;
+          }
+        }
+      }
+    }
+
+    logp_zstar_t = max(delta_tk[T_oos]);
+
+    for (j in 1:K)
+      if (delta_tk[T_oos, j] == logp_zstar_t)
+        zstar_t[T_oos] = j;
+
+    for (t in 1:(T_oos - 1)) {
+      zstar_t[T_oos - t] = a_tk[T_oos - t + 1, zstar_t[T_oos - t + 1]];
+    }
+  } // Viterbi
 }
