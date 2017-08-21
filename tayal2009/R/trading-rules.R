@@ -1,0 +1,23 @@
+topstate_trading <- function(tdata, lag) {
+  signal <- ((1:nrow(tdata))[tdata$topstate != lag(tdata$topstate)] + lag)[-1]
+  start  <- signal + lag
+  end    <- c(tail(start, -1), nrow(tdata))
+  action <- ifelse(tdata$topstate[signal] == state.bear, -1, 1)
+  entryp <- as.numeric(tdata[start, 1])
+  exitp  <- as.numeric(tdata[end, 1])
+  perchg <- (exitp - entryp) / entryp
+  cbind(action  = action,
+        signal  = signal,
+        start   = start,
+        end     = end,
+        entryp  = entryp,
+        exitp   = exitp,
+        perchg  = perchg,
+        ret     = as.numeric(action) * perchg)
+}
+
+buyandhold <- function(tdata) {
+  entryp <- as.numeric(tdata[1, 1])
+  exitp  <- as.numeric(tdata[nrow(tdata), 1])
+  return((exitp - entryp) / entryp)
+}

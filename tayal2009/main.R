@@ -5,17 +5,19 @@ library(rstan)
 library(shinystan)
 library(xts)
 source('common/R/plots.R')
+source('tayal2009/R/constants.R')
 source('tayal2009/R/feature-extraction.R')
+source('tayal2009/R/trading-rules.R')
 source('tayal2009/R/state-plots.R')
 
 # Set up! -----------------------------------------------------------------
 # Data kept in a private folder as we do no have redistribution rights
-data.files <- c('../data/2007.05.01.G.TO.RData',
-                '../data/2007.05.02.G.TO.RData',
-                '../data/2007.05.03.G.TO.RData',
-                '../data/2007.05.04.G.TO.RData',
-                '../data/2007.05.07.G.TO.RData',
-                '../data/2007.05.08.G.TO.RData')
+data.files <- c('../data/G.TO/2007.05.01.G.TO.RData',
+                '../data/G.TO/2007.05.02.G.TO.RData',
+                '../data/G.TO/2007.05.03.G.TO.RData',
+                '../data/G.TO/2007.05.04.G.TO.RData',
+                '../data/G.TO/2007.05.07.G.TO.RData',
+                '../data/G.TO/2007.05.08.G.TO.RData')
 
 # Timespans to separate training and test sets
 ins <- '2007-05-01 09:30:00/2007-05-07 16:30:00'
@@ -36,7 +38,7 @@ n.cores = 1
 n.thin = 1
 n.seed = 9000
 
-cache.path = 'tayal2009/stan_cache'
+cache.path = 'tayal2009/fore_cache'
               # A naive implementation to cache Stan fit objects
               # Sampler won't run twice under exactly same setup
               # NULL = No cache!
@@ -74,7 +76,7 @@ x.oos <- as.vector(zig.oos$feature)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'tayal2009/stan/hhmm-tayal2009-oos.stan'
+stan.model = 'tayal2009/stan/hhmm-tayal2009-lite.stan'
 
 stan.data = list(
   T = T.ins,
@@ -224,25 +226,7 @@ plot_topstate_seqv(tdata.oos, zig.oos,
 plot_topstate_features(top.oos$feature, top.oos$topstate, L)
 
 # Trading strategy --------------------------------------------------------
-trading <- function(tdata, lag) {
-  signal <- ((1:nrow(tdata))[tdata$topstate != lag(tdata$topstate)] + lag)[-1]
-  start  <- signal + lag
-  end    <- c(tail(start, -1), nrow(tdata))
-  action <- ifelse(tdata$topstate[signal] == state.bear, -1, 1)
-  entryp <- as.numeric(tdata[start, 1])
-  exitp  <- as.numeric(tdata[end, 1])
-  perchg <- (exitp - entryp) / entryp
-  cbind(action  = action,
-        signal  = signal,
-        start   = start,
-        end     = end,
-        entryp  = entryp,
-        exitp   = exitp,
-        perchg  = perchg,
-        ret     = as.numeric(action) * perchg)
-}
-
-trades <- trading(tdata.oos, 1)
+trades <- topstate_trading(tdata.oos, 1)
 # no-lag strategy, strategy, b&h
 # equity line prod(1+trade$ret)
 
@@ -256,7 +240,6 @@ par(mfrow = c(1, 2))
 plot(x = index(tdata.oos), y = l1)
 plot(x = index(tdata.oos), y = l2, type = 'l', ylim = c(0.9, 1.1))
 lines(l3, col = "blue")
-
 
 plot(tdata.oos[, 1])
 plot(cumprod(1 + trades$perchg))
