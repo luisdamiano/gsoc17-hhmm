@@ -226,24 +226,17 @@ plot_topstate_seqv(tdata.oos, zig.oos,
 plot_topstate_features(top.oos$feature, top.oos$topstate, L)
 
 # Trading strategy --------------------------------------------------------
-trades <- topstate_trading(tdata.oos, 1)
+trades.oos <- topstate_trading(tdata.oos, 1)
 # no-lag strategy, strategy, b&h
 # equity line prod(1+trade$ret)
 
+
+
+
+plot_topstate_trading(tdata.oos, trades.oos)
+
+
 mean(trades$perchg) < mean(trades$ret)
-
-l1 <- as.numeric(tdata.oos[, 1])
-l2 <- cumprod(1 + trades$perchg)
-l3 <- cumprod(1 + trades$ret)
-
-par(mfrow = c(1, 2))
-plot(x = index(tdata.oos), y = l1)
-plot(x = index(tdata.oos), y = l2, type = 'l', ylim = c(0.9, 1.1))
-lines(l3, col = "blue")
-
-plot(tdata.oos[, 1])
-plot(cumprod(1 + trades$perchg))
-plot(cumprod(1 + trades$ret))
 
 # Out-of-sample analysis --------------------------------------------------
 # Viterbi most likely path

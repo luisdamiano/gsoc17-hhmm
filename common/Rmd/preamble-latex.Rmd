@@ -16,3 +16,7 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\LL}{\mathcal{L}}
 \newcommand{\RR}{\mathbb{R}}
+
+\usepackage{lscape}
+\newcommand{\blandscape}{\begin{landscape}}
+\newcommand{\elandscape}{\end{landscape}}

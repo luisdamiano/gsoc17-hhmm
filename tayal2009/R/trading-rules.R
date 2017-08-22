@@ -6,14 +6,16 @@ topstate_trading <- function(tdata, lag) {
   entryp <- as.numeric(tdata[start, 1])
   exitp  <- as.numeric(tdata[end, 1])
   perchg <- (exitp - entryp) / entryp
-  cbind(action  = action,
-        signal  = signal,
-        start   = start,
-        end     = end,
-        entryp  = entryp,
-        exitp   = exitp,
-        perchg  = perchg,
-        ret     = as.numeric(action) * perchg)
+  ret <- cbind(action  = action,
+               signal  = signal,
+               start   = start,
+               end     = end,
+               entryp  = entryp,
+               exitp   = exitp,
+               perchg  = perchg,
+               ret     = as.numeric(action) * perchg)
+  attr(ret, 'lag') <- lag
+  return(ret)
 }
 
 buyandhold <- function(tdata) {

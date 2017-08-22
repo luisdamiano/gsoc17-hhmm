@@ -3,34 +3,85 @@ title: "Regime Switching and Technical Trading with Dynamic Bayesian Networks in
 author: "Luis Damiano, Brian Peterson, Michael Weylandt"
 date: "`r Sys.Date()`"
 output:
-  rmarkdown::html_vignette:
+  pdf_document:
     toc: true
     number_sections: true
-    self_contained: true
+    citation_package: biblatex
     includes:
-      in_header: ../common/Rmd/preamble-html.Rmd
-vignette: >
-  %\VignetteIndexEntry{Input-Output Hidden Markov Model}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+      in_header:  ../common/Rmd/preamble-latex.Rmd
+  # rmarkdown::html_vignette:
+  #   toc: true
+  #   number_sections: true
+  #   self_contained: true
+  #   includes:
+  #     in_header: ../common/Rmd/preamble-html.Rmd
+# vignette: >
+#   %\VignetteIndexEntry{Input-Output Hidden Markov Model}
+#   %\VignetteEngine{knitr::rmarkdown}
+#   %\VignetteEncoding{UTF-8}
 bibliography: ../common/references.bib
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 16, fig.height = 8)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE)
 ```
 
-```{r, echo = FALSE, message = FALSE}
+```{r}
+pint <- function(x) { formatC(x, format = "d", big.mark = ",") }
+pflo <- function(x) { formatC(x, format = "f", big.mark = ",", decimal.mark = ".") }
+ptab <- function(x) { sapply(x, function(e) {sprintf("%0.2f", e)}) }
+```
+
+
+```{r}
+library(digest)
+library(highfrequency)
 library(moments)
-library(xts)
 library(rstan)
 library(shinystan)
+library(xts)
 source('../common/R/plots.R')
+source('R/constants.R')
 source('R/feature-extraction.R')
+source('R/trading-rules.R')
+source('R/state-plots.R')
+
+# Set up! -----------------------------------------------------------------
+# Data kept in a private folder as we do no have redistribution rights
+data.files <- c('../../data/G.TO/2007.05.01.G.TO.RData',
+                '../../data/G.TO/2007.05.02.G.TO.RData',
+                '../../data/G.TO/2007.05.03.G.TO.RData',
+                '../../data/G.TO/2007.05.04.G.TO.RData',
+                '../../data/G.TO/2007.05.07.G.TO.RData',
+                '../../data/G.TO/2007.05.08.G.TO.RData')
+
+# Timespans to separate training and test sets
+ins <- '2007-05-01 09:30:00/2007-05-07 16:30:00'
+oos <- '2007-05-08 09:30:00/2007-05-08 16:30:00'
+
+# Alpha threshold in the change of volumen setting (0.25 = Tayal 2009)
+features.alpha <- 0.25
+
+# HHMM structure: K production/emission states, L possible outcomes
+K = 4
+L = 9
+
+# MCMC settings
+n.iter = 500
+n.warmup = 250
+n.chains = 1
+n.cores = 1
+n.thin = 1
+n.seed = 9000
+
+cache.path = 'fore_cache'
+              # A naive implementation to cache Stan fit objects
+              # Sampler won't run twice under exactly same setup
+              # NULL = No cache!
 ```
 
-```{r echo = FALSE, results="asis"}
-cat("<style>img{border: 0px !important;} tbody{font-size:9px;}</style>")
+```{r results = "asis"}
+# cat("<style>img{border: 0px !important;} tbody{font-size:9px;}</style>")
 ```
 
 This work aims at ... .
@@ -255,101 +306,83 @@ Finally, a trading strategy is tested. After a zig-zag leg is completed, the tra
 
 ## GoldCorp Inc (TSE:G)
 
-We present an in-depth study of one stock, TSE:G, to assess the strengths and weaknesses of the model.
-
-**[MW] Data is very similar to Tayal**
-
-### Data exploration
-
-```{r, echo = FALSE, message = FALSE}
-files <- c('../../data/2007.05.01.G.TO.RData',
-           '../../data/2007.05.02.G.TO.RData',
-           '../../data/2007.05.03.G.TO.RData',
-           '../../data/2007.05.04.G.TO.RData',
-           '../../data/2007.05.07.G.TO.RData',
-           '../../data/2007.05.08.G.TO.RData')
-
-series <- do.call(rbind, lapply(files, function(f) {
-  load(f)
-  indexTZ(G.TO) <- 'America/Toronto'
-  G.TO
+```{r}
+# Data loading ------------------------------------------------------------
+data.env <- new.env()
+series <- do.call(rbind, lapply(data.files, function(f) {
+  data.name <- load(file = f, envir = data.env)
+  data.var  <- get(data.name, data.env)
+  attr(data.var, 'symbol') <- data.name
+  indexTZ(data.var) <- 'America/Toronto'
+  return(data.var)
 }))
+rm(data.env)
 
 tdata <- na.omit(series[, 1:2])
 colnames(tdata) <- c("PRICE", "SIZE")
+```
 
+We present an in-depth study of one stock to assess the strengths and weaknesses of the model. Using the tick-by-tick series of GoldCorp Inc (TSE:G), we split our dataset in training (2007-05-01 to 2007-05-07 - five trading days and `r # pint(nrow(tdata[ins, ]))` ticks) and test (2007-05-08 - `r # pint(nrow(tdata[oos, ]))` ticks) sets. Next, we run our procedure in a walking forward fashion for this stock as well as others and present some summary statistics for the performance of the strategy.
+
+### Data exploration
+
+```{r}
 # Feature extraction ------------------------------------------------------
-system.time(zig <- extract_features(tdata, 0.25))
+system.time(zig <- extract_features(tdata, features.alpha))
+zig.ins <- zig[ins]
+zig.oos <- zig[oos]
 ```
 
-We pick an arbitrary day to explore the data. **[MW] This day is also plotted in Tayal's work. **
+We center our attention on the sequence of trades, disregarding valuable information from the bid and ask series. Future research may employ such information to improve model predictability. We start by extracting the features using the procedure detailed above. We set the threshold for the change in volume indicator variable in $\alpha = 0.25$ as suggested by the author of the original work. In-sample dataset reduced from `r # pint(nrow(tdata[ins, ]))` trade records to `r sprintf("%0.0f", nrow(zig.ins))` zig-zags.
 
-We plot the extrema:
+Apart from the zig-zags themselves, local extrema are interesting on their own. Although we could not gain insight by visually inspecting other intermediate indicators such as the trend $f_1$, further research may find value in them.
 
-```{r}
-ss <- '2007-05-02 10:30:00/2007-05-02 11:30:00/'
-plot_features(tdata[ss ], zig, which.features = 'extrema')
+```{r, include = TRUE, fig.cap = "Local extrema detected in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
+ss <- '2007-05-02 10:30:00/2007-05-02 11:30:00'
+plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
 ```
 
-We plot the "trend" component (not very useful):
-
-```{r}
-plot_features(tdata[ss ], zig, which.features = 'trend')
+\newpage
+\blandscape
+```{r, include = TRUE, fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
+plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
 ```
-
-We plot the features:
-```{r}
-plot_features(tdata[ss ], zig, which.features = 'all')
-```
-
-**[MW] The features look OK, similar to Tayal.**
-
-...
+\elandscape
 
 ### Estimation
 
-**[MW] The sampler takes 10 mins, but you can use the file in the dropbox folder**
-
 ```{r}
-ins <- '2007-05-01 09:30:00/2007-05-07 23:59:59/'
-T.length = nrow(zig[ins])
-K = 4
-L = 9
-O = matrix(1:L, 1, L, TRUE)
-x = as.vector(zig[ins]$feature)
-
-oos <- '2007-05-08 09:30:00/2007-05-08 23:59:59/'
-T.oos = nrow(zig[oos])
-x.oos = as.vector(zig[oos]$feature)
-
-use.cache = TRUE
-
-n.iter = 500
-n.warmup = 250
-n.chains = 1
-n.cores = 1
-n.thin = 1
-n.seed = 9000
+T.ins <- nrow(zig.ins)
+x.ins <- as.vector(zig.ins$feature)
+T.oos <- nrow(zig.oos)
+x.oos <- as.vector(zig.oos$feature)
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-stan.model = 'stan/hhmm-tayal2009-oos.stan'
-stan.cache = 'stan_cache/hhmm-tayal2009-oos.RDS'
+stan.model = 'stan/hhmm-tayal2009-lite.stan'
 
 stan.data = list(
-  T = T.length,
+  T = T.ins,
   K = K,
   L = L,
-  sign = ifelse(x < L + 1, 1, 2),
-  x = ifelse(x < L + 1, x, x - L),
+  sign = ifelse(x.ins < L + 1, 1, 2),
+  x = ifelse(x.ins < L + 1, x.ins, x.ins - L),
   T_oos = T.oos,
   sign_oos = ifelse(x.oos < L + 1, 1, 2),
-  x_oos = ifelse(x.oos < L + 1, x.oos, x.oos - L)
-)
+  x_oos = ifelse(x.oos < L + 1, x.oos, x.oos - L))
 
-if (use.cache & file.exists(stan.cache)) {
-  stan.fit <- readRDS(stan.cache)
+# A naive implementation for a stan cache
+cache.objects  <- list(series, features.alpha,
+                       stan.model, readLines(stan.model),
+                       stan.data, n.iter, n.warmup,
+                       n.thin, n.chains, n.cores, n.seed)
+
+cache.digest   <- digest(cache.objects)
+cache.filename <- file.path(cache.path, paste0(cache.digest, ".RDS"))
+
+if (!is.null(cache.path) & file.exists(cache.filename)) {
+  stan.fit <- readRDS(cache.filename)
 } else {
   stan.fit <- stan(file = stan.model,
                    model_name = stan.model,
@@ -358,124 +391,139 @@ if (use.cache & file.exists(stan.cache)) {
                    thin = n.thin, chains = n.chains,
                    cores = n.cores, seed = n.seed)
 
-  if (use.cache)
-    saveRDS(stan.fit, stan.cache)
+  if (!is.null(cache.path))
+    saveRDS(stan.fit, cache.filename)
 }
+
+rm(cache.objects, cache.digest, cache.filename)
 
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-...
+```{r}
+print(matrix(summary(stan.fit,
+               pars = c('p_1k'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       1, K, TRUE))
+```
+
+```{r}
+print(matrix(summary(stan.fit,
+               pars = c('A_ij'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, K, TRUE))
+```
+
+```{r}
+print(matrix(summary(stan.fit,
+               pars = c('phi_k'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
+       K, L, TRUE))
+```
 
 ### Convergence
 
-```{r, echo = FALSE}
-summary(stan.fit,
+Mixing and convergence to a stationary distribution is very good. Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes far easier to program and convergence.
+
+```{r}
+print(summary(stan.fit,
         pars = c('p_1k', 'A_ij', 'phi_k'),
-        probs = c(0.50))$summary
+        probs = c(0.50))$summary)
 ```
 
-Converge is fine. Try shinystan if you need to see more.
-
-...
+Comments.
 
 ### State probability
 
-Estimated parameters:
+```{r}
+# Extraction
+alpha_tk.ins  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
+alpha_tk.oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
 
-```{r, echo = FALSE}
-options(digits = 2)
+# Hard classification
+state.filtered.ins <- apply(apply(alpha_tk.ins, c(2, 3), median), 1, which.max)
+state.filtered.oos <- apply(apply(alpha_tk.oos, c(2, 3), median), 1, which.max)
+state.filtered     <- c(state.filtered.ins, state.filtered.oos)
 
-print("Estimated initial state probabilities")
-summary(stan.fit,
-        pars = c('p_1k'),
-        probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+# Top state classification ------------------------------------------------
+topstate.labels <- c("Bear", "Bull")
+topstate.pairs  <- list(c(1, 2), c(3, 4))  # bottom-node to top-node map
+topstate.index  <- c(state.bear, state.bull)
 
-print("Estimated probabilities in the transition matrix")
-matrix(summary(stan.fit,
-               pars = c('A_ij'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-       K, K, TRUE)
+# assign zig-zag to top states
+zig$topstate <- state.filtered
+for (i in 1:length(topstate.pairs))
+  zig$topstate[state.filtered %in% topstate.pairs[[i]]] <- topstate.index[i]
 
-print("Estimated event probabilities in each state")
-matrix(summary(stan.fit,
-               pars = c('phi_k'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-       K, L, TRUE)
+zig$topstate.chg    <- zig$topstate != lag(zig$topstate)
+zig$topstate.chg[1] <- TRUE
+
+# build top sequence
+top     <- zig[zig$topstate.chg == TRUE, ]
+top$end <- c(as.numeric(tail(top$start, -1)) - 1, last(zig$end))
+top$len <- top$end - top$start
+top$ret <- (as.numeric(tdata[top$end, 1]) - as.numeric(tdata[top$start, 1])) / as.numeric(tdata[top$start, 1])
+
+# label top nodes
+if (mean(top$ret[top$topstate == state.bear]) > mean(top$ret[top$topstate == state.bull])) {
+  top$topstate <- ifelse(top$topstate == state.bear, state.bull, state.bear)
+  zig$topstate <- ifelse(zig$topstate == state.bear, state.bull, state.bear)
+  print(sprintf("I identified top-nodes as bears and bulls.
+                Result: Bear = %0.4f%% vs Bull = %0.4f%%",
+                mean(top$ret[top$topstate == state.bear]),
+                mean(top$ret[top$topstate == state.bull])))
+}
+
+tdata     <- xts_expand(tdata, zig[, c('feature', 'topstate')])
+tdata.ins <- tdata[ins]
+tdata.oos <- tdata[oos]
+zig.ins   <- zig[ins]
+zig.oos   <- zig[oos]
+top.ins   <- top[ins]
+top.oos   <- top[oos]
 ```
 
-**[MW] It's very suspicious that only two states switch (one for negative and the other for positive zig-zags). In the end, it's just "classifying" all negatives to one hidden state, all positives to the other. All negative zig-zags are "bear" and all positive zig-zags are "bulls". **
+Observations are hard classified as belonging to the emission state (one of the four possible bottom-node) with largest forward probability. By the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
+
+The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the two top nodes are symmetrical, thus they do not have a predetermined label. We label them as run and reversals according to the expected trade returns observed in-sample.
+
+```{r}
+knitr::kable(t(as.data.frame(topstate_summary(top.ins))), booktabs = TRUE,
+             #row.names = c('Mean', 'Sd', 'Skewness', 'Kurtosis', 'q_25\\%', 'Median', 'q_75\\%', 'Mean length', 'Median length'),
+             caption = "")
+```
+
+```{r out.width = '\\textwidth', fig.height = 4}
+plot_topstate_hist(top.ins$ret, top.ins$topstate,
+                main.lab = "Return", x.lab = "R")
+```
+
+Analyse mean, sd, kurtosis, etc.
+
+```{r}
+knitr::kable(ptab(t(topstate_summary(top.ins))), booktabs = TRUE,
+             #row.names = c('Mean', 'Sd', 'Skewness', 'Kurtosis', 'q_25\\%', 'Median', 'q_75\\%', 'Mean length', 'Median length'),
+             caption = "")
+```
 
 ...
 
 ### Fitted output
 
-```{r}
-# Extraction
-alpha_tk      <- extract(stan.fit, pars = 'alpha_tk')[[1]]
-alpha_tk_oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
-class.fil     <- apply(apply(alpha_tk, c(2, 3), median), 1, which.max)
-class.fil_oos <- apply(apply(alpha_tk_oos, c(2, 3), median), 1, which.max)
-```
 
 Now, look how at how the features are classified:
 
-```{r}
-table(x, class.fil)
-```
+
 
 The model has four production/emission states: 1, 2, 3 and 4. 1 and 3 for negative legs and 2 and 4 for positive legs. States 1 and 2 belong to the "bull" state while 3 and 4 belong to "bear" state. There can be negative legs in bull states (they're negative but with little volume) and positive legs in bear states (positive but, again, with little volume).
 
 Our sampler, tho, maps each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated.
 
-```{r, echo = FALSE}
-plot_state_returns <- function(x, top, state.labels = c('Bull', 'Bear'), qs = c(0.05, 0.50, 0.95), ...) {
-  opar <- par(TRUE)
-
-  par(mfrow = c(1, 2))
-  my.xlim <- c(min(x), max(x))
-  for (i in c(state.bear, state.bull)) {
-    rx <- x[top == i]
-    lb <- if (i == state.bear) {state.labels[2]} else {state.labels[1]}
-
-    h <- hist(rx, plot = FALSE)
-
-    plot(h, xlim = my.xlim,
-         main = bquote("Returns in " * .(lb) * " top state"),
-         xlab = bquote(R),
-         col = 'lightgray', border = 'gray')
-
-    if (!is.null(qs)) {
-      qx <- quantile(rx, c(0.05, 0.50, 0.95))
-      abline(v = qx, lwd = 1, lty = 2, col = 'gray')
-      legend(x = "topright", bty = 'n', cex = 0.60, xjust = 1, yjust = 1,
-             legend = bquote(.(sprintf("q[%s] ~ \"=\" ~ %0.3f%%", names(qx), 100 * qx))))
-    }
-  }
-  invisible(par(opar))
-}
-```
 
 1. Look at forward probabilities (the two columns are repeated since I don't compute smoothed probabilities to improve computational time)
 
-```{r}
-plot_stateprobability(alpha_tk, alpha_tk, 0.8)
-```
 
 2. Then the distribution of returns inside each "top state" (either bull or bear). These top states should have two children state for positive/negative legs each. States 1 and 2 = Bull (greater mean return), states 3 and 4 = bear (smaller mean return).
-
-```{r}
-zig.in <- zig[ins]
-zig.in$topstate     <- ifelse(class.fil == 1 | class.fil == 2, state.bull, state.bear)
-zig.in$topstate.chg <- zig.in$topstate != lag(zig.in$topstate)
-zig.in$topstate.chg[1] <- TRUE
-
-top.in     <- zig.in[zig.in$topstate.chg == TRUE, ]
-top.in$end <- c(as.numeric(tail(top.in$start, -1)) - 1, last(zig.in$end))
-top.in$ret <- (as.numeric(tdata[top.in$end, 1]) - as.numeric(tdata[top.in$start, 1])) / as.numeric(tdata[top.in$start, 1])
-
-plot_state_returns(top.in$ret, top.in$topstate)
-```
 
 <!-- Plotting ** TITLE SAYS RETURNS BUT IT'S TOP STATE LENGTH!** (ie how many ticks until the top state switches). -->
 

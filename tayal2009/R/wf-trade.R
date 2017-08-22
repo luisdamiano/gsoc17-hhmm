@@ -12,14 +12,13 @@ source('tayal2009/R/trading-rules.R')
 # ------------------------------------------------------------------------
 # An automated rolling window forecasting process.
 # ------------------------------------------------------------------------
-# rstan_options(auto_write = TRUE)
-# n.samples = (n.iter - n.warmup) * n.chains
+wf_trade <- function(task.list,
+                     features.alpha, K, L,
+                     n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed,
+                     cache.path) {
 
-wf_trade <- function(files.list, ins.list, oos.list, features.alpha, K, L,
-                        n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed,
-                        cache.path = "fore_cache/") {
-  # cl <- makeCluster(parallel::detectCores())
-  cl <- makeCluster(n.cores, outfile = "")
+  wd <- getwd()
+  cl <- makeCluster(n.cores, outfile = file.path(cache.path, "log.txt"))
   clusterCall(cl, function() {
     source('tayal2009/R/constants.R')
     source('tayal2009/R/feature-extraction.R')
@@ -29,14 +28,15 @@ wf_trade <- function(files.list, ins.list, oos.list, features.alpha, K, L,
 
   # Data fetching and pre-processing ----------------------------------------
   results <- foreach(
-    i = 1:length(files.list),
+    task = task.list,
     .packages = c("digest", "rstan", "xts")
   ) %dopar% {
-    data.files <- files.list[[i]]
-    ins <- ins.list[[i]]
-    oos <- oos.list[[i]]
+    setwd(wd)
+    data.files <- task[[1]]
+    ins <- task[[2]]
+    oos <- task[[3]]
 
-    print(paste(Sys.info()[['nodename']], Sys.getpid(), "Start ", data.files, ins, oos))
+    print(paste(Sys.time(), Sys.info()[['nodename']], Sys.getpid(), "Start ", paste(data.files, collapse = " || "), ins, oos))
 
     data.env <- new.env()
     series <- do.call(rbind, lapply(data.files, function(f) {
@@ -134,10 +134,6 @@ wf_trade <- function(files.list, ins.list, oos.list, features.alpha, K, L,
     if (mean(top$ret[top$topstate == state.bear]) > mean(top$ret[top$topstate == state.bull])) {
       top$topstate <- ifelse(top$topstate == state.bear, state.bull, state.bear)
       zig$topstate <- ifelse(zig$topstate == state.bear, state.bull, state.bear)
-      print(sprintf("I identified top-nodes as bears and bulls.
-                Result: Bear = %0.4f%% vs Bull = %0.4f%%",
-                    mean(top$ret[top$topstate == state.bear]),
-                    mean(top$ret[top$topstate == state.bull])))
     }
 
     tdata     <- xts_expand(tdata, zig[, c('feature', 'topstate')])
@@ -160,10 +156,11 @@ wf_trade <- function(files.list, ins.list, oos.list, features.alpha, K, L,
         saveRDS(trade.list, cache.filename)
     }
 
-    print(paste(Sys.info()[['nodename']], Sys.getpid(), "End   ", data.files, ins, oos))
+    print(Sys.time(), paste(Sys.info()[['nodename']], Sys.getpid(), "End   ", paste(data.files, collapse = " || "), ins, oos))
 
     gc()
-    return(list(cache.filename, trade.list))
+    return(1)
+    # return(list(stan.fit, trade.list))
   }
 
   stopCluster(cl)

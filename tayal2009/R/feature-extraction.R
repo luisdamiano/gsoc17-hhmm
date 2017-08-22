@@ -1,3 +1,9 @@
+xts_expand <- function(long, short, ...) {
+  expand <- merge(long, short, join = 'left', ...)
+  expand <- na.locf(na.locf(expand, fromLast = TRUE))
+  expand
+}
+
 # tdata has to be a xts with two columns price and size
 extract_features <- function(tdata, alpha = 0.25) {
   # 1. Initial checks

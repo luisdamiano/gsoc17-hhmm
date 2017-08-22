@@ -1,9 +1,3 @@
-xts_expand <- function(long, short, ...) {
-  expand <- merge(long, short, join = 'left', ...)
-  expand <- na.locf(na.locf(expand, fromLast = TRUE))
-  expand
-}
-
 topstate_summary <- function(top, topstate.label = c("Bear", "Bull")) {
   mat <- sapply(sort(unique(top$topstate)), function(i) {
     ind <- top$topstate == i
@@ -184,83 +178,6 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   par(opar)
 }
 
-plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
-  # 2. Data extraction
-  price <- tdata$PRICE
-  size  <- tdata$SIZE
-
-  opar <- par(no.readonly = TRUE)
-  layout(matrix(1:2, nrow = 2, ncol = 1), heights = c(0.75, 0.25))
-
-  # 4. Plot I: Prices, extrema and features
-  price.x <- index(tdata)
-  price.y <- as.vector(price)
-  price.top <- tdata$topstate
-  x.at <- axTicksByTime(tdata, format.labels = "%H:%M:%S")
-
-  # Price
-  par(mar = c(0.0, 5.0, 4.1, 2.1))
-  plot(x = price.x, y = price.y, type = 'l',
-       ylab = expression("Price" ~ p[t]), cex.axis = 0.70,
-       cex.lab = 0.85, xaxt = 'n', yaxt = 's',
-       lwd = 2.0, col = "lightgray")
-
-  axis(3, at = xy.coords(price.x, price.y)$x[x.at],
-       labels = names(x.at), cex.axis = 0.75, las = 2)
-
-  all.palette <- tail(ifelse(price.top == state.bull, 'green3',
-                             ifelse(price.top == state.bear, 'red',
-                                    'blue')), -1)
-
-  segments(head(price.x, -1), head(price.y, -1),
-           tail(price.x, -1), tail(price.y, -1),
-           col = tail(all.palette, -1),
-           lwd = 2)
-
-  if (!is.null(main.lab)) {
-    text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
-         labels = main.lab,
-         pos = 4, cex = 0.6, font = 2)
-  }
-
-  legend(x = "topright",
-         legend = c('Bullish top state', 'Bearish top state'),
-         lwd = 2,
-         col = c('green3', 'red'),
-         bty = 'n', cex = 0.6,
-         horiz = TRUE)
-
-  # Plot 2 Volume
-  volume.y <- as.vector(size)
-  volume.x <- na.locf(cbind(size, zigzag$f2), fromLast = TRUE)
-  volume.palette <- ifelse(volume.x$f2 == volume.up, 'green3',
-                           ifelse(volume.x$f2 == volume.dn, 'red',
-                                  'blue'))
-
-  par(mar = c(3.1, 5.0, 0.0, 2.1))
-  par(mgp = c(3.0, 1.0, 0.0))
-  barplot(height = volume.y,
-          ylab = expression("Volume" ~ v[t]),
-          ylim = c(0, quantile(volume.y, 0.9999)),
-          cex.axis = 0.70,
-          cex.lab = 0.85, xaxt = 'n', yaxt = 's',
-          border = volume.palette,
-          col = volume.palette)
-  box()
-
-  title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
-
-  legend(x = "topleft",
-         legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
-         lwd = c(2,  2,  2),
-         col = c('green3', 'red', 'blue'),
-         bty = 'n', cex = 0.6,
-         y.intersp	= 0.0, # x.intersp = 0.2,
-         # text.width = 20.0,
-         horiz = TRUE)
-  par(opar)
-}
-
 plot_topstate_hist <- function(x, top,
                             qs = c(0.05, 0.50, 0.95),
                             topstate.label = c('Bear', 'Bull'),
@@ -343,6 +260,83 @@ plot_topstate_seq <- function(tdata, top, main.lab = NULL, ...) {
   invisible()
 }
 
+plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
+  # 2. Data extraction
+  price <- tdata$PRICE
+  size  <- tdata$SIZE
+
+  opar <- par(no.readonly = TRUE)
+  layout(matrix(1:2, nrow = 2, ncol = 1), heights = c(0.75, 0.25))
+
+  # 4. Plot I: Prices, extrema and features
+  price.x <- index(tdata)
+  price.y <- as.vector(price)
+  price.top <- tdata$topstate
+  x.at <- axTicksByTime(tdata, format.labels = "%H:%M:%S")
+
+  # Price
+  par(mar = c(0.0, 5.0, 4.1, 2.1))
+  plot(x = price.x, y = price.y, type = 'l',
+       ylab = expression("Price" ~ p[t]), cex.axis = 0.70,
+       cex.lab = 0.85, xaxt = 'n', yaxt = 's',
+       lwd = 2.0, col = "lightgray")
+
+  axis(3, at = xy.coords(price.x, price.y)$x[x.at],
+       labels = names(x.at), cex.axis = 0.75, las = 2)
+
+  all.palette <- tail(ifelse(price.top == state.bull, 'green3',
+                             ifelse(price.top == state.bear, 'red',
+                                    'blue')), -1)
+
+  segments(head(price.x, -1), head(price.y, -1),
+           tail(price.x, -1), tail(price.y, -1),
+           col = tail(all.palette, -1),
+           lwd = 2)
+
+  if (!is.null(main.lab)) {
+    text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
+         labels = main.lab,
+         pos = 4, cex = 0.6, font = 2)
+  }
+
+  legend(x = "topright",
+         legend = c('Bullish top state', 'Bearish top state'),
+         lwd = 2,
+         col = c('green3', 'red'),
+         bty = 'n', cex = 0.6,
+         horiz = TRUE)
+
+  # Plot 2 Volume
+  volume.y <- as.vector(size)
+  volume.x <- na.locf(cbind(size, zigzag$f2), fromLast = TRUE)
+  volume.palette <- ifelse(volume.x$f2 == volume.up, 'green3',
+                           ifelse(volume.x$f2 == volume.dn, 'red',
+                                  'blue'))
+
+  par(mar = c(3.1, 5.0, 0.0, 2.1))
+  par(mgp = c(3.0, 1.0, 0.0))
+  barplot(height = volume.y,
+          ylab = expression("Volume" ~ v[t]),
+          ylim = c(0, quantile(volume.y, 0.9999)),
+          cex.axis = 0.70,
+          cex.lab = 0.85, xaxt = 'n', yaxt = 's',
+          border = volume.palette,
+          col = volume.palette)
+  box()
+
+  title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
+
+  legend(x = "topleft",
+         legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
+         lwd = c(2,  2,  2),
+         col = c('green3', 'red', 'blue'),
+         bty = 'n', cex = 0.6,
+         y.intersp	= 0.0, # x.intersp = 0.2,
+         # text.width = 20.0,
+         horiz = TRUE)
+  par(opar)
+}
+
 plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", "Bull")) {
   topstate <- sort(unique(top))
   n <- length(topstate)
@@ -372,4 +366,128 @@ plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", 
 
   par(opar)
   invisible()
+}
+
+plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
+  # 2. Data extraction
+  price <- tdata$PRICE
+  size  <- tdata$SIZE
+  if (!is.list(trades)) { trades <- list(trades) }
+
+  opar <- par(no.readonly = TRUE)
+  layout(matrix(1:3, nrow = 3, ncol = 1), heights = c(0.60, 0.25, 0.15))
+
+  # 4. Plot I: Prices and features
+  price.x    <- index(tdata)
+  price.y    <- as.vector(price)
+  price.top  <- tdata$topstate
+  x.at <- axTicksByTime(tdata, format.labels = "%H:%M:%S")
+
+  # Plot I Equity line
+  my.ylim = c(min(sapply(trades, function(t){min(c(cumprod(1 + t$perchg), cumprod(1 + t$ret)))})),
+              max(sapply(trades, function(t){max(c(cumprod(1 + t$perchg), cumprod(1 + t$ret)))})))
+  par(mar = c(0.0, 5.0, 4.1, 2.1))
+  # plot(x = equity.x, y = cumprod(1 + trades[[1]]$ret), type = 'l',
+  plot(NULL,
+       ylab = expression("Equity line"), cex.axis = 1.00,
+       cex.lab = 1.00, xaxt = 'n', yaxt = 's',
+       xlim = c(min(price.x), max(price.x)),
+       ylim = my.ylim,
+       lwd = 2.0, col = "lightgray")
+
+  axis(3, at = xy.coords(price.x, price.y)$x[x.at],
+       labels = names(x.at), cex.axis = 0.75, las = 2)
+
+  # for (t in trades) {
+  for (i in 1:length(trades)) {
+    t <- trades[[i]]
+    t.lty <- rep(1:6, ceiling(length(trades) / 6))[i]
+    equity.x   <- index(t)
+    equity.str <- cumprod(1 + t$ret)
+    equity.top <- t$topstate
+    equity.bnh <- cumprod(1 + t$perchg)
+
+    all.palette <- tail(ifelse(equity.top == state.bull, 'green3',
+                               ifelse(equity.top == state.bear, 'red',
+                                      'blue')), -1)
+
+    lines(equity.x, equity.str, col = i, lwd = 1)
+
+    lines(equity.x, equity.bnh, col = "gray", lty = t.lty)
+
+    text(x = last(equity.x), y = last(equity.str),
+         pos = 4, labels = bquote("Trading lag = "*.(attr(t, 'lag'))*" ticks"),
+         cex = 1.0, col = i)
+  }
+
+  text(x = last(index(trades[[1]])), y = last(cumprod(1 + trades[[1]]$perchg)),
+       pos = 4, labels = bquote("Buy and hold"),
+       cex = 1.0, col = 'gray')
+
+  abline(h = 1, col = 'lightgray')
+
+  if (!is.null(main.lab)) {
+    text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
+         labels = main.lab,
+         pos = 4, cex = 1.0, font = 2)
+  }
+
+  # Plot II Price and features
+  par(mar = c(0.0, 5.0, 0.0, 2.1))
+  plot(x = price.x, y = price.y, type = 'l',
+       ylab = expression("Price" ~ p[t]), cex.axis = 1.00,
+       cex.lab = 1.00, xaxt = 'n', yaxt = 's',
+       lwd = 2.0, col = "lightgray")
+
+  all.palette <- tail(ifelse(price.top == state.bull, 'green3',
+                             ifelse(price.top == state.bear, 'red',
+                                    'blue')), -1)
+
+  segments(head(price.x, -1), head(price.y, -1),
+           tail(price.x, -1), tail(price.y, -1),
+           col = tail(all.palette, -1),
+           lwd = 2)
+
+  if (!is.null(main.lab)) {
+    text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
+         labels = main.lab,
+         pos = 4, cex = 1.0, font = 2)
+  }
+
+  legend(x = "topright",
+         legend = c('Bullish top state', 'Bearish top state'),
+         lwd = 2, y.intersp	= 0.0,
+         col = c('green3', 'red'),
+         bty = 'n', cex = 1.0,
+         horiz = TRUE)
+
+  # Plot III Volume
+  volume.y <- as.vector(size)
+  volume.x <- na.locf(cbind(size, zigzag$f2), fromLast = TRUE)
+  volume.palette <- ifelse(volume.x$f2 == volume.up, 'green3',
+                           ifelse(volume.x$f2 == volume.dn, 'red',
+                                  'blue'))
+
+  par(mar = c(3.1, 5.0, 0.0, 2.1))
+  par(mgp = c(3.0, 1.0, 0.0))
+  barplot(height = volume.y,
+          ylab = expression("Volume" ~ v[t]),
+          ylim = c(0, quantile(volume.y, 0.99)),
+          cex.axis = 0.70,
+          cex.lab = 0.85, xaxt = 'n', yaxt = 's',
+          border = volume.palette,
+          col = volume.palette)
+  box()
+
+  title(xlab = expression("Time" ~ t), mgp = c(0.5, 0, 0))
+
+  legend(x = "topleft",
+         legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
+         lwd = c(2,  2,  2),
+         col = c('green3', 'red', 'blue'),
+         bty = 'n', cex = 0.85,
+         y.intersp	= 0.0,
+         horiz = TRUE)
+
+  par(opar)
 }
