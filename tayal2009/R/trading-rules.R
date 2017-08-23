@@ -19,7 +19,7 @@ topstate_trading <- function(tdata, lag) {
 }
 
 buyandhold <- function(tdata) {
-  entryp <- as.numeric(tdata[1, 1])
-  exitp  <- as.numeric(tdata[nrow(tdata), 1])
+  entryp <- as.numeric(head(tdata[, 1], -1))
+  exitp  <- as.numeric(tail(tdata[, 1], -1))
   return((exitp - entryp) / entryp)
 }

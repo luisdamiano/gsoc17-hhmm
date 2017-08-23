@@ -36,7 +36,9 @@ wf_trade <- function(task.list,
     ins <- task[[2]]
     oos <- task[[3]]
 
-    print(paste(Sys.time(), Sys.info()[['nodename']], Sys.getpid(), "Start ", paste(data.files, collapse = " || "), ins, oos))
+    print_debug <- function(x) {
+      print(paste(Sys.time(), Sys.info()[['nodename']], Sys.getpid(), x, ins, oos, paste(data.files, collapse = " || ")))
+    }
 
     data.env <- new.env()
     series <- do.call(rbind, lapply(data.files, function(f) {
@@ -53,14 +55,17 @@ wf_trade <- function(task.list,
 
     # Feature extraction ------------------------------------------------------
     zig <- extract_features(tdata, features.alpha)
-    zig.ins <- zig[ins]
-    zig.oos <- zig[oos]
+    ind <- zig[ins, which.i = TRUE]
+    zig.ins <- zig[ind]
+    zig.oos <- zig[(last(ind) + 1):nrow(zig)]
 
     # Model estimation --------------------------------------------------------
     T.ins <- nrow(zig.ins)
     x.ins <- as.vector(zig.ins$feature)
     T.oos <- nrow(zig.oos)
     x.oos <- as.vector(zig.oos$feature)
+
+    print_debug(sprintf("Found data: %d tdata, %d zigzags", nrow(tdata), nrow(zig)))
 
     rstan_options(auto_write = TRUE)
     options(mc.cores = parallel::detectCores())
@@ -87,8 +92,10 @@ wf_trade <- function(task.list,
     cache.filename <- file.path(cache.path, paste0(cache.digest, ".RDS"))
 
     if (!is.null(cache.path) & file.exists(cache.filename)) {
+      print_debug(paste("Model was cached!", cache.filename))
       stan.fit <- readRDS(cache.filename)
     } else {
+      print_debug(paste("Model not cached!", cache.filename))
       stan.fit <- stan(file = stan.model,
                        model_name = stan.model,
                        data = stan.data, verbose = T,
@@ -145,8 +152,10 @@ wf_trade <- function(task.list,
     cache.filename <- file.path(cache.path, paste0(cache.digest, ".RDS"))
 
     if (!is.null(cache.path) & file.exists(cache.filename)) {
+      print_debug(paste("Trades were cached!", cache.filename))
       trade.list <- readRDS(cache.filename)
     } else {
+      print_debug(paste("Trades not cached!", cache.filename))
       trade.list <- list(buyandhold   = buyandhold(tdata.oos),
                          strategy0lag = topstate_trading(tdata.oos, 0),
                          strategy1lag = topstate_trading(tdata.oos, 1),
@@ -156,10 +165,10 @@ wf_trade <- function(task.list,
         saveRDS(trade.list, cache.filename)
     }
 
-    print(Sys.time(), paste(Sys.info()[['nodename']], Sys.getpid(), "End   ", paste(data.files, collapse = " || "), ins, oos))
+    print_debug(paste("End", cache.filename))
 
     gc()
-    return(1)
+    return(list(ins, oos, tdata, trade.list))
     # return(list(stan.fit, trade.list))
   }
 

@@ -9,29 +9,23 @@ output:
     citation_package: biblatex
     includes:
       in_header:  ../common/Rmd/preamble-latex.Rmd
-  # rmarkdown::html_vignette:
-  #   toc: true
-  #   number_sections: true
-  #   self_contained: true
-  #   includes:
-  #     in_header: ../common/Rmd/preamble-html.Rmd
-# vignette: >
-#   %\VignetteIndexEntry{Input-Output Hidden Markov Model}
-#   %\VignetteEngine{knitr::rmarkdown}
-#   %\VignetteEncoding{UTF-8}
 bibliography: ../common/references.bib
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE)
 ```
 
 ```{r}
-pint <- function(x) { formatC(x, format = "d", big.mark = ",") }
-pflo <- function(x) { formatC(x, format = "f", big.mark = ",", decimal.mark = ".") }
+pint <- function(x) { print(formatC(x, format = "d", big.mark = ",")) }
+pflo <- function(x) { print(formatC(x, format = "f", big.mark = ",", decimal.mark = ".")) }
 ptab <- function(x) { sapply(x, function(e) {sprintf("%0.2f", e)}) }
+pmat  <- function(mat, row.names = NULL, digits = NULL, ...) {
+  if (!is.null(digits)) {mat <- round(mat, digits)}
+  if (!is.null(row.names)) {mat <- cbind(row.names, mat)}
+  knitr::kable(mat, booktabs = TRUE, row.names = FALSE, ...)
+}
 ```
-
 
 ```{r}
 library(digest)
@@ -240,14 +234,14 @@ and transition matrix
 \[
 \mat{A} =
   \begin{bmatrix}
-    p_{11} & p_{12} & 1 - p_{11} - p_{12} & 0                   \\
+    a_{11} & a_{12} & 1 - a_{11} - a_{12} & 0                   \\
     1      & 0      & 0                   & 0                   \\
-    p_{31} & 0      & p_{33}              & 1 - p_{31} - p_{33} \\
+    a_{31} & 0      & a_{33}              & 1 - a_{31} - a_{33} \\
     0      & 0      & 1                   & 0                   \\
   \end{bmatrix},
 \]
 
-where each element $p_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only five free parameters.
+where each element $a_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only five free parameters.
 
 Does this representation "lose" the hierarchical interpretation of the states? Do transition probabilities summarize all possible paths from one node to the other? In this case I believe there's a 1-to-1 map from the HHMM arrows to the HMM matrix.
 
@@ -265,7 +259,7 @@ The observation model has 32 free parameters.
 On the whole, the parameter vector for the HMM representation reduces to 
 
 \[
-\mat{\theta} = (\pi_1, p_{11}, p_{12}, p_{31}, p_{33}, b^1_{D_l}, b^2_{U_l}, b^3_{U_l}, b^4_{D_l}),
+\mat{\theta} = (\pi_1, a_{11}, a_{12}, a_{31}, a_{33}, b^1_{D_l}, b^2_{U_l}, b^3_{U_l}, b^4_{D_l}),
 \]
 
 with $l \in \{1, \dots, L-1\}$.
@@ -333,21 +327,25 @@ zig.ins <- zig[ins]
 zig.oos <- zig[oos]
 ```
 
-We center our attention on the sequence of trades, disregarding valuable information from the bid and ask series. Future research may employ such information to improve model predictability. We start by extracting the features using the procedure detailed above. We set the threshold for the change in volume indicator variable in $\alpha = 0.25$ as suggested by the author of the original work. In-sample dataset reduced from `r # pint(nrow(tdata[ins, ]))` trade records to `r sprintf("%0.0f", nrow(zig.ins))` zig-zags.
+We center our attention on the sequence of trades, disregarding possibly valuable information from the bid and ask series. Future research may employ such information to improve model predictability. We start by extracting the features using the procedure detailed above. We set the threshold for the change in volume indicator variable in $\alpha = 0.25$ as suggested by the author of the original work. In-sample dataset reduced from `r # pint(nrow(tdata[ins, ]))` trade records to `r sprintf("%0.0f", nrow(zig.ins))` zig-zags.
 
 Apart from the zig-zags themselves, local extrema are interesting on their own. Although we could not gain insight by visually inspecting other intermediate indicators such as the trend $f_1$, further research may find value in them.
 
-```{r, include = TRUE, fig.cap = "Local extrema detected in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
+```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Local extrema detected in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
 ss <- '2007-05-02 10:30:00/2007-05-02 11:30:00'
+opar <- par(TRUE)
+par(cex = 0.7, cex.axis = 0.7, cex.label = 0.7)
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
 ```
 
-\newpage
-\blandscape
-```{r, include = TRUE, fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
+```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
+par(opar)
 ```
-\elandscape
+
+<!-- \newpage -->
+<!-- \blandscape -->
+<!-- \elandscape -->
 
 ### Estimation
 
@@ -400,38 +398,45 @@ rm(cache.objects, cache.digest, cache.filename)
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-```{r}
-print(matrix(summary(stan.fit,
-               pars = c('p_1k'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-       1, K, TRUE))
+We present a summary of the estimates in \ref{tab:param-estimates}. We 
+
+\tiny
+```{r, include = TRUE}
+mat <- summary(stan.fit, pars = c('p_1k', 'A_ij', 'A_ij'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+mat <- mat[mat[, 5] != 0, ]
+
+pmat(round(mat, 4),
+     col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
+     row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
+                   '$a_{11}$', '$a_{12}$', '$1 - a_{11} - a_{12}$', 
+                   '$a_{22}$', 
+                   '$a_{31}$', '$a_{33}$', '$1 - a_{31} - a_{33}$', 
+                   '$a_{44}$'),
+     align = 'r', scientific = FALSE)
+
+mat <- summary(stan.fit, pars = c('phi_k'),
+               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+
+pmat(round(mat, 4),
+     col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
+     row.names = c(paste0('$U_', 1:9, '$'), paste0('D_', 1:9, '$')),
+     align = 'r', scientific = FALSE,
+     caption = "\\label{tab:param-estimates}")
 ```
 
-```{r}
-print(matrix(summary(stan.fit,
-               pars = c('A_ij'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-       K, K, TRUE))
-```
 
-```{r}
-print(matrix(summary(stan.fit,
-               pars = c('phi_k'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)][, 4],
-       K, L, TRUE))
-```
+
+\normalsize
 
 ### Convergence
 
-Mixing and convergence to a stationary distribution is very good. Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes far easier to program and convergence.
-
-```{r}
-print(summary(stan.fit,
-        pars = c('p_1k', 'A_ij', 'phi_k'),
-        probs = c(0.50))$summary)
-```
+Mixing and convergence to the stationary distribution is acceptable. As an illustration, Figure \ref{} shows the trace plot of some arbitrary parameters. Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the appendix.
 
 Comments.
+
+Plot
 
 ### State probability
 
@@ -483,7 +488,7 @@ top.ins   <- top[ins]
 top.oos   <- top[oos]
 ```
 
-Observations are hard classified as belonging to the emission state (one of the four possible bottom-node) with largest forward probability. By the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
+Observations are hard assigned to the emission state from the four possible bottom-node) with largest forward probability. By the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
 
 The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the two top nodes are symmetrical, thus they do not have a predetermined label. We label them as run and reversals according to the expected trade returns observed in-sample.
 
@@ -561,13 +566,33 @@ Our sampler, tho, maps each of the 18 possible features into one state. For exam
 
 ---
 
+# References
+
+<div id="refs"></div>
+
+---
+
+# Appendix
+
+\small
+```{r, include = TRUE}
+mat <- summary(stan.fit, pars = c('p_1k', 'A_ij', 'A_ij', 'phi_k'),
+               probs = c(0.10, 0.50, 0.90))$summary
+
+pmat(mat,
+     col.names = c('Parameter', 'Mean', 'Mean Std. Error', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$', 'Eff. sample size', '$\\hat{R}$'),
+     row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
+                   '$a_{11}$', '$a_{12}$', '$1 - a_{11} - a_{12}$', 
+                   '$a_{22}$', 
+                   '$a_{31}$', '$a_{33}$', '$1 - a_{31} - a_{33}$', 
+                   '$a_{44}$'),
+     digits = 4, align = 'r', scientific = FALSE)
+```
+\normalsize
+
 # Original Computing Environment
 
 ```{r}
 writeLines(readLines(file.path(Sys.getenv("HOME"), ".R/Makevars")))
 devtools::session_info("rstan")
 ```
-
----
-
-# References

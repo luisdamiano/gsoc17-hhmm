@@ -14,7 +14,7 @@ window.oos <- 1
 window.all <- window.ins + window.oos
 
 # Parallel walking forward
-n.cores = 4
+n.cores = 3
 
 # MCMC settings
 n.iter = 500
@@ -55,5 +55,23 @@ task.list <- do.call(c, lapply(dir(data.path), function(d) { # d = one stock
 
 # Ready, steady... GO! ----------------------------------------------------
 # runs the strategy walking forward
-wf_trade(task.list, features.alpha, K, L,
+tr <- wf_trade(task.list, features.alpha, K, L,
          n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed, cache.path)
+
+apply(sapply(tr, function(t) {
+  c(bh = prod(1 + t[[4]][[1]]) - 1,
+    l0 = prod(1 + t[[4]][[2]]$ret) - 1,
+    l1 = prod(1 + t[[4]][[3]]$ret) - 1,
+    l2 = prod(1 + t[[4]][[4]]$ret) - 1)
+}), 1, function(x) {prod(1 + x) - 1})
+
+
+
+lapply(tr, function(t) {
+  list(
+    bh = as.vector(t[[4]][[1]]),
+    l0 = as.vector(t[[4]][[2]]$ret),
+    l1 = as.vector(t[[4]][[3]]$ret),
+    l2 = as.vector(t[[4]][[4]]$ret))
+})
+
