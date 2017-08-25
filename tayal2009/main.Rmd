@@ -17,6 +17,9 @@ knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE)
 ```
 
 ```{r}
+
+par(cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
+
 pint <- function(x) { print(formatC(x, format = "d", big.mark = ",")) }
 pflo <- function(x) { print(formatC(x, format = "f", big.mark = ",", decimal.mark = ".")) }
 ptab <- function(x) { sapply(x, function(e) {sprintf("%0.2f", e)}) }
@@ -83,6 +86,8 @@ This work aims at ... .
 The authors acknowledge Google for financial support via the Google Summer of Code 2017 program.
 
 ---
+
+# Motivation
 
 # Hierarchical Hidden Markov Models
 
@@ -188,6 +193,8 @@ f_n^2 =
 
 The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, U_9 \}$ are then created using the following table.
 
+\tiny
+
 | Feature           |          $U_1$ |          $U_2$ |           $U_3$ |          $U_4$ |            $U_5$ |      $U_6$ |           $U_7$ |       $U_8$ |         $U_9$ |
 |-------------------|---------------:|---------------:|----------------:|---------------:|-----------------:|-----------:|----------------:|------------:|--------------:|
 | Zig-zag direction |     Upwards<br />+1 |     Upwards<br />+1 |      Upwards<br />+1 |     Upwards<br />+1 |       Upwards<br />+1 | Upwards<br />+1 |      Upwards<br />+1 |  Upwards<br />+1 |    Upwards<br />+1 |
@@ -203,6 +210,8 @@ The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, 
 | Market state      |      Bullish |       Bullish |         Bullish |        Bullish | Local volatility |        Bearish |         Bearish |        Bearish |        Bearish |
 
 Table: Summary of feature space.
+
+\normalsize
 
 **Plot here showing some example**
 
@@ -279,6 +288,7 @@ Note that we do not model prices directly. Instead, non-linear transforms are ap
 ...
 
 ## Methodology
+\label{sec:methodology}
 
 Model parameters are estimated on a rolling window with five days each. Since top nodes are symmetrical, states are labeled ex-post based on the order of the in-sample mean of the percentage change in the initial and final price before the top level state switch. The state with larger and smaller returns are marked as bullish (a run) and bearish (a reversal) respectively.
 
@@ -338,7 +348,7 @@ par(cex = 0.7, cex.axis = 0.7, cex.label = 0.7)
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
 ```
 
-```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
+```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00.", warning = FALSE}
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
 par(opar)
 ```
@@ -398,11 +408,11 @@ rm(cache.objects, cache.digest, cache.filename)
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-We present a summary of the estimates in \ref{tab:param-estimates}. We 
+We present a summary of the estimates for the model parameters in \ref{tab:param-estimates}. The top nodes show some persistence since the estimated transition probabilities inside $1 - \\pi_{1}$ and $\\pi_{31}$ are close to $1$. Extreme features are less likely in all states, which is consistent with our empirical observations. Features $D_5$ and $U_5$ are frequent in both regimens. Features $\{D_1, \dots D_4 \}$ are more frequent on the the most frequent positive and negative legs, are linked to local volatility. ** The weakness**.
 
 \tiny
-```{r, include = TRUE}
-mat <- summary(stan.fit, pars = c('p_1k', 'A_ij', 'A_ij'),
+```{r, include = TRUE, warning = FALSE}
+mat <- summary(stan.fit, pars = c('p_1k', 'A_ij'),
                probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 mat <- mat[mat[, 5] != 0, ]
@@ -410,10 +420,10 @@ mat <- mat[mat[, 5] != 0, ]
 pmat(round(mat, 4),
      col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
      row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
-                   '$a_{11}$', '$a_{12}$', '$1 - a_{11} - a_{12}$', 
-                   '$a_{22}$', 
-                   '$a_{31}$', '$a_{33}$', '$1 - a_{31} - a_{33}$', 
-                   '$a_{44}$'),
+                   '$a_{12}$', '$1 - a_{12}$', 
+                   '$a_{21}$', 
+                   '$a_{31}$', '$1 - a_{31}$', 
+                   '$a_{43}$'),
      align = 'r', scientific = FALSE)
 
 mat <- summary(stan.fit, pars = c('phi_k'),
@@ -421,7 +431,7 @@ mat <- summary(stan.fit, pars = c('phi_k'),
 
 pmat(round(mat, 4),
      col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
-     row.names = c(paste0('$U_', 1:9, '$'), paste0('D_', 1:9, '$')),
+     row.names = c(paste0('$U_', 1:9, '$'), paste0('$D_', 1:9, '$')),
      align = 'r', scientific = FALSE,
      caption = "\\label{tab:param-estimates}")
 ```
@@ -432,11 +442,30 @@ pmat(round(mat, 4),
 
 ### Convergence
 
-Mixing and convergence to the stationary distribution is acceptable. As an illustration, Figure \ref{} shows the trace plot of some arbitrary parameters. Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the appendix.
+Figure \ref{fig:diag} illustrates the trace plot of some arbitrary parameters as well as some diagnostic measures. In general terms, mixing and convergence to the stationary distribution is acceptable. The shrink factor of [@gelman1992inference], close to $1$ for all hidden quantities, indicates an adequate degree of convergence. Sampling is efficient as signaled by effective sample size ratios near to $1$ and Monte Carlo Standar Error to posterior standard deviation ratios well below 10%.
 
-Comments.
+```{r include = TRUE, warning = FALSE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\\label{fig:diag}"}
 
-Plot
+quickplot <- function(x, ...) {
+  plot(x, type = 'l', col = 'lightgray', xlab = "Iteration", ...)
+  abline(h = median(x), col = 'gray')
+}
+
+quickhist <- function(x, ...) {
+  hist(x, breaks = "FD", col = 'lightgray', border = 'gray', ...)
+}
+
+par(mfrow = c(2, 3))
+quickplot(extract(stan.fit, pars = 'p_11')[[1]], main = expression(pi[1]), ylab = "")
+quickplot(extract(stan.fit, pars = 'A_ij')[[1]][, 1, 2], main = expression(a[12]), ylab = "")
+quickplot(extract(stan.fit, pars = 'phi_k')[[1]][, 1, 5], main = expression(phi[1*","*5]), ylab = "")
+quickhist(summary(stan.fit)[[1]][, 'Rhat'], main = expression(hat(R) ~ "statistic"), xlab = "")
+quickhist(summary(stan.fit)[[1]][, 'n_eff'] / n.samples, main = expression("Effective sample size (%)"), xlab = "")
+quickhist(summary(stan.fit)[[1]][, 'se_mean'] / summary(stan.fit)[[1]][, 'sd'], main = expression("Monte Carlo SE / SD"), xlab = "")
+
+```
+
+Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the appendix.
 
 ### State probability
 
@@ -488,28 +517,42 @@ top.ins   <- top[ins]
 top.oos   <- top[oos]
 ```
 
-Observations are hard assigned to the emission state from the four possible bottom-node) with largest forward probability. By the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
+The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence avaliable up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
 
-The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the two top nodes are symmetrical, thus they do not have a predetermined label. We label them as run and reversals according to the expected trade returns observed in-sample.
-
-```{r}
-knitr::kable(t(as.data.frame(topstate_summary(top.ins))), booktabs = TRUE,
-             #row.names = c('Mean', 'Sd', 'Skewness', 'Kurtosis', 'q_25\\%', 'Median', 'q_75\\%', 'Mean length', 'Median length'),
-             caption = "")
+```{r include = TRUE, warning = FALSE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Distribution of observed features conditional on the estimated hidden regime (top node)."}
+plot_topstate_features(zig.ins$feature, zig.ins$topstate, L = 9,
+                       cex.names = 0.70, cex.axis = 0.70)
 ```
 
-```{r out.width = '\\textwidth', fig.height = 4}
+The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the top nodes are symmetrical and they do not have an a priori order. We label them as runs and reversals according to the expected trade returns observed in-sample.
+
+\footnotesize
+
+```{r, include = TRUE}
+
+# knitr::kable(t(as.data.frame(topstate_summary(top.ins))), booktabs = TRUE,
+#              col.names = c('Top state', 'Mean', 'Std. dev.', 'Skewness', 'Kurtosis', '$q_{25}$\\%', 'Median', '$q_{75}$\\%', 'Mean length', 'Median length'),
+#              caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns were computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved.")
+
+source('R/state-plots.R')
+pmat(round(t(as.data.frame(topstate_summary(top.ins))), 4), digits = 4,
+             col.names = c('Top state', 'Mean', 'Std. dev.', 'Skewness', 'Kurtosis', '$q_{25}\\%$', 'Median', '$q_{75}\\%$', 'Mean length', 'Median length'),
+             row.names = c('Bear', 'Bull', 'Unconditional'),
+             caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage.")
+```
+
+\normalsize
+
+Bear and bull top states have negative and positive mean respectively by construction. As it is also visible in Figure \ref{fig:ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five day long in-sample dataset. However, bear markets have a marked skew towards negative returns, becomes more risky in term of extreme events (kurtosis) and trades in bear markets tend to last one tick more than bulls.
+
+
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00. \\label{fig:ret-hist}"}
 plot_topstate_hist(top.ins$ret, top.ins$topstate,
-                main.lab = "Return", x.lab = "R")
+                main.lab = "Return", x.lab = "R")#,
+#                cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
 ```
 
-Analyse mean, sd, kurtosis, etc.
-
-```{r}
-knitr::kable(ptab(t(topstate_summary(top.ins))), booktabs = TRUE,
-             #row.names = c('Mean', 'Sd', 'Skewness', 'Kurtosis', 'q_25\\%', 'Median', 'q_75\\%', 'Mean length', 'Median length'),
-             caption = "")
-```
+We remark that trade returns originated in different stocks or timespans do not share these characteristics. Location, dispersion, symmetry and shape of the returns vary along stocks and day of analysis.
 
 ...
 
@@ -580,7 +623,7 @@ mat <- summary(stan.fit, pars = c('p_1k', 'A_ij', 'A_ij', 'phi_k'),
                probs = c(0.10, 0.50, 0.90))$summary
 
 pmat(mat,
-     col.names = c('Parameter', 'Mean', 'Mean Std. Error', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$', 'Eff. sample size', '$\\hat{R}$'),
+     # col.names = colnames(mat),
      row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
                    '$a_{11}$', '$a_{12}$', '$1 - a_{11} - a_{12}$', 
                    '$a_{22}$', 

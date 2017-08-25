@@ -168,7 +168,7 @@ wf_trade <- function(task.list,
     print_debug(paste("End", cache.filename))
 
     gc()
-    return(list(ins, oos, tdata, trade.list))
+    return(list(ins, oos, tdata, trade.list, stan.fit))
     # return(list(stan.fit, trade.list))
   }
 

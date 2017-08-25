@@ -1,7 +1,6 @@
 topstate_summary <- function(top, topstate.label = c("Bear", "Bull")) {
-  mat <- sapply(sort(unique(top$topstate)), function(i) {
-    ind <- top$topstate == i
-    x <- top$ret[ind]
+  mystats <- function(top, ind) {
+    x <- 100 * top$ret[ind]
     l <- top$end[ind] - top$start[ind]
     c(ret_mean     = mean(x),
       ret_stdev    = sd(x),
@@ -10,8 +9,14 @@ topstate_summary <- function(top, topstate.label = c("Bear", "Bull")) {
       ret_iqrange  = quantile(x, c(0.25, 0.50, 0.75)),
       len_mean     = mean(l),
       len_median   = median(l))
+  }
+
+  mat <- sapply(sort(unique(top$topstate)), function(i) {
+    ind <- top$topstate == i
+    mystats(top, ind)
   })
-  colnames(mat) <- topstate.label
+  mat <- cbind(mat, mystats(top, rep(TRUE, nrow(top))))
+  colnames(mat) <- c(topstate.label, "Unconditional")
   return(mat)
 }
 
@@ -202,7 +207,7 @@ plot_topstate_hist <- function(x, top,
     plot(h[[i]], xlim = my.xlim, ylim = my.ylim,
          main = bquote(.(main.lab) ~ "(top state " * .(topstate.label[i]) * ")"),
          xlab = bquote(.(x.lab)),
-         col = 'lightgray', border = 'gray')
+         col = 'lightgray', border = 'gray', ...)
 
     if (!is.null(qs)) {
       qx <- quantile(x[top == topstate[i]], c(0.05, 0.50, 0.95))
@@ -337,7 +342,7 @@ plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
   par(opar)
 }
 
-plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", "Bull")) {
+plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", "Bull"), ...) {
   topstate <- sort(unique(top))
   n <- length(topstate)
   my.ylim <- c(0, 500 * ((max(table(features)) %/% 500) + 1))
@@ -354,12 +359,12 @@ plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", 
             main = bquote("Zig-zags (top state " * .(topstate.label[i]) * ")"),
             xlab = "Feature", ylab = "Frequency",
             beside = TRUE, ylim = my.ylim,
-            col = c('green3', 'red'), border = c('green3', 'red'))
+            col = c('green3', 'red'), border = c('green3', 'red'), ...)
 
     legend(x = "topright",
            legend = c(expression('Positive leg' ~ U[i]),
                       expression('Negative leg' ~ D[i])),
-           bty = 'y', horiz = FALSE, cex = 0.65,
+           bty = 'n', horiz = FALSE, cex = 0.65,
            fill = c('green3', 'red'),
            border = c('green3', 'red'))
   }
