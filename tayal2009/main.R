@@ -125,11 +125,13 @@ launch_shinystan(stan.fit)
 # Extraction
 alpha_tk.ins  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 alpha_tk.oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
+zstar_t.oos   <- extract(stan.fit, pars = 'zstar_t')[[1]]
 
 # Hard classification
 state.filtered.ins <- apply(apply(alpha_tk.ins, c(2, 3), median), 1, which.max)
 state.filtered.oos <- apply(apply(alpha_tk.oos, c(2, 3), median), 1, which.max)
 state.filtered     <- c(state.filtered.ins, state.filtered.oos)
+state.viterbi.oos  <- apply(zstar_t.oos, 2, median)
 
 # Summary -----------------------------------------------------------------
 options(digits = 2)

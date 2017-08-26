@@ -2148,7 +2148,8 @@
     <bcf:citekey order="5">ord2008secret</bcf:citekey>
     <bcf:citekey order="7">wisebourt2011hierarchical</bcf:citekey>
     <bcf:citekey order="9">sandoval2015computational</bcf:citekey>
-    <bcf:citekey order="11">gelman1992inference</bcf:citekey>
+    <bcf:citekey order="11">tayal2009regime</bcf:citekey>
+    <bcf:citekey order="13">gelman1992inference</bcf:citekey>
   </bcf:section>
   <bcf:sortlist section="0" name="nty/global/" type="entry" sortscheme="nty" sortnamekeyscheme="global" labelprefix="">
   <bcf:sorting>

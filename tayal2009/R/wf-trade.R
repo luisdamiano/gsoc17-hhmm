@@ -159,7 +159,10 @@ wf_trade <- function(task.list,
       trade.list <- list(buyandhold   = buyandhold(tdata.oos),
                          strategy0lag = topstate_trading(tdata.oos, 0),
                          strategy1lag = topstate_trading(tdata.oos, 1),
-                         strategy2lag = topstate_trading(tdata.oos, 2))
+                         strategy2lag = topstate_trading(tdata.oos, 2),
+                         strategy3lag = topstate_trading(tdata.oos, 3),
+                         strategy4lag = topstate_trading(tdata.oos, 4),
+                         strategy5lag = topstate_trading(tdata.oos, 5))
 
       if (!is.null(cache.path))
         saveRDS(trade.list, cache.filename)
@@ -168,8 +171,8 @@ wf_trade <- function(task.list,
     print_debug(paste("End", cache.filename))
 
     gc()
-    return(list(ins, oos, tdata, trade.list, stan.fit))
-    # return(list(stan.fit, trade.list))
+    # return(list(task, ins, oos, tdata, trade.list, stan.fit))
+    return(list(task, ins, oos, tdata, trade.list))
   }
 
   stopCluster(cl)

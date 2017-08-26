@@ -1,5 +1,9 @@
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 \usepackage{bm} % True bold symbols
+\usepackage{float} % Image position
+\usepackage{tabularx} % Tables
+\usepackage{tikz} % Graphs
+\usetikzlibrary{positioning}
 
 % Math operators
 \DeclareMathOperator*{\argmax}{\operatorname*{arg\,max}}
@@ -16,6 +20,9 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\LL}{\mathcal{L}}
 \newcommand{\RR}{\mathbb{R}}
+
+% Tables
+\newcolumntype{R}{>{\raggedright\arraybackslash}X}
 
 \usepackage{lscape}
 \newcommand{\blandscape}{\begin{landscape}}

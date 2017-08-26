@@ -6,17 +6,30 @@ output:
   pdf_document:
     toc: true
     number_sections: true
-    citation_package: biblatex
+    citation_package: none
     includes:
       in_header:  ../common/Rmd/preamble-latex.Rmd
 bibliography: ../common/references.bib
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE)
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE, fig.pos = 'H')
+
+knitr::opts_knit$set(global.par = TRUE)
 ```
 
 ```{r}
+library(xtable)
+options(xtable.sanitize.text.function = identity,
+        xtable.sanitize.rownames.function = identity,
+        xtable.sanitize.colnames.function = identity,
+        xtable.sanitize.subheadings.function = identity,
+        xtable.sanitize.message.function = identity,
+        xtable.comment = FALSE,
+        xtable.booktabs = TRUE,
+        xtable.floating = TRUE,
+        xtable.latex.environments = "center",
+        xtable.tabular.environment = "tabularx")
 
 par(cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
 
@@ -45,16 +58,16 @@ source('R/state-plots.R')
 
 # Set up! -----------------------------------------------------------------
 # Data kept in a private folder as we do no have redistribution rights
-data.files <- c('../../data/G.TO/2007.05.01.G.TO.RData',
-                '../../data/G.TO/2007.05.02.G.TO.RData',
-                '../../data/G.TO/2007.05.03.G.TO.RData',
-                '../../data/G.TO/2007.05.04.G.TO.RData',
+data.files <- c('../../data/G.TO/2007.05.04.G.TO.RData',
                 '../../data/G.TO/2007.05.07.G.TO.RData',
-                '../../data/G.TO/2007.05.08.G.TO.RData')
+                '../../data/G.TO/2007.05.08.G.TO.RData',
+                '../../data/G.TO/2007.05.09.G.TO.RData',
+                '../../data/G.TO/2007.05.10.G.TO.RData',
+                '../../data/G.TO/2007.05.11.G.TO.RData')
 
 # Timespans to separate training and test sets
-ins <- '2007-05-01 09:30:00/2007-05-07 16:30:00'
-oos <- '2007-05-08 09:30:00/2007-05-08 16:30:00'
+ins <- '2007-05-04 09:30:00/2007-05-10 16:30:00'
+oos <- '2007-05-11 09:30:00/2007-05-11 16:30:00'
 
 # Alpha threshold in the change of volumen setting (0.25 = Tayal 2009)
 features.alpha <- 0.25
@@ -191,45 +204,112 @@ f_n^2 =
 \end{cases}
 \]
 
-The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, U_9 \}$ are then created using the following table.
+The features or legs $\mat{D} = \{D_1, \dots, D_9 \}$, $\mat{U} = \{U_1, \dots, U_9 \}$ are then created using the Table $\ref{tab:feature-space}$.
 
-\tiny
+```{r, include = TRUE, results="asis"}
+df.col <- c("Zig-zag direction", "Price trend", "Change in volume", "Market State")
+df.row <- expand.grid(1:9, c("U", "D"))
 
-| Feature           |          $U_1$ |          $U_2$ |           $U_3$ |          $U_4$ |            $U_5$ |      $U_6$ |           $U_7$ |       $U_8$ |         $U_9$ |
-|-------------------|---------------:|---------------:|----------------:|---------------:|-----------------:|-----------:|----------------:|------------:|--------------:|
-| Zig-zag direction |     Upwards<br />+1 |     Upwards<br />+1 |      Upwards<br />+1 |     Upwards<br />+1 |       Upwards<br />+1 | Upwards<br />+1 |      Upwards<br />+1 |  Upwards<br />+1 |    Upwards<br />+1 |
-| Price trend       |    Up-trend<br/>+1 |  Down-trend<br/>-1 |     Up-trend<br/>+1 |     No trend<br />0 |       No trend<br />0 | No trend<br />0 |   Down-trend<br/>-1 | Up-trend<br/>+1 | Down-trend<br/>-1 |
-| Change in volume  | Strengthens<br/>+1 | Strengthens<br/>+1 | Indeterminant<br/>0 | Strengthens<br/>+1 |  Indeterminant<br/>0 | Weakens<br/>-1 | Indeterminant<br/>0 |  Weakens<br/>-1 |    Weakens<br/>-1 |
-| Market state      |        Bullish |        Bullish |         Bullish |        Bullish | Local volatility |    Bearish |         Bearish |     Bearish |       Bearish |
+df.lab <- list(
+    list("up" = "Up +1", "dn" = "Down -1"),
+    list("up" = "Up +1", "nt" = "No trend  0", "dn" = "Down -1"),
+    list("st" = "Strong +1", "in" = "Intederminant  0", "wk" = "Weak -1"),
+    list("bu" = "Bull", "lv" = "Local volatility", "be" = "Bear")
+  )
 
-| Feature           |        $D_1$ |         $D_2$ |           $D_3$ |          $D_4$ |            $D_5$ |          $D_6$ |           $D_7$ |          $D_8$ |          $D_9$ |
-|-------------------|-------------:|--------------:|----------------:|---------------:|-----------------:|---------------:|----------------:|---------------:|---------------:|
-| Zig-zag direction | Downwards<br />-1 |  Downwards<br />-1 |    Downwards<br />-1 |   Downwards<br />-1 |     Downwards<br />-1 |   Downwards<br />-1 |    Downwards<br />-1 |   Downwards<br />-1 |   Downwards<br />-1 |
-| Price trend       |  Up-trend<br/>+1 | Down-trend<br/>-1 |     Up-trend<br/>+1 |     No trend<br />0 |       No trend<br />0 |     No trend<br />0 |   Down-trend<br/>-1 |    Up-trend<br/>+1 |  Down-trend<br/>-1 |
-| Change in volume  |   Weakens<br/>-1 |    Weakens<br/>-1 | Indeterminant<br/>0 | Weakens</br>-1 |  Indeterminant<br/>0 | Strengthens<br/>+1 | Indeterminant<br/>0 | Strengthens<br/>+1 | Strengthens<br/>+1 |
-| Market state      |      Bullish |       Bullish |         Bullish |        Bullish | Local volatility |        Bearish |         Bearish |        Bearish |        Bearish |
+df <- data.frame(
+    direction = rep(c('up', 'dn'), each = 9),
+    trend = rep(c('up', 'dn', 'up', 'nt', 'nt', 'nt', 'dn', 'up', 'dn'), 2),
+    cgvol = c('st', 'st', 'in', 'st', 'in', 'wk', 'in', 'wk', 'wk', 'wk', 'wk', 'in', 'wk', 'in', 'st', 'in', 'st', 'st'),
+    state = rep(c(rep('bu', 4), 'lv', rep('be', 4)), 2),
+    stringsAsFactors = FALSE
+)
 
-Table: Summary of feature space.
+colnames(df) <- df.col
+rownames(df) <- sprintf("$%s_{%s}$", df.row[, 2], df.row[, 1])
 
-\normalsize
+for (i in 1:length(df.lab)) {
+  for (j in 1:length(df.lab[[i]])) {
+    df[, i] <- gsub(paste0("\\<", names(df.lab[[i]])[j], "\\>"), df.lab[[i]][[j]], df[, i])
+  }
+}
 
-**Plot here showing some example**
+options(xtable.sanitize.text.function = identity,
+        xtable.sanitize.rownames.function = identity,
+        xtable.sanitize.colnames.function = identity,
+        xtable.sanitize.subheadings.function = identity,
+        xtable.sanitize.message.function = identity,
+        xtable.comment = FALSE,
+        xtable.booktabs = TRUE,
+        xtable.floating = TRUE,
+        xtable.latex.environments = "center",
+        xtable.tabular.environment = "tabularx")
+
+tabs <- xtableList(split(df, df[, 1]),
+                   caption = "Feature space.",
+                   label = "tab:feature-space",
+                   align = c('l', rep('R', 4)))
+
+print.xtableList(tabs,
+                 colnames.format = "single", tabular.environment = "tabularx",
+                 width = "0.8 \\textwidth", size = "\\footnotesize")
+```
 
 Defining appropiate rules that capture trade volume dynamics and identify trends in volume despite high-frequency noise is the most challenging aspect of this design. @wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spread between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure trade volume concentration in both sides of the book.
 
 ## Model
+\label{sec:model}
 
 We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM to learn the sequence of discrete features extracted from a high-frequency time series of stock prices and traded volume. The figure below summarises the model structure in the form of a Dynamic Bayesian Network.
 
 The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints to determine beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Althought the original author does not mention this possibility, prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
 
-![Graph from Tayal (2009). Will make my own figure when time comes. $q_1^1$ is equivalent to $z_1^1$ in our notation.](graph.PNG)
+\definecolor{myred}{RGB}{228, 31, 38}
+\begin{figure}[!h]
+\centering
+\begin{tikzpicture}[
+roundnode/.style={circle, draw=myred, very thick, minimum size=7mm},
+groundnode/.style={circle, draw=myred, fill=myred!10, very thick, minimum size=7mm},
+droundnode/.style={circle, double, draw=myred, very thick, minimum size=7mm},
+]
+%Nodes
+\node[roundnode]                    (root)  {$z^0$};
+\node[roundnode]                    (top1)  [below left  = 1.0cm and 1.5cm of root] {$z^1_1$};
+\node[roundnode]                    (top2)  [below right = 1.0cm and 1.5cm of root] {$z^1_2$};
+\node[groundnode, label={\small -}] (bot1)  [below left  = 1cm of top1] {$z^2_1$};
+\node[groundnode, label={\small +}] (bot2)  [right       = 0.4cm of bot1] {$z^2_2$};
+\node[droundnode]                   (bot51) [below right = 1cm of top1] {$z^2_5$};
+\node[groundnode, label={\small +}] (bot3)  [below left  = 1cm of top2] {$z^2_3$};
+\node[groundnode, label={\small -}] (bot4)  [right       = 0.4cm of bot3] {$z^2_4$};
+\node[droundnode]                   (bot52) [below right = 1cm of top2] {$z^2_5$};
+
+%Lines
+\draw[->, dashed] (root) -- (top1);
+\draw[->, dashed] (root) -- (top2);
+\draw[->]         (top1) edge [bend right = 05] (top2);
+\draw[->]         (top2) edge [bend right = 05] (top1);
+\draw[->, dashed] (top1) -- (bot1);
+\draw[->, dashed] (bot51) -- (top1);
+\draw[->]         (bot1) edge [bend right = 10] (bot2);
+\draw[->]         (bot2) edge [bend right = 10] (bot1);
+\draw[->, dashed] (top2) -- (bot3);
+\draw[->, dashed] (bot52) -- (top2);
+\draw[->]         (bot3) edge [bend right = 10] (bot4);
+\draw[->]         (bot4) edge [bend right = 10] (bot3);
+
+\draw[->]         (bot1) edge [bend right = 60] (bot51);
+\draw[->]         (bot3) edge [bend right = 60] (bot52);
+\end{tikzpicture}
+\caption{Hierarchical Hidden Markov Model for price and volumen proposed by @tayal2009regime.}
+\end{figure}
+
+<!-- Top level states transition vertically to a HMM that represent observations from bull or bear market states. Bottom level nodes in gray are emission states that produce one negative or positive zig-zag before transioning horizontally to another node inside the HHM. Bottom level double circled nodes are terminations that return control back to the top level, which is forced to transition horizontally to the alternate top state. -->
 
 Each top node activates a probabilistic HMM with two latent states for negative and positive zig-zag legs. The sub-model activated by the node $z_1^1$ always starts with the node $z_1^2$ producing an observation from the distribution of negative zig-zag $\mat{D} = \{D_1, \dots, D_9 \}$. Next, it transitions to (a) the node $z_2^2$ producing a positive zig-zag leg $\mat{U} = \{U_1, \dots, U_9 \}$, (b) the end node which may, in turn, transition back to $z_1^1$ emitting a new negative zig-zag leg, or (c) the end node and switches to the second sub-model, landing on node $z_3^2$ and producing a positive zig-zag leg. Restricting transitions to this limited set of movements force alternation between positive and negative zig-zag legs, thus guaranteeing that all possible observation sequences are well behaved. The sub-model belonging to $z_2^1$ has similar but symmetrical behaviour. These two inner models are conditionally independent, an advantage we will take for computational time.
 
-![Graph from Wisebourt (2011). Will make my own figure when time comes. Explain why that positive zig-zags are short-term trend up, while top nodes are long term, etc.](graph2.PNG)
+The persistence of price trends vary according to the resolution of the dataset. In low frequency contexts, financial analysts will frequently define short and long term trends based on timespans involving weeks and months of observations. In high frequency trading, however, trends may last from seconds to hours. The main idea behind the conception of the hierarchical model is that top levels may group a sequence of price movements forming a general trend, whereas the bottom nodes allow zig-zags to represent micro trends that may deviate shortly from the main drift. That is, the model accommodates for possibly unequally probable negative price movements in an upwards market as well as positive short trends in a price reversal.
 
-Theoretically, all HHMM can be expressed as an equivalent HMM with possibly sparse initial probability vector and transition matrix. Although learning from this representation may prove less efficient in terms of computational complexity, the relatively simple structure and many restrictions of the model under study make estimation and inference feasible. The equivalent "expanded" HMM has the following initial probability vector
+Theoretically, all HHMM can be expressed as an equivalent HMM with possibly sparse initial probability vector and transition matrix. Although learning from this representation may prove less efficient in terms of computational complexity, the relatively simple structure and many restrictions of the model under study make estimation and inference feasible. The equivalent "expanded" HMM has $K = 4$ states, the following $K$-sized initial probability vector
 
 \[
 \mat{\pi} = 
@@ -238,54 +318,46 @@ Theoretically, all HHMM can be expressed as an equivalent HMM with possibly spar
   \end{bmatrix}
 \]
 
-and transition matrix
+and the $K \times K$ transition matrix
 
 \[
 \mat{A} =
   \begin{bmatrix}
-    a_{11} & a_{12} & 1 - a_{11} - a_{12} & 0                   \\
-    1      & 0      & 0                   & 0                   \\
-    a_{31} & 0      & a_{33}              & 1 - a_{31} - a_{33} \\
-    0      & 0      & 1                   & 0                   \\
+    0      & a_{12} & 1 - a_{11} & 0          \\
+    1      & 0      & 0          & 0          \\
+    a_{31} & 0      & 0          & 1 - a_{31} \\
+    0      & 0      & 1          & 0          \\
   \end{bmatrix},
 \]
 
-where each element $a_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only five free parameters.
+where each element $a_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only three free parameters.
 
-Does this representation "lose" the hierarchical interpretation of the states? Do transition probabilities summarize all possible paths from one node to the other? In this case I believe there's a 1-to-1 map from the HHMM arrows to the HMM matrix.
-
-Production nodes emit one observation from the finite sets of possible outputs $\mat{O}_D$ (for $z_1^2$ and $z_4^2$) and $\mat{O}_U$ (for $z_2^2$ and $z_3^2$). Conditional probability distributions are given by output probability vectors of length $L_U$ and $L_D$ subject to sum-to-one constraints:
+Production nodes emit one observation from the finite sets of possible outputs $\mat{O}_D$ (for $z_1^2$ and $z_4^2$) and $\mat{O}_U$ (for $z_2^2$ and $z_3^2$). Conditional probability distributions are given by output probability vectors of length $L = 9$ subject to sum-to-one constraints:
 
 \[
-\mat{B}^1 = p(\mat{x}_t | z_1^2) = \left[b^{1}_{D_1}, \dots, b^{1}_{D_9} \right], \\
-\mat{B}^2 = p(\mat{x}_t | z_2^2) = \left[b^{2}_{U_1}, \dots, b^{2}_{U_9} \right], \\
-\mat{B}^3 = p(\mat{x}_t | z_3^2) = \left[b^{3}_{U_1}, \dots, b^{3}_{U_9} \right], \\
-\mat{B}^4 = p(\mat{x}_t | z_4^2) = \left[b^{4}_{D_1}, \dots, b^{4}_{D_9} \right]. \\
+\begin{aligned}
+\mat{B}^1 &= p(\mat{x}_t | z_1^2) = \left[b^{1}_{D_1}, \dots, b^{1}_{D_9} \right], \\
+\mat{B}^2 &= p(\mat{x}_t | z_2^2) = \left[b^{2}_{U_1}, \dots, b^{2}_{U_9} \right], \\
+\mat{B}^3 &= p(\mat{x}_t | z_3^2) = \left[b^{3}_{U_1}, \dots, b^{3}_{U_9} \right], \\
+\mat{B}^4 &= p(\mat{x}_t | z_4^2) = \left[b^{4}_{D_1}, \dots, b^{4}_{D_9} \right]. \\
+\end{aligned}
 \]
 
 The observation model has 32 free parameters.
 
-On the whole, the parameter vector for the HMM representation reduces to 
+On the whole, the parameter vector for the HMM representation reduces to vector of size $35$, 
 
 \[
-\mat{\theta} = (\pi_1, a_{11}, a_{12}, a_{31}, a_{33}, b^1_{D_l}, b^2_{U_l}, b^3_{U_l}, b^4_{D_l}),
+\mat{\theta} = (\pi_1, a_{12}, a_{31}, b^1_{D_l}, b^2_{U_l}, b^3_{U_l}, b^4_{D_l}),
 \]
 
 with $l \in \{1, \dots, L-1\}$.
-
-## The sampler
-
-...
 
 ## Dataset
 
 The original work presents results for both simulated and real data. The latter is based on historical high-frequency time series for the 60 stocks listed in the S&P/TSE60 index. The dataset consists of all 22 business days of May 2007. The author excludes three days due to significant errors without disclosing the exact dates. We confirm that our results are consistent with the original work by focusing on GoldCorp Inc (TSE:G), the only series described exhaustively in the original work.
 
-## Feature extraction
-
 Note that we do not model prices directly. Instead, non-linear transforms are applied on the price and traded volume high-frequency series to produce the sequence of observations fed to the proposed model.
-
-...
 
 ## Methodology
 \label{sec:methodology}
@@ -306,7 +378,7 @@ where $p^s_l$ and $p^e_l$ are the price at the start and end of the switch.
 
 The information content of learning the top-level state is assessed by comparing the unconditional empirical distribution of trade returns versus their empirical distribution conditioned on the top-level state. Additionaly, regime return characteristics are validated: mean trade returns are expected to be higher for bullish regimes compared to bearish regimes, and they are expected to be positive and negative for runs and reversals respectively. In the original work, most of these analysis are run both in-sample and out-of-sample. We focus on out-of-sample results only.
 
-Finally, a trading strategy is tested. After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). Trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias.
+Finally, a trading strategy is tested. After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). As an addition to @tayal2009regime, where trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias, we investigate the decay of the strategy performance for longer lags.
 
 ## GoldCorp Inc (TSE:G)
 
@@ -326,7 +398,7 @@ tdata <- na.omit(series[, 1:2])
 colnames(tdata) <- c("PRICE", "SIZE")
 ```
 
-We present an in-depth study of one stock to assess the strengths and weaknesses of the model. Using the tick-by-tick series of GoldCorp Inc (TSE:G), we split our dataset in training (2007-05-01 to 2007-05-07 - five trading days and `r # pint(nrow(tdata[ins, ]))` ticks) and test (2007-05-08 - `r # pint(nrow(tdata[oos, ]))` ticks) sets. Next, we run our procedure in a walking forward fashion for this stock as well as others and present some summary statistics for the performance of the strategy.
+We present an in-depth study of one stock to assess the strengths and weaknesses of the model. Using the tick-by-tick series of GoldCorp Inc (TSE:G), we split our dataset in training (2007-05-04 to 2007-05-10 - five trading days and `r # pint(nrow(tdata[ins, ]))` ticks) and test (2007-05-11 - `r # pint(nrow(tdata[oos, ]))` ticks) sets. Next, we run our procedure in a walking forward fashion for this stock as well as others and present some summary statistics for the performance of the strategy.
 
 ### Data exploration
 
@@ -341,21 +413,23 @@ We center our attention on the sequence of trades, disregarding possibly valuabl
 
 Apart from the zig-zags themselves, local extrema are interesting on their own. Although we could not gain insight by visually inspecting other intermediate indicators such as the trend $f_1$, further research may find value in them.
 
-```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Local extrema detected in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00."}
-ss <- '2007-05-02 10:30:00/2007-05-02 11:30:00'
-opar <- par(TRUE)
-par(cex = 0.7, cex.axis = 0.7, cex.label = 0.7)
+```{r, include = TRUE, out.width = '\\textwidth', fig.cap = "Local extrema detected in TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \\label{tseg-ins-extrema}"}
+ss <- '2007-05-11 10:30:00/2007-05-11 11:30:00'
+print(par()$cex.axis)
+print(par()$cex.lab)
+
+source('R/state-plots.R')
+
+par(cex = 0.70, cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
+print(par()$cex.axis)
+print(par()$cex.lab)
+print(knitr::opts_knit$get("global.par"))
 ```
 
-```{r, include = TRUE, out.width = '\\textwidth', out.height = '0.4 \\textheight', fig.cap = "Features extracted from TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00.", warning = FALSE}
+```{r, include = TRUE, out.width = '\\textwidth', fig.cap = "Features extracted from TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \\label{tseg-ins-features}"}
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
-par(opar)
 ```
-
-<!-- \newpage -->
-<!-- \blandscape -->
-<!-- \elandscape -->
 
 ### Estimation
 
@@ -408,14 +482,16 @@ rm(cache.objects, cache.digest, cache.filename)
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-We present a summary of the estimates for the model parameters in \ref{tab:param-estimates}. The top nodes show some persistence since the estimated transition probabilities inside $1 - \\pi_{1}$ and $\\pi_{31}$ are close to $1$. Extreme features are less likely in all states, which is consistent with our empirical observations. Features $D_5$ and $U_5$ are frequent in both regimens. Features $\{D_1, \dots D_4 \}$ are more frequent on the the most frequent positive and negative legs, are linked to local volatility. ** The weakness**.
+We present a summary of the estimates for the model parameters in \ref{tab:tseg-ins-params}. The top nodes show some persistence since the estimated transition probabilities inside $1 - \\pi_{1}$ and $\\pi_{31}$ are close to $1$. Extreme features are less likely in all states, which is consistent with our empirical observations. Features $D_5$ and $U_5$ are frequent in both regimens. Features $\{D_1, \dots D_4 \}$ are more frequent on the the most frequent positive and negative legs, are linked to local volatility. ** The weakness**.
 
 \tiny
-```{r, include = TRUE, warning = FALSE}
+```{r, include = TRUE}
 mat <- summary(stan.fit, pars = c('p_1k', 'A_ij'),
                probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 mat <- mat[mat[, 5] != 0, ]
+
+print(options('xtable.tabular.environment'))
 
 pmat(round(mat, 4),
      col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
@@ -433,7 +509,7 @@ pmat(round(mat, 4),
      col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
      row.names = c(paste0('$U_', 1:9, '$'), paste0('$D_', 1:9, '$')),
      align = 'r', scientific = FALSE,
-     caption = "\\label{tab:param-estimates}")
+     caption = "\\label{tab:tseg-ins-params}")
 ```
 
 
@@ -442,9 +518,9 @@ pmat(round(mat, 4),
 
 ### Convergence
 
-Figure \ref{fig:diag} illustrates the trace plot of some arbitrary parameters as well as some diagnostic measures. In general terms, mixing and convergence to the stationary distribution is acceptable. The shrink factor of [@gelman1992inference], close to $1$ for all hidden quantities, indicates an adequate degree of convergence. Sampling is efficient as signaled by effective sample size ratios near to $1$ and Monte Carlo Standar Error to posterior standard deviation ratios well below 10%.
+Figure \ref{tseg-ins-diags} illustrates the trace plot of some arbitrary parameters as well as some diagnostic measures. In general terms, mixing and convergence to the stationary distribution is acceptable. The shrink factor of [@gelman1992inference], close to $1$ for all hidden quantities, indicates an adequate degree of convergence. Sampling is efficient as signaled by effective sample size ratios near to $1$ and Monte Carlo Standar Error to posterior standard deviation ratios well below 10%.
 
-```{r include = TRUE, warning = FALSE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\\label{fig:diag}"}
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\\label{tseg-ins-diags}"}
 
 quickplot <- function(x, ...) {
   plot(x, type = 'l', col = 'lightgray', xlab = "Iteration", ...)
@@ -473,11 +549,13 @@ Although re-estating the original Hierarchical Hidden Markov Model into a Hidden
 # Extraction
 alpha_tk.ins  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 alpha_tk.oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
+zstar_t.oos   <- extract(stan.fit, pars = 'zstar_t')[[1]]
 
 # Hard classification
 state.filtered.ins <- apply(apply(alpha_tk.ins, c(2, 3), median), 1, which.max)
 state.filtered.oos <- apply(apply(alpha_tk.oos, c(2, 3), median), 1, which.max)
 state.filtered     <- c(state.filtered.ins, state.filtered.oos)
+state.viterbi.oos  <- apply(zstar_t.oos, 2, median)
 
 # Top state classification ------------------------------------------------
 topstate.labels <- c("Bear", "Bull")
@@ -519,7 +597,7 @@ top.oos   <- top[oos]
 
 The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence avaliable up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
 
-```{r include = TRUE, warning = FALSE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Distribution of observed features conditional on the estimated hidden regime (top node)."}
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Distribution of observed features conditional on the estimated hidden regime (top node). \\label{tseg-ins-features-hist}"}
 plot_topstate_features(zig.ins$feature, zig.ins$topstate, L = 9,
                        cex.names = 0.70, cex.axis = 0.70)
 ```
@@ -528,56 +606,66 @@ The following table provides some summary statistics for the returns of the obse
 
 \footnotesize
 
-```{r, include = TRUE}
-
-# knitr::kable(t(as.data.frame(topstate_summary(top.ins))), booktabs = TRUE,
-#              col.names = c('Top state', 'Mean', 'Std. dev.', 'Skewness', 'Kurtosis', '$q_{25}$\\%', 'Median', '$q_{75}$\\%', 'Mean length', 'Median length'),
-#              caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns were computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved.")
-
-source('R/state-plots.R')
+```{r, include = TRUE, fig.cap = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage. \\label{tab:tseg-ins-topstate}"}
 pmat(round(t(as.data.frame(topstate_summary(top.ins))), 4), digits = 4,
              col.names = c('Top state', 'Mean', 'Std. dev.', 'Skewness', 'Kurtosis', '$q_{25}\\%$', 'Median', '$q_{75}\\%$', 'Mean length', 'Median length'),
-             row.names = c('Bear', 'Bull', 'Unconditional'),
-             caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage.")
+             row.names = c('Bear', 'Bull', 'Unconditional'))
+#,
+#             caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage.")
 ```
 
 \normalsize
 
-Bear and bull top states have negative and positive mean respectively by construction. As it is also visible in Figure \ref{fig:ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five day long in-sample dataset. However, bear markets have a marked skew towards negative returns, becomes more risky in term of extreme events (kurtosis) and trades in bear markets tend to last one tick more than bulls.
+Bear and bull top states have negative and positive mean respectively by construction. As it is also visible in Figure \ref{fig:tseg-ins-ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five day long in-sample dataset. However, bear markets have a marked skew towards negative returns, becomes more risky in term of extreme events (kurtosis) and trades in bear markets tend to last one tick more than bulls.
 
 
-```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-02 10:30:00/2007-05-02 11:30:00. \\label{fig:ret-hist}"}
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-ret-hist}"}
 plot_topstate_hist(top.ins$ret, top.ins$topstate,
                 main.lab = "Return", x.lab = "R")#,
-#                cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
 ```
 
-We remark that trade returns originated in different stocks or timespans do not share these characteristics. Location, dispersion, symmetry and shape of the returns vary along stocks and day of analysis.
-
-...
+We remark that trade returns originated in different stocks or timespans do not necessarily share these characteristics. Location, dispersion, symmetry and shape of the returns vary along stocks and day of analysis.
 
 ### Fitted output
 
+As mentioned in Section \ref{sec:model}, the model assumes that outputs are emitted by one of four possible bottom nodes. By definition, negative legs belong to either $z_{1}^2$ or $z_{4}^2$ while positive legs belong to $z_{2}^2$ or $z_{3}^2$. Once the parameters were estimated, states $z_{1}^2$ and $z_{2}^2$ are labeled as bears while $z_{3}^2$ and $z_{4}^2$ are marked as bulls according to the mean trade return of the observations included in each of them.
 
-Now, look how at how the features are classified:
+Bullish states allow for negative zig-zags and bearish states allow for positive zig-zags as long as the trade volume is indeterminant or weak. The results of the classification are summarized in Table \ref{tab:tseg-filtered-ins}. As expected, the bullish top-node capture positive movements due to local volatility as well as downward movements with weak volume.
 
+Our sampler, tho, maps each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated. This is possibly a weakness in the model.
 
+\tiny
 
-The model has four production/emission states: 1, 2, 3 and 4. 1 and 3 for negative legs and 2 and 4 for positive legs. States 1 and 2 belong to the "bull" state while 3 and 4 belong to "bear" state. There can be negative legs in bull states (they're negative but with little volume) and positive legs in bear states (positive but, again, with little volume).
+```{r, include = TRUE, fig.cap = "Features extracted are classified as emitted by one of the four possible bottom-nodes according to the filtered probability. TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{tab:tseg-filtered-ins}"}
+mat <- table(x.ins, state.filtered.ins)
+mat <- cbind(
+  c(rep("Bull", 2), rep("Bear", 2)), 
+  sprintf("$z^2_{%s}$", 1:4),
+  round(t(mat), 0))
+rows <- expand.grid(1:9, c("U", "D"))
 
-Our sampler, tho, maps each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated.
+pmat(mat,
+     # row.names = sprintf("$z^2_{%s}$", 1:4),
+     col.names = c("Top state", "Emission state", sprintf("$%s_{%s}$", rows[, 2], rows[, 1])),
+     # col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
+     # row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
+     #               '$a_{12}$', '$1 - a_{12}$', 
+     #               '$a_{21}$', 
+     #               '$a_{31}$', '$1 - a_{31}$', 
+     #               '$a_{43}$'),
+     align = 'r', scientific = FALSE)
+```
 
+\normalsize
 
-1. Look at forward probabilities (the two columns are repeated since I don't compute smoothed probabilities to improve computational time)
+Now, look how at how the features are classified: Mention plot number on tayal.
 
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Tick by tick sequence of trades, classified as belonging to bear or bull states, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
 
-2. Then the distribution of returns inside each "top state" (either bull or bear). These top states should have two children state for positive/negative legs each. States 1 and 2 = Bull (greater mean return), states 3 and 4 = bear (smaller mean return).
-
-<!-- Plotting ** TITLE SAYS RETURNS BUT IT'S TOP STATE LENGTH!** (ie how many ticks until the top state switches). -->
-
-<!-- ```{r} -->
-<!-- plot_state_returns(top.in$end - top.in$start, top.in$topstate, qs = NULL) -->
-<!-- ``` -->
+ss <- '2007-05-10 09:30:00/2007-05-10 10:30:00'
+plot_topstate_seqv(tdata.ins[ss, ], zig.ins[ss, ],
+                   main.lab = sprintf("%s In-sample [%s]", attr(tdata.oos, 'symbol'), ss))
+```
 
 ...
 

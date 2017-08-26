@@ -1,0 +1,57 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1}Motivation}{1}{section.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2}Hierarchical Hidden Markov Models}{1}{section.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.1}Model specification}{2}{subsection.2.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.2}Generative model}{2}{subsection.2.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.3}Parameter estimation}{2}{subsection.2.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3}Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets}{3}{section.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.1}Preamble}{3}{subsection.3.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.2}Feature extraction}{3}{subsection.3.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.2.1}Input series}{3}{subsubsection.3.2.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.2.2}Processing rules}{3}{subsubsection.3.2.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.3}Model}{4}{subsection.3.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.4}Dataset}{6}{subsection.3.4}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.5}Methodology}{6}{subsection.3.5}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.6}GoldCorp Inc (TSE:G)}{7}{subsection.3.6}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.1}Data exploration}{7}{subsubsection.3.6.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.2}Estimation}{9}{subsubsection.3.6.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.3}Convergence}{9}{subsubsection.3.6.3}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.4}State probability}{10}{subsubsection.3.6.4}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.5}Fitted output}{12}{subsubsection.3.6.5}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.6}In-sample summary}{13}{subsubsection.3.6.6}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.7}Forecast}{13}{subsubsection.3.6.7}
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{\numberline {3.6.7.1}Walking forward forecasts}{13}{paragraph.3.6.7.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.6.8}Trading strategy}{13}{subsubsection.3.6.8}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.7}Discussion}{14}{subsection.3.7}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.7.1}The statistical model}{14}{subsubsection.3.7.1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.7.2}The financial application}{14}{subsubsection.3.7.2}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4}References}{14}{section.4}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5}Appendix}{14}{section.5}
