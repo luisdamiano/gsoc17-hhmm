@@ -7,6 +7,7 @@ output:
     toc: true
     number_sections: true
     citation_package: none
+    keep_tex: true
     includes:
       in_header:  ../common/Rmd/preamble-latex.Rmd
 bibliography: ../common/references.bib
@@ -20,22 +21,26 @@ knitr::opts_knit$set(global.par = TRUE)
 
 ```{r}
 library(xtable)
-options(xtable.sanitize.text.function = identity,
-        xtable.sanitize.rownames.function = identity,
-        xtable.sanitize.colnames.function = identity,
-        xtable.sanitize.subheadings.function = identity,
-        xtable.sanitize.message.function = identity,
-        xtable.comment = FALSE,
-        xtable.booktabs = TRUE,
-        xtable.floating = TRUE,
-        xtable.latex.environments = "center",
-        xtable.tabular.environment = "tabularx")
 
-par(cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
+setglobals <- function() { # What a beautiful hack! 
+                           # global.par = TRUE won't do it
+  options(xtable.sanitize.text.function = identity,
+          xtable.sanitize.rownames.function = identity,
+          xtable.sanitize.colnames.function = identity,
+          xtable.sanitize.subheadings.function = identity,
+          xtable.sanitize.message.function = identity,
+          xtable.comment = FALSE,
+          xtable.booktabs = TRUE,
+          xtable.floating = TRUE,
+          xtable.latex.environments = "center",
+          xtable.tabular.environment = "tabularx")
+  
+  par(cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
+}
 
 pint <- function(x) { print(formatC(x, format = "d", big.mark = ",")) }
 pflo <- function(x) { print(formatC(x, format = "f", big.mark = ",", decimal.mark = ".")) }
-ptab <- function(x) { sapply(x, function(e) {sprintf("%0.2f", e)}) }
+# ptab <- function(x) { sapply(x, function(e) {sprintf("%0.2f", e)}) }
 pmat  <- function(mat, row.names = NULL, digits = NULL, ...) {
   if (!is.null(digits)) {mat <- round(mat, digits)}
   if (!is.null(row.names)) {mat <- cbind(row.names, mat)}
@@ -94,7 +99,7 @@ cache.path = 'fore_cache'
 # cat("<style>img{border: 0px !important;} tbody{font-size:9px;}</style>")
 ```
 
-This work aims at ... .
+This work aims at replicating the Hierarichal Hidden Markov Model (HHMM) originally proposed by @tayal2009regime to learn price and volume patterns using rules from technical analysis, infer the hidden state of the system and identify runs and reversals out-of-sample in a statistically significant way. The main goal is to reproduce the results of the original research as well as to provide additional insight and criticism. Also, we produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities. A brief introduction about Hidden Markov Models (HMM) can be found in our [literature review](https://github.com/luisdamiano/gsoc17-hhmm/blob/master/litreview/main.pdf).
 
 The authors acknowledge Google for financial support via the Google Summer of Code 2017 program.
 
@@ -234,25 +239,15 @@ for (i in 1:length(df.lab)) {
   }
 }
 
-options(xtable.sanitize.text.function = identity,
-        xtable.sanitize.rownames.function = identity,
-        xtable.sanitize.colnames.function = identity,
-        xtable.sanitize.subheadings.function = identity,
-        xtable.sanitize.message.function = identity,
-        xtable.comment = FALSE,
-        xtable.booktabs = TRUE,
-        xtable.floating = TRUE,
-        xtable.latex.environments = "center",
-        xtable.tabular.environment = "tabularx")
-
+setglobals()
 tabs <- xtableList(split(df, df[, 1]),
                    caption = "Feature space.",
                    label = "tab:feature-space",
                    align = c('l', rep('R', 4)))
 
-print.xtableList(tabs,
-                 colnames.format = "single", tabular.environment = "tabularx",
-                 width = "0.8 \\textwidth", size = "\\footnotesize")
+print(tabs,
+      colnames.format = "single", tabular.environment = "tabularx",
+      width = "0.8 \\textwidth", size = "\\footnotesize")
 ```
 
 Defining appropiate rules that capture trade volume dynamics and identify trends in volume despite high-frequency noise is the most challenging aspect of this design. @wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spread between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure trade volume concentration in both sides of the book.
@@ -415,25 +410,21 @@ Apart from the zig-zags themselves, local extrema are interesting on their own. 
 
 ```{r, include = TRUE, out.width = '\\textwidth', fig.cap = "Local extrema detected in TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \\label{tseg-ins-extrema}"}
 ss <- '2007-05-11 10:30:00/2007-05-11 11:30:00'
-print(par()$cex.axis)
-print(par()$cex.lab)
-
-source('R/state-plots.R')
-
-par(cex = 0.70, cex.names = 0.70, cex.axis = 0.70, cex.lab = 0.70, cex.main = 0.70)
+setglobals()
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
-print(par()$cex.axis)
-print(par()$cex.lab)
-print(knitr::opts_knit$get("global.par"))
 ```
 
+The Features
+
 ```{r, include = TRUE, out.width = '\\textwidth', fig.cap = "Features extracted from TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \\label{tseg-ins-features}"}
+setglobals()
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
 ```
 
 ### Estimation
 
 ```{r}
+
 T.ins <- nrow(zig.ins)
 x.ins <- as.vector(zig.ins$feature)
 T.oos <- nrow(zig.oos)
@@ -482,39 +473,93 @@ rm(cache.objects, cache.digest, cache.filename)
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-We present a summary of the estimates for the model parameters in \ref{tab:tseg-ins-params}. The top nodes show some persistence since the estimated transition probabilities inside $1 - \\pi_{1}$ and $\\pi_{31}$ are close to $1$. Extreme features are less likely in all states, which is consistent with our empirical observations. Features $D_5$ and $U_5$ are frequent in both regimens. Features $\{D_1, \dots D_4 \}$ are more frequent on the the most frequent positive and negative legs, are linked to local volatility. ** The weakness**.
+Model parameters can be segregated into two groups: parameters for the hidden model, including the initial distribution vector as well as the transition matrix, and parameters for the conditional multinomial distributions for the output. Table \ref{tab:tseg-ins-transition} summarises the former. The estimates for the initial distribution probabilities $\pi_1$ and $1 - \pi_1$ are uncertain to a large extent, which is unsurprising as the sample provides with only one starting observation and the model imposes almost no prior information for the parameters. @team2017stan, a technical manual for a programming language that also contains many brief discussion of statistical notions, describes some alternative specifications. If the sample were conceived as a subsequence of a long-running data generating process, the initial probabilities may be set to equal the stationary state probabilities of the transition Markov chain. Contrarily, if the sample was considered a finite-length sequence, the model may have a different starting distribution.
 
-\tiny
-```{r, include = TRUE}
+On the other hand, estimation of the transition parameters profit from a larger number of trades: more information reduce uncertainty. We note that the bull top state seems persistent as positive zig-zags $z^2_3$ are more likely to transition to bull negative zig-zags $z^2_4$ versus bear negative zig-zags $z^2_1$ by a factor of $a_{34} / a_{31}  \approx 10$. After studying several stocks and timespans, we decide that these empirical observations are specific to the sample and are highly influenced by the general price trend present in the five day-long training dataset.
+
+```{r, include = TRUE, results="asis"}
 mat <- summary(stan.fit, pars = c('p_1k', 'A_ij'),
                probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
 
 mat <- mat[mat[, 5] != 0, ]
 
-print(options('xtable.tabular.environment'))
-
-pmat(round(mat, 4),
-     col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
-     row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
+colnames(mat) <- c('Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$')
+rownames(mat) <- c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
                    '$a_{12}$', '$1 - a_{12}$', 
                    '$a_{21}$', 
                    '$a_{31}$', '$1 - a_{31}$', 
-                   '$a_{43}$'),
-     align = 'r', scientific = FALSE)
+                   '$a_{43}$')
 
-mat <- summary(stan.fit, pars = c('phi_k'),
-               probs = c(0.10, 0.50, 0.90))$summary[, c(1, 3, 4, 5, 6)]
+setglobals()
+tab  <- xtable(mat,
+               caption = "Estimated parameters of the transition matrix 
+               for TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00.",
+               label = "tab:tseg-ins-transition",
+               align = c('r', rep('R', 5)))
 
-pmat(round(mat, 4),
-     col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
-     row.names = c(paste0('$U_', 1:9, '$'), paste0('$D_', 1:9, '$')),
-     align = 'r', scientific = FALSE,
-     caption = "\\label{tab:tseg-ins-params}")
+print(tab, digits = 4,
+      width = "0.65 \\textwidth", size = "\\footnotesize")
 ```
 
+Output distributions are summarized in Figure \\ref{fig:tseg-ins-multinomial}. It is important to note that zig-zags with no price trends $D_4, D_5, D_6, U_4, U_5, U_6$ are the most preeminent features. In particular, it is worthwhile to analyse the behaviour of the model in the presence of local volatility $D_5, U_5$, i.e. when there is no clear trends in price and volume. 
 
+```{r, include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Estimated parameters of the conditional multinomial distribution of the outputs given the emission state (bottom node) for TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-multinomial}"}
+parplot <- function(mat, y.axislab = NULL, xlim = NULL, ...) {
+  if (ncol(mat) != 5)
+    stop("Please provide a mat with five columns: 1 and 5 for the long line, 2 and 4 for the short line and 3 for the central dot.")
 
-\normalsize
+  if (is.null(xlim))
+    xlim <- round(c(min(mat), max(mat)), 0)
+    
+  y <- nrow(mat):1
+  plot(NULL,
+       xlim = xlim, ylim = round(c(min(y), max(y)), 0),
+       yaxt = 'n',
+       ...)
+  
+  if (!is.null(y.axislab))
+    axis(2, at = y, labels = y.axislab, las = 1)
+  
+  arrows(mat[, 1], y, mat[, 5], y, 
+         angle = 90, code = 3, 
+         col = 'black',  lwd = 1, length = 0.04)
+  
+  arrows(mat[, 2], y, mat[, 4], y, 
+         angle = 90, code = 0, 
+         col = 'gray', lwd = 3, length = 0.04)
+  
+  points(x = mat[, 3], y = y, cex = par()$cex * 0.65,
+         pch = 21, bg = 'black', col = 'black')
+}
+
+phi_k <- extract(stan.fit, pars = 'phi_k')[[1]]
+mat   <- apply(phi_k, c(2, 3), function(p) {c(min(p), quantile(p, c(0.10, 0.50, 0.90)), max(p))})
+subs  <- c('Bear - Negative zig-zag', 'Bear - Positive zig-zag', 'Bull - Positive zig-zag', 'Bull - Negative zig-zag')
+
+setglobals()
+par(mfrow = c(1, K))
+layout(matrix(1:K, TRUE), widths = c(0.22, rep(0.22, 3)))
+for (k in 1:K) {
+  par(mar = c(3.1, 3.1, 4.1, 0))
+  y.axislab <- paste("Phi", 1:9)
+  
+  if (k != 1) {
+    par(mar = c(3.1, 0, 4.1, 0))
+    y.axislab <- NULL
+  }
+
+  # par(oma = c(0, 1, 0, 0))
+  parplot(t(mat[, k, ]),
+          main = bquote(atop('Production state' ~ .(k),
+                             .(subs[k]))),
+          y.axislab = y.axislab,
+          xlim = c(0, 1), xlab = "", ylab = "")
+}
+```
+
+We first study short-term price changes in the opposite direction to the long-term trend. The vast majority of negative zig-zags observed in bullish markets are due to local volatility ($\hat{\phi}_{45}$ = 0.88) as do most of the positive zig-zags found in bearish markets ($\hat{\phi}_{25}$ = 0.80). We note, however, that negative legs with no price trends but weakening or strengthening trade volume are equally probable in bearish markets ($\hat{\phi}_{14} \approx \hat{\phi}_{16}$). Analogously, we find in bullish markets that $\hat{\phi}_{34} \approx \hat{\phi}_{36}$. These observations counter the a priori classification stated in Table \ref{tab:feature-space}. 
+
+Additionally, we find that positive zig-zags originated in local volatility are more likely to be seen in bearish markets versus bullish markets by a factor of $\phi_{25} / \phi_{35} \approx 4$. The odds for negative zig-zags are similar. We warn the reader that the current model needs more information to classify this feature. All in all, we are warned that zig-zag direction $f^0$ and change in volume $f^2$ are not decisive without a price trend, a hint that the current model needs either better feature engineering rules for the change in volume or more external information to deal with local volatility.
 
 ### Convergence
 
@@ -523,7 +568,7 @@ Figure \ref{tseg-ins-diags} illustrates the trace plot of some arbitrary paramet
 ```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\\label{tseg-ins-diags}"}
 
 quickplot <- function(x, ...) {
-  plot(x, type = 'l', col = 'lightgray', xlab = "Iteration", ...)
+  plot(x, type = 'l', col = 'lightgray', xlab = "Iteration", bty='l', ...)
   abline(h = median(x), col = 'gray')
 }
 
@@ -531,6 +576,7 @@ quickhist <- function(x, ...) {
   hist(x, breaks = "FD", col = 'lightgray', border = 'gray', ...)
 }
 
+setglobals()
 par(mfrow = c(2, 3))
 quickplot(extract(stan.fit, pars = 'p_11')[[1]], main = expression(pi[1]), ylab = "")
 quickplot(extract(stan.fit, pars = 'A_ij')[[1]][, 1, 2], main = expression(a[12]), ylab = "")
@@ -541,11 +587,11 @@ quickhist(summary(stan.fit)[[1]][, 'se_mean'] / summary(stan.fit)[[1]][, 'sd'], 
 
 ```
 
-Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the appendix.
+Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the Appendix Section \ref{sec:appendix-tseg-parameters}.
 
 ### State probability
 
-```{r}
+```{r, include = TRUE}
 # Extraction
 alpha_tk.ins  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 alpha_tk.oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
@@ -576,11 +622,17 @@ top$end <- c(as.numeric(tail(top$start, -1)) - 1, last(zig$end))
 top$len <- top$end - top$start
 top$ret <- (as.numeric(tdata[top$end, 1]) - as.numeric(tdata[top$start, 1])) / as.numeric(tdata[top$start, 1])
 
+print(sprintf("%% BEFORE AN EVENTUAL SWITCH: 
+              bottom nodes 1, 2 (bear) have a mean return of %0.4f%%, 
+              while bottom nodes 3, 4 (bull) have a mean return of %0.4f%%.",
+              100 * mean(top$ret[top$topstate == state.bear]),
+              100 * mean(top$ret[top$topstate == state.bull])))
+
 # label top nodes
 if (mean(top$ret[top$topstate == state.bear]) > mean(top$ret[top$topstate == state.bull])) {
   top$topstate <- ifelse(top$topstate == state.bear, state.bull, state.bear)
   zig$topstate <- ifelse(zig$topstate == state.bear, state.bull, state.bear)
-  print(sprintf("I identified top-nodes as bears and bulls.
+  print(sprintf("%%I identified top-nodes as bears and bulls.
                 Result: Bear = %0.4f%% vs Bull = %0.4f%%",
                 mean(top$ret[top$topstate == state.bear]),
                 mean(top$ret[top$topstate == state.bull])))
@@ -595,105 +647,167 @@ top.ins   <- top[ins]
 top.oos   <- top[oos]
 ```
 
-The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence avaliable up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears or bulls).
+The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence avaliable up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears and bulls). Figure \ref{tseg-ins-features-hist} reflects the resulting classification.
 
-```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Distribution of observed features conditional on the estimated hidden regime (top node). \\label{tseg-ins-features-hist}"}
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Distribution of features conditional on the estimated hidden regime (top node). \\label{tseg-ins-features-hist}"}
+setglobals()
 plot_topstate_features(zig.ins$feature, zig.ins$topstate, L = 9,
-                       cex.names = 0.70, cex.axis = 0.70)
+                       topstate.label = c("bear", "bull"))
 ```
 
-The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the top nodes are symmetrical and they do not have an a priori order. We label them as runs and reversals according to the expected trade returns observed in-sample.
+The following table provides some summary statistics for the returns of the observations classified in each state. The structure of the top nodes are symmetrical and they do not have an a priori order. We label them according to the in-sample mean trade returns.
 
-\footnotesize
+```{r, include = TRUE, results = "asis"}
+mat <- t(round(topstate_summary(top.ins), 4))
 
-```{r, include = TRUE, fig.cap = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage. \\label{tab:tseg-ins-topstate}"}
-pmat(round(t(as.data.frame(topstate_summary(top.ins))), 4), digits = 4,
-             col.names = c('Top state', 'Mean', 'Std. dev.', 'Skewness', 'Kurtosis', '$q_{25}\\%$', 'Median', '$q_{75}\\%$', 'Mean length', 'Median length'),
-             row.names = c('Bear', 'Bull', 'Unconditional'))
-#,
-#             caption = "Summary statistics for the return of the trades assigned to each of the two possible top states. Trade returns are computed as defined in Section \\ref{sec:methodology}. Trade length is computed as the number of ticks involved. Returns expressed in percentage.")
+colnames(mat) <- c('Mean', 'SD', 'Skewness', 'Kurtosis', 
+                   '$q_{25}\\%$', '$q_{50}\\%$', '$q_{75}\\%$', 
+                   'Mean length', 'Median length')
+
+rownames(mat) <- c('Bear', 'Bull', 'Unconditional')
+
+setglobals()
+tab  <- xtable(mat,
+               caption = "Summary statistics for the return of the trades 
+               assigned to each of the two possible top states for 
+               TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. Trade returns 
+               are computed as defined in Section \\ref{sec:methodology}. 
+               Trade length is computed as the number of ticks involved.
+               Returns expressed in percentage. SD means Standard Deviation.",
+               label = "tab:tseg-ins-topstate",
+               align = c('r', rep('R', 9)))
+
+print(tab, digits = 4,
+      width = "\\textwidth", size = "\\footnotesize")
 ```
-
-\normalsize
 
 Bear and bull top states have negative and positive mean respectively by construction. As it is also visible in Figure \ref{fig:tseg-ins-ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five day long in-sample dataset. However, bear markets have a marked skew towards negative returns, becomes more risky in term of extreme events (kurtosis) and trades in bear markets tend to last one tick more than bulls.
 
-
-```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-ret-hist}"}
+```{r include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-ret-hist}"}
+setglobals()
+par(mar = c(3.5, 4.1, 1.0, 2.1))
 plot_topstate_hist(top.ins$ret, top.ins$topstate,
-                main.lab = "Return", x.lab = "R")#,
+                main.lab = "Return", x.lab = "",
+                topstate.label = c("bear", "bull"))
 ```
 
-We remark that trade returns originated in different stocks or timespans do not necessarily share these characteristics. Location, dispersion, symmetry and shape of the returns vary along stocks and day of analysis.
+We remark that trade returns originated in different stocks or timespans do not necessarily share these characteristics. Location, dispersion, symmetry and shape of the return distribution vary along stocks and day of analysis.
 
 ### Fitted output
 
-As mentioned in Section \ref{sec:model}, the model assumes that outputs are emitted by one of four possible bottom nodes. By definition, negative legs belong to either $z_{1}^2$ or $z_{4}^2$ while positive legs belong to $z_{2}^2$ or $z_{3}^2$. Once the parameters were estimated, states $z_{1}^2$ and $z_{2}^2$ are labeled as bears while $z_{3}^2$ and $z_{4}^2$ are marked as bulls according to the mean trade return of the observations included in each of them.
+As mentioned in Section \ref{sec:model}, the model assumes that outputs are emitted by one of four possible bottom nodes. By definition, negative legs belong to either $z_{1}^2$ or $z_{4}^2$ while positive legs belong to $z_{2}^2$ or $z_{3}^2$. Once the parameters are estimated, states $z_{1}^2$ and $z_{2}^2$ are labeled as bears while $z_{3}^2$ and $z_{4}^2$ are marked as bulls according to the mean trade return of the observations belonging to each top node.
 
 Bullish states allow for negative zig-zags and bearish states allow for positive zig-zags as long as the trade volume is indeterminant or weak. The results of the classification are summarized in Table \ref{tab:tseg-filtered-ins}. As expected, the bullish top-node capture positive movements due to local volatility as well as downward movements with weak volume.
 
-Our sampler, tho, maps each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated. This is possibly a weakness in the model.
+### We remark that each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated. This is possibly a weakness in the model. See the plot in \ref{fig:tseg-ins-seqv}.
 
-\tiny
+```{r, include = TRUE, results = "asis"}
+mat <- t(rbind(
+          c(rep("Bear", 2), rep("Bull", 2)),
+          1:4,
+          round(as.matrix(table(x.ins, state.filtered.ins)), 0)))
 
-```{r, include = TRUE, fig.cap = "Features extracted are classified as emitted by one of the four possible bottom-nodes according to the filtered probability. TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{tab:tseg-filtered-ins}"}
-mat <- table(x.ins, state.filtered.ins)
-mat <- cbind(
-  c(rep("Bull", 2), rep("Bear", 2)), 
-  sprintf("$z^2_{%s}$", 1:4),
-  round(t(mat), 0))
-rows <- expand.grid(1:9, c("U", "D"))
+colnames(mat) <- c("Top", "Bottom",
+  apply(expand.grid(1:9, c("U", "D")), 1,
+                       function(x) { sprintf("$%s_{%s}$", x[2], x[1])}))
 
-pmat(mat,
-     # row.names = sprintf("$z^2_{%s}$", 1:4),
-     col.names = c("Top state", "Emission state", sprintf("$%s_{%s}$", rows[, 2], rows[, 1])),
-     # col.names = c('Parameter', 'Mean', 'Std. Deviation', '$q_{10\\%}$', '$q_{50\\%}$', '$q_{90\\%}$'),
-     # row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
-     #               '$a_{12}$', '$1 - a_{12}$', 
-     #               '$a_{21}$', 
-     #               '$a_{31}$', '$1 - a_{31}$', 
-     #               '$a_{43}$'),
-     align = 'r', scientific = FALSE)
+setglobals()
+tab  <- xtable(mat,
+               caption = "Features extracted are classified as emitted by one
+               of the four possible bottom-nodes according to the filtered
+               probability. TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00.",
+               label = "tab:tseg-filtered-ins",
+               align = c(rep('r', 2), rep('R', 19)))
+
+print(tab, digits = 4, include.rownames = FALSE,
+      width = "\\textwidth", size = "\\scriptsize")
 ```
-
-\normalsize
 
 Now, look how at how the features are classified: Mention plot number on tayal.
 
-```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Tick by tick sequence of trades, classified as belonging to bear or bull states, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
+```{r include = TRUE, out.width = '\\textwidth', fig.cap = "Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
 
+source('R/state-plots.R')
+
+setglobals()
 ss <- '2007-05-10 09:30:00/2007-05-10 10:30:00'
 plot_topstate_seqv(tdata.ins[ss, ], zig.ins[ss, ],
                    main.lab = sprintf("%s In-sample [%s]", attr(tdata.oos, 'symbol'), ss))
 ```
 
-...
+### Trading Strategy
+Using the parameters estimated from the five days of training data, we run the trading strategy out of sample during one day. 
 
-### In-sample summary
+#### After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). As an addition to @tayal2009regime, where trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias, we investigate the decay of the strategy performance for longer lags.
 
-...
+\blandscape
+\newpage
 
-### Forecast
+```{r include = TRUE, warning = FALSE, out.width='1\\linewidth', fig.width=14, fig.height=8, fig.cap = "Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
 
-...
+setglobals()
+trades.oos <- topstate_trading(tdata.oos, 1)
 
-#### Walking forward forecasts
+ltrades.oos <- lapply(1:5, function(i) {topstate_trading(tdata.oos, i)})
+plot_topstate_trading(tdata.oos, zig.oos, ltrades.oos)
+```
+
+\elandscape
+
+#### Walking forward backtest
+
+```{r}
+trades.all <- readRDS('fore_cache/tr_all.RDS')
+```
+
+```{r, include = TRUE, results = "asis"}
+filter.in <- c('G.TO')
+
+task.filter <- sapply(trades.all, function(trade) {
+  any(grepl(paste(filter.in, collapse = '|'), trade$symbol))
+})
+
+trades <- trades.all[task.filter]
+
+mat <- t(sapply(trades, function(trade) {
+    c(buyandhold = prod(1 + trade$trades$buyandhold) - 1,
+      sapply(trade$trades[-1], function(strat) {
+        prod(1 + strat$ret) - 1
+      }))
+}))
+
+mat <- rbind(mat,
+             apply(mat, 2, function(m) {prod(1 + m) - 1}))
+
+colnames(mat) <- c("Buy-Hold", sprintf("HHMM (%s lag)", 0:5))
+rownames(mat) <- c(sapply(trades, function(trade) { substr(trade$oos, 1, 10) }), "Total")
+
+setglobals()
+tab  <- xtable(round(mat, 4),
+               caption = "Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TSE:G.",
+               label = "tab:tseg-filtered-ins",
+               align = c('r', rep('R', 7)))
+
+print(tab, digits = 4, hline.after = c(-1, 0, nrow(mat) - 1, nrow(mat)),
+      width = "\\textwidth", size = "\\scriptsize")
+```
 
 ...
 
 ### Trading strategy
+
+Show total for other stocks and mention strat vs bh.
 
 ...
 
 ## Discussion {#further-research}
 
 ### The statistical model
-
-...
+We find that the model proposed, while statistically simple, is highly expressive of financial domain knowledge. The hierarchical design creates a multi-level stochastic process that learns autocorrelations in different time scales. This accommodates for multiresolution, a typical characterstic of financial datasets. We remark that, whereas HHMM offer a methodology to create a complex, highly non linear model for time series, estimation and inference can be achieved in reasonable complexity. The developments by @murphy2001linear simplified cubic time into linear time inference, making inference feasible for high-frequency finance.
 
 ### The financial application
 
-...
+We have special interest in the feature extraction procedure. They were cleverly designed to reproduce some of the most basic principles of technical analysis and, when applied to real data, they proved to be a powerful descriptor of price and volume movements. Nonetheless, we observe that the change in volume is the weakest component and provides with great opportunities for further enhancements. The contribution of the author should not be neglected: in general terms, the features are the most important factor in the success or the failure of a machine learning project[@domingos2012few].
 
 ---
 
@@ -705,25 +819,88 @@ plot_topstate_seqv(tdata.ins[ss, ], zig.ins[ss, ],
 
 # Appendix
 
-\small
-```{r, include = TRUE}
-mat <- summary(stan.fit, pars = c('p_1k', 'A_ij', 'A_ij', 'phi_k'),
-               probs = c(0.10, 0.50, 0.90))$summary
+## Estimated parameters TSE:G 2007-05-04/2007-05-10.
+\label{sec:appendix-tseg-parameters}
 
-pmat(mat,
-     # col.names = colnames(mat),
-     row.names = c('$\\pi_{1}$', '$1 - \\pi_{1}$', 
-                   '$a_{11}$', '$a_{12}$', '$1 - a_{11} - a_{12}$', 
-                   '$a_{22}$', 
-                   '$a_{31}$', '$a_{33}$', '$1 - a_{31} - a_{33}$', 
-                   '$a_{44}$'),
-     digits = 4, align = 'r', scientific = FALSE)
+```{r, include = TRUE, results = "asis"}
+pars <- c('p_1k', 'A_ij', 'phi_k')
+rows <- list(
+  sprintf("$\\pi_{%s}$", 1:4),
+  sprintf("$a_{%s}$", 
+          apply(expand.grid(1:4, 1:4), 1, function(x) { paste0(x[2], x[1]) })),
+  sprintf("$\\phi_{%s}$", 
+          apply(expand.grid(1:9, 1:4), 1, function(x) { paste0(x[2], x[1]) }))
+)
+prob <- c(0.025, 0.10, 0.25, 0.50, 0.75, 0.90, 0.975)
+
+lmat <- lapply(1:length(pars), function(i) {
+  p <- pars[i]
+  mat <- summary(stan.fit, pars = p,
+          probs = prob)$summary
+  
+  colnames(mat) <- c("Mean", "MCSE", "SD", 
+                     sprintf("$q_{%0.1f\\%%}$", 100 * prob), 
+                     "ESS", "$\\hat{R}$")
+  
+  rownames(mat) <- rows[[i]]
+  
+  mat
+  })
+
+setglobals()
+tabs <- xtableList(lmat,
+                   caption = "Statistics summary for the distributions of 
+                   estimated parameters for TSE:G 2007-05-04 
+                   09:30:00/2007-05-10 16:30:00. MCSE means Monte Carlo 
+                   Standard Error, SD means (posteriori) Standard Deviation 
+                   and ESS means Effective Sample Size.",
+                   label = "tab:tseg-ins-appendix-summary",
+                   align = c('l', rep('R', 12)))
+
+print(tabs, colnames.format = "single",
+      digits = 4, NA.string = 'n.a.',
+      width = "\\textwidth", size = "\\footnotesize")
 ```
-\normalsize
 
-# Original Computing Environment
+\newpage
 
-```{r}
+## Walking forward for all assets
+
+```{r, include = FALSE}
+syms <- unique(sapply(trades.all, function(t) { t$symbol }))
+
+
+out <- NULL
+for (sym in syms) {
+  task.filter <- sapply(trades.all, function(trade) {
+    any(grepl(paste(sym, collapse = '|'), trade$symbol))
+  })
+  
+  trades <- trades.all[task.filter]
+  
+  mat <- t(sapply(trades, function(trade) {
+      c(buyandhold = prod(1 + trade$trades$buyandhold) - 1,
+        sapply(trade$trades[-1], function(strat) {
+          prod(1 + strat$ret) - 1
+        }))
+  }))
+  
+  mat <- rbind(mat,
+               apply(mat, 2, function(m) {prod(1 + m) - 1}))
+  
+  colnames(mat) <- c("Buy-Hold", sprintf("HHMM (%s lag)", 0:5))
+  rownames(mat) <- c(sapply(trades, function(trade) { substr(trade$oos, 1, 10) }), "Total")
+  
+  out <- c(out, knitr::knit_child('Rmd/appendix-wf.Rmd'))
+}
+
+```
+
+`r paste(out,   collapse='\n')`
+
+## Original Computing Environment
+
+```{r, include = TRUE}
 writeLines(readLines(file.path(Sys.getenv("HOME"), ".R/Makevars")))
 devtools::session_info("rstan")
 ```

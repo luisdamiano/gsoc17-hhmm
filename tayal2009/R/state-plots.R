@@ -133,7 +133,12 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
   }
 
   if ('all' %in% which.features) {
+    lexp <- cbind(expand.grid(1:9, c("U", "D")),
+                  c(rep("Bull", 4), "Local vol", rep("Bear", 4)))
+    labs <- sprintf("%s%s (%s)", lexp[, 2], lexp[, 1], lexp[, 3])
+
     all.palette <- colorRampPalette(c('lightgreen', 'darkred'))(18)
+    all.palette <- all.palette[c(1:5, 15:18, 6:14)]
 
     segments(head(zigzag.x, -1), head(zigzag$price, -1),
              tail(zigzag.x, -1), tail(zigzag$price, -1),
@@ -141,7 +146,8 @@ plot_features <- function(tdata, zigzag = extract_features(tdata),
              lwd = 2)
 
     legend.list <- list_add(legend.list,
-                            legend = c(paste("Bull", 1:9), paste("Bear", 1:9)),
+                            legend = labs,
+                            # legend = c(paste("Bull", 1:9), paste("Bear", 1:9)),
                             pch = rep(NA, 18),
                             lwd = rep( 2, 18),
                             col = all.palette,
@@ -216,9 +222,9 @@ plot_topstate_hist <- function(x, top,
       qx <- quantile(x[top == topstate[i]], c(0.05, 0.50, 0.95))
       abline(v = qx, lwd = 1, lty = 2, col = 'gray')
       legend(x = "topright",
-             bty = 'n', # cex = 0.60,
+             bty = 'n', cex = par()$cex * 0.50,
              xjust = 1, yjust = 1,
-             legend = bquote(.(sprintf("q[%s] ~ \"=\" ~ %0.6f", names(qx), qx))))
+             legend = bquote(.(parse(text = sprintf("q[\"%s\"] ~ \"= %0.6f\"", names(qx), qx)))))
     }
   }
   par(opar)
@@ -305,7 +311,7 @@ plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
 
   if (!is.null(main.lab)) {
     text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
-         labels = main.lab,
+         labels = main.lab, cex = par()$cex * 0.5,
          pos = 4, font = 2) # cex = 0.6,
   }
 
@@ -313,7 +319,7 @@ plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
          legend = c('Bullish top state', 'Bearish top state'),
          lwd = 2,
          col = c('green3', 'red'),
-         bty = 'n', # cex = 0.6,
+         bty = 'n', cex = par()$cex * 0.5,
          horiz = TRUE)
 
   # Plot 2 Volume
@@ -340,7 +346,7 @@ plot_topstate_seqv <- function(tdata, zigzag, main.lab = NULL) {
          legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
          lwd = c(2,  2,  2),
          col = c('green3', 'red', 'blue'),
-         bty = 'n', # cex = 0.6,
+         bty = 'n', cex = par()$cex * 0.5,
          y.intersp	= 0.0, # x.intersp = 0.2,
          # text.width = 20.0,
          horiz = TRUE)
@@ -353,6 +359,7 @@ plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", 
   my.ylim <- c(0, 500 * ((max(table(features)) %/% 500) + 1))
 
   opar <- par(TRUE)
+  par(mar = c(3.5, 4.1, 1.0, 2.1))
   par(mfrow = c(1, 2))
   for (i in 1:n) {
     zx <- features[top == topstate[i]]
@@ -362,14 +369,15 @@ plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", 
 
     barplot(tab,
             main = bquote("Zig-zags (top state " * .(topstate.label[i]) * ")"),
-            xlab = "Feature", ylab = "Frequency",
+            ylab = "Frequency",
             beside = TRUE, ylim = my.ylim,
             col = c('green3', 'red'), border = c('green3', 'red'), ...)
 
     legend(x = "topright",
            legend = c(expression('Positive leg' ~ U[i]),
                       expression('Negative leg' ~ D[i])),
-           bty = 'n', horiz = FALSE, # cex = 0.65,
+           bty = 'n', horiz = FALSE,
+           cex = par()$cex * 0.5,
            fill = c('green3', 'red'),
            border = c('green3', 'red'))
   }
@@ -427,19 +435,19 @@ plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
 
     text(x = last(equity.x), y = last(equity.str),
          pos = 4, labels = bquote("Trading lag = "*.(attr(t, 'lag'))*" ticks"),
-         col = i) #cex = 1.0,
+         col = i, cex = par()$cex * 0.5) #cex = 1.0,
   }
 
   text(x = last(index(trades[[1]])), y = last(cumprod(1 + trades[[1]]$perchg)),
        pos = 4, labels = bquote("Buy and hold"),
-       col = 'gray') #cex = 1.0,
+       col = 'gray', cex = par()$cex * 0.5) #cex = 1.0,
 
   abline(h = 1, col = 'lightgray')
 
   if (!is.null(main.lab)) {
     text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
          labels = main.lab,
-         pos = 4, font = 2) # cex = 1.0
+         pos = 4, font = 2, cex = par()$cex * 0.5) # cex = 1.0
   }
 
   # Plot II Price and features
@@ -462,14 +470,14 @@ plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
   if (!is.null(main.lab)) {
     text(x = par('usr')[1] - strheight("f"), y = par('usr')[4] - strheight("f"),
          labels = main.lab,
-         pos = 4, font = 2) # cex = 1.0,
+         pos = 4, font = 2, cex = par()$cex * 0.5) # cex = 1.0,
   }
 
   legend(x = "topright",
          legend = c('Bullish top state', 'Bearish top state'),
          lwd = 2, y.intersp	= 0.0,
          col = c('green3', 'red'),
-         bty = 'n', # cex = 1.0,
+         bty = 'n', cex = par()$cex * 0.5, # cex = 1.0,
          horiz = TRUE)
 
   # Plot III Volume
@@ -496,7 +504,7 @@ plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
          legend = c('Volume strengthens', 'Volumen weakens', 'Indeterminant'),
          lwd = c(2,  2,  2),
          col = c('green3', 'red', 'blue'),
-         bty = 'n', # cex = 0.85,
+         bty = 'n', cex = par()$cex * 0.5, # cex = 0.85,
          y.intersp	= 0.0,
          horiz = TRUE)
 

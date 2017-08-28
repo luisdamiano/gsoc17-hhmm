@@ -30,6 +30,7 @@ wf_trade <- function(task.list,
   results <- foreach(
     task = task.list,
     .packages = c("digest", "rstan", "xts")
+  # ) %do% {
   ) %dopar% {
     setwd(wd)
     data.files <- task[[1]]
@@ -37,7 +38,7 @@ wf_trade <- function(task.list,
     oos <- task[[3]]
 
     print_debug <- function(x) {
-      print(paste(Sys.time(), Sys.info()[['nodename']], Sys.getpid(), x, ins, oos, paste(data.files, collapse = " || ")))
+      # print(paste(Sys.time(), Sys.info()[['nodename']], Sys.getpid(), x, ins, oos, paste(data.files, collapse = " || ")))
     }
 
     data.env <- new.env()
@@ -171,8 +172,11 @@ wf_trade <- function(task.list,
     print_debug(paste("End", cache.filename))
 
     gc()
-    # return(list(task, ins, oos, tdata, trade.list, stan.fit))
-    return(list(task, ins, oos, tdata, trade.list))
+    # return(list(task, ins, oos, tdata, top, zig, trade.list, stan.fit))
+    return(list(symbol = attr(tdata, 'symbol'),
+                task = task, ins = ins, oos = oos,
+                tdata = tdata, top = top, zig = zig,
+                trades = trade.list))
   }
 
   stopCluster(cl)

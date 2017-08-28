@@ -57,3 +57,5 @@ task.list <- do.call(c, lapply(dir(data.path), function(d) { # d = one stock
 # runs the strategy walking forward
 tr <- wf_trade(task.list, features.alpha, K, L,
          n.iter, n.warmup, n.chains, n.cores, n.thin, n.seed, cache.path)
+
+saveRDS(tr, file.path(cache.path, 'tr_all.RDS'))

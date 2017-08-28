@@ -1,6 +1,6 @@
 topstate_trading <- function(tdata, lag) {
-  signal <- ((1:nrow(tdata))[tdata$topstate != lag(tdata$topstate)] + lag)[-1]
-  start  <- signal + lag
+  signal <- ((1:nrow(tdata))[tdata$topstate != lag(tdata$topstate)])[-1]
+  start  <- ifelse(signal + lag > nrow(tdata), nrow(tdata), signal + lag)
   end    <- c(tail(start, -1), nrow(tdata))
   action <- ifelse(tdata$topstate[signal] == state.bear, -1, 1)
   entryp <- as.numeric(tdata[start, 1])

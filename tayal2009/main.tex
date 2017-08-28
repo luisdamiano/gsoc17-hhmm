@@ -29,9 +29,6 @@
             pdfborder={0 0 0},
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
-\usepackage{natbib}
-\bibliographystyle{plainnat}
-\usepackage{longtable,booktabs}
 \usepackage{graphicx,grffile}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -85,14 +82,16 @@ High-Frequency Stock Markets}
   \postauthor{\par}
   \predate{\centering\large\emph}
   \postdate{\par}
-  \date{2017-08-26}
+  \date{2017-08-28}
 
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 \usepackage{bm} % True bold symbols
 \usepackage{float} % Image position
 \usepackage{tabularx} % Tables
 \usepackage{tikz} % Graphs
-\usetikzlibrary{positioning}
+\usepackage[utf8]{inputenc} % UTF-8
+\usepackage{lscape} % Landscape mode
+\usepackage{booktabs}
 
 % Math operators
 \DeclareMathOperator*{\argmax}{\operatorname*{arg\,max}}
@@ -110,7 +109,18 @@ High-Frequency Stock Markets}
 \newcommand{\LL}{\mathcal{L}}
 \newcommand{\RR}{\mathbb{R}}
 
-\usepackage{lscape}
+% Graphs
+\usetikzlibrary{positioning}
+
+% Tables
+% \newcolumntype{R}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% Captions
+\setlength{\abovecaptionskip}{2pt plus 0pt minus 0pt}
+\setlength{\belowcaptionskip }{2pt plus 0pt minus 0pt}
+
+% Landscape
 \newcommand{\blandscape}{\begin{landscape}}
 \newcommand{\elandscape}{\end{landscape}}
 
@@ -121,7 +131,19 @@ High-Frequency Stock Markets}
 \setcounter{tocdepth}{2}
 \tableofcontents
 }
-This work aims at \ldots{} .
+This work aims at replicating the Hierarichal Hidden Markov Model (HHMM)
+originally proposed by Tayal (2009) to learn price and volume patterns
+using rules from technical analysis, infer the hidden state of the
+system and identify runs and reversals out-of-sample in a statistically
+significant way. The main goal is to reproduce the results of the
+original research as well as to provide additional insight and
+criticism. Also, we produce public programming code in
+\href{http://mc-stan.org/}{Stan} (Carpenter et al. 2016) for a fully
+Bayesian estimation of the model parameters and inference on hidden
+quantities. A brief introduction about Hidden Markov Models (HMM) can be
+found in our
+\href{https://github.com/luisdamiano/gsoc17-hhmm/blob/master/litreview/main.pdf}{literature
+review}.
 
 The authors acknowledge Google for financial support via the Google
 Summer of Code 2017 program.
@@ -219,8 +241,8 @@ activations returns to the root state.
 The parameters of the models are
 \(\mat{\theta} = \left\{ \left\{ \mat{A}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\pi}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\theta}_o \right\} \right\}\).
 The form of \(\mat{\theta}_o\) depends on the specification of the
-production states. We refer the read to \citet{fine1998hierarchical} for
-a detailed treatment of estimation and inference procedures.
+production states. We refer the read to Fine and Singer (1998) for a
+detailed treatment of estimation and inference procedures.
 
 \begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
 
@@ -242,14 +264,14 @@ in seconds, \(p_k\) is the trade price and \(v_k\) is the trade volume.
 The sequence is ordered by the occurence of trades. There can be more
 than one trade within a second.
 
-Following \citet{tayal2009regime}, who in turns drew inspiration from
-the technical analysis techniques proposed by \citet{ord2008secret}, we
-derive a zig-zag sequence that captures the bid-ask bounce \(\{z_k\}\)
-with \(z_k = (i_n, j_n, e_n, \phi_n)\), where \(i_n \le i_j\) are
-indices to the tick series representing the starting and ending point of
-the extrema, \(e_n = p_k \ \forall \ k : i_n \le k \le j_n\) is the
-price at the local extrema, and \(\phi_m\) measures the average volume
-per second during the zig-zag leg ending at \(e_n\):
+Following Tayal (2009), who in turns drew inspiration from the technical
+analysis techniques proposed by Ord (2008), we derive a zig-zag sequence
+that captures the bid-ask bounce \(\{z_k\}\) with
+\(z_k = (i_n, j_n, e_n, \phi_n)\), where \(i_n \le i_j\) are indices to
+the tick series representing the starting and ending point of the
+extrema, \(e_n = p_k \ \forall \ k : i_n \le k \le j_n\) is the price at
+the local extrema, and \(\phi_m\) measures the average volume per second
+during the zig-zag leg ending at \(e_n\):
 
 \[
 \phi_n = \frac{1}{t_{j_n} - t_{i_{n-1}} + 1} \sum_{k = i_{n-1}}^{j_n}{v_k}.
@@ -324,54 +346,58 @@ f_n^2 =
 \]
 
 The features or legs \(\mat{D} = \{D_1, \dots, D_9 \}\),
-\(\mat{U} = \{U_1, \dots, U_9 \}\) are then created using the table
+\(\mat{U} = \{U_1, \dots, U_9 \}\) are then created using the Table
 \(\ref{tab:feature-space}\).
 
-\% latex table generated in R 3.3.3 by xtable 1.8-2 package \% Sat Aug
-26 14:09:52 2017
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
 
 \begin{table}[ht]
 \centering
 \begingroup\footnotesize
-\begin{tabularx}{0.7 \textwidth}{rrrrr}
+\begin{tabularx}{0.8 \textwidth}{lRRRR}
   \toprule
  & Zig-zag direction & Price trend & Change in volume & Market State \\ 
   \midrule
-$D_{1}$ & Down -1 & Up +1 & dn & Bull \\ 
-  $D_{2}$ & Down -1 & Down -1 & dn & Bull \\ 
-  $D_{3}$ & Down -1 & Up +1 & Intederminant 0 & Bull \\ 
-  $D_{4}$ & Down -1 & No trend & dn & Bull \\ 
-  $D_{5}$ & Down -1 & No trend & Intederminant 0 & Local volatility \\ 
-  $D_{6}$ & Down -1 & No trend & Strong +1 & Bear \\ 
-  $D_{7}$ & Down -1 & Down -1 & Intederminant 0 & Bear \\ 
+$D_{1}$ & Down -1 & Up +1 & Weak -1 & Bull \\ 
+  $D_{2}$ & Down -1 & Down -1 & Weak -1 & Bull \\ 
+  $D_{3}$ & Down -1 & Up +1 & Intederminant  0 & Bull \\ 
+  $D_{4}$ & Down -1 & No trend  0 & Weak -1 & Bull \\ 
+  $D_{5}$ & Down -1 & No trend  0 & Intederminant  0 & Local volatility \\ 
+  $D_{6}$ & Down -1 & No trend  0 & Strong +1 & Bear \\ 
+  $D_{7}$ & Down -1 & Down -1 & Intederminant  0 & Bear \\ 
   $D_{8}$ & Down -1 & Up +1 & Strong +1 & Bear \\ 
   $D_{9}$ & Down -1 & Down -1 & Strong +1 & Bear \\ 
    \midrule
 $U_{1}$ & Up +1 & Up +1 & Strong +1 & Bull \\ 
   $U_{2}$ & Up +1 & Down -1 & Strong +1 & Bull \\ 
-  $U_{3}$ & Up +1 & Up +1 & Intederminant 0 & Bull \\ 
-  $U_{4}$ & Up +1 & No trend & Strong +1 & Bull \\ 
-  $U_{5}$ & Up +1 & No trend & Intederminant 0 & Local volatility \\ 
-  $U_{6}$ & Up +1 & No trend & dn & Bear \\ 
-  $U_{7}$ & Up +1 & Down -1 & Intederminant 0 & Bear \\ 
-  $U_{8}$ & Up +1 & Up +1 & dn & Bear \\ 
-  $U_{9}$ & Up +1 & Down -1 & dn & Bear \\ 
+  $U_{3}$ & Up +1 & Up +1 & Intederminant  0 & Bull \\ 
+  $U_{4}$ & Up +1 & No trend  0 & Strong +1 & Bull \\ 
+  $U_{5}$ & Up +1 & No trend  0 & Intederminant  0 & Local volatility \\ 
+  $U_{6}$ & Up +1 & No trend  0 & Weak -1 & Bear \\ 
+  $U_{7}$ & Up +1 & Down -1 & Intederminant  0 & Bear \\ 
+  $U_{8}$ & Up +1 & Up +1 & Weak -1 & Bear \\ 
+  $U_{9}$ & Up +1 & Down -1 & Weak -1 & Bear \\ 
    \bottomrule
 \multicolumn{4}{l}{}\\
 \end{tabularx}
 \endgroup
+\caption{Feature space.} 
+\label{tab:feature-space}
 \end{table}
 
 Defining appropiate rules that capture trade volume dynamics and
 identify trends in volume despite high-frequency noise is the most
-challenging aspect of this design. \citet{wisebourt2011hierarchical}
-proposes a modification for the feature extraction procedure. By
-computing the spread between the Volume Weighted Average Prices of the
-bid and the ask, he designs a book imbalance metric that describes the
-state of the order book at any given moment in time. In turns,
-\citet{sandoval2015computational} applies wavelets over two
-simple-smoothed exponential distance-weighted average volume series to
-measure trade volume concentration in both sides of the book.
+challenging aspect of this design. Wisebourt (2011) proposes a
+modification for the feature extraction procedure. By computing the
+spread between the Volume Weighted Average Prices of the bid and the
+ask, he designs a book imbalance metric that describes the state of the
+order book at any given moment in time. In turns, Sandoval and Hernández
+(2015) applies wavelets over two simple-smoothed exponential
+distance-weighted average volume series to measure trade volume
+concentration in both sides of the book.
 
 \subsection{Model}\label{model}
 
@@ -579,9 +605,9 @@ out-of-sample results only.
 Finally, a trading strategy is tested. After a zig-zag leg is completed,
 the trading system buys one unit every time the top-level state switches
 to bullish (a run) and sells one unit every time it switches to bearish
-(a reveral). As an addition to \citet{tayal2009regime}, where trades are
-executed one tick after the zig-zag leg is observed to ensure there is
-no lock-ahead bias, we investigate the decay of the strategy performance
+(a reveral). As an addition to Tayal (2009), where trades are executed
+one tick after the zig-zag leg is observed to ensure there is no
+lock-ahead bias, we investigate the decay of the strategy performance
 for longer lags.
 
 \subsection{GoldCorp Inc (TSE:G)}\label{goldcorp-inc-tseg}
@@ -609,127 +635,153 @@ their own. Although we could not gain insight by visually inspecting
 other intermediate indicators such as the trend \(f_1\), further
 research may find value in them.
 
-\begin{figure}[H]
-\includegraphics[width=\textwidth,height=0.4 \textheight]{main_files/figure-latex/unnamed-chunk-7-1} \caption{Local extrema detected in TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \label{tseg-ins-extrema}}\label{fig:unnamed-chunk-7}
-\end{figure}
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
 
 \begin{figure}[H]
-\includegraphics[width=\textwidth,height=0.4 \textheight]{main_files/figure-latex/unnamed-chunk-8-1} \caption{Features extracted from TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \label{tseg-ins-features}}\label{fig:unnamed-chunk-8}
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-7-1} \caption{Local extrema detected in TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \label{tseg-ins-extrema}}\label{fig:unnamed-chunk-7}
+\end{figure}
+
+The Features
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-8-1} \caption{Features extracted from TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \label{tseg-ins-features}}\label{fig:unnamed-chunk-8}
 \end{figure}
 
 \subsubsection{Estimation}\label{estimation}
 
-We present a summary of the estimates for the model parameters in
-\ref{tab:tseg-ins-params}. The top nodes show some persistence since the
-estimated transition probabilities inside \(1 - \\pi_{1}\) and
-\(\\pi_{31}\) are close to \(1\). Extreme features are less likely in
-all states, which is consistent with our empirical observations.
-Features \(D_5\) and \(U_5\) are frequent in both regimens. Features
-\(\{D_1, \dots D_4 \}\) are more frequent on the the most frequent
-positive and negative legs, are linked to local volatility. ** The
-weakness**.
+Model parameters can be segregated into two groups: parameters for the
+hidden model, including the initial distribution vector as well as the
+transition matrix, and parameters for the conditional multinomial
+distributions for the output. Table \ref{tab:tseg-ins-transition}
+summarises the former. The estimates for the initial distribution
+probabilities \(\pi_1\) and \(1 - \pi_1\) are uncertain to a large
+extent, which is unsurprising as the sample provides with only one
+starting observation and the model imposes almost no prior information
+for the parameters. Team (2017), a technical manual for a programming
+language that also contains many brief discussion of statistical
+notions, describes some alternative specifications. If the sample were
+conceived as a subsequence of a long-running data generating process,
+the initial probabilities may be set to equal the stationary state
+probabilities of the transition Markov chain. Contrarily, if the sample
+was considered a finite-length sequence, the model may have a different
+starting distribution.
 
-\tiny
+On the other hand, estimation of the transition parameters profit from a
+larger number of trades: more information reduce uncertainty. We note
+that the bull top state seems persistent as positive zig-zags \(z^2_3\)
+are more likely to transition to bull negative zig-zags \(z^2_4\) versus
+bear negative zig-zags \(z^2_1\) by a factor of
+\(a_{34} / a_{31} \approx 10\). After studying several stocks and
+timespans, we decide that these empirical observations are specific to
+the sample and are highly influenced by the general price trend present
+in the five day-long training dataset.
 
 \begin{verbatim}
-## $xtable.tabular.environment
-## NULL
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
 \end{verbatim}
 
-\begin{longtable}[]{@{}rrrrrr@{}}
-\caption{\label{tab:tseg-ins-params}}\tabularnewline
-\toprule
-Parameter & Mean & Std. Deviation & \(q_{10\%}\) & \(q_{50\%}\) &
-\(q_{90\%}\)\tabularnewline
-\midrule
-\endfirsthead
-\toprule
-Parameter & Mean & Std. Deviation & \(q_{10\%}\) & \(q_{50\%}\) &
-\(q_{90\%}\)\tabularnewline
-\midrule
-\endhead
-\(\pi_{1}\) & 0.5067 & 0.282 & 0.0956 & 0.5162 & 0.8931\tabularnewline
-\(1 - \pi_{1}\) & 0.4933 & 0.282 & 0.1069 & 0.4838 &
-0.9044\tabularnewline
-\(a_{12}\) & 0.4559 & 0.1089 & 0.3085 & 0.47 & 0.579\tabularnewline
-\(1 - a_{12}\) & 0.5441 & 0.1089 & 0.421 & 0.53 & 0.6915\tabularnewline
-\(a_{21}\) & 1 & 0 & 1 & 1 & 1\tabularnewline
-\(a_{31}\) & 0.0914 & 0.0623 & 0.0171 & 0.0836 & 0.1717\tabularnewline
-\(1 - a_{31}\) & 0.9086 & 0.0623 & 0.8283 & 0.9164 &
-0.9829\tabularnewline
-\(a_{43}\) & 1 & 0 & 1 & 1 & 1\tabularnewline
-\bottomrule
-\end{longtable}
+\begin{table}[ht]
+\centering
+\begingroup\footnotesize
+\begin{tabularx}{0.65 \textwidth}{rRRRRR}
+  \toprule
+ & Mean & Std. Deviation & $q_{10\%}$ & $q_{50\%}$ & $q_{90\%}$ \\ 
+  \midrule
+$\pi_{1}$ & 0.51 & 0.28 & 0.10 & 0.52 & 0.89 \\ 
+  $1 - \pi_{1}$ & 0.49 & 0.28 & 0.11 & 0.48 & 0.90 \\ 
+  $a_{12}$ & 0.46 & 0.11 & 0.31 & 0.47 & 0.58 \\ 
+  $1 - a_{12}$ & 0.54 & 0.11 & 0.42 & 0.53 & 0.69 \\ 
+  $a_{21}$ & 1.00 & 0.00 & 1.00 & 1.00 & 1.00 \\ 
+  $a_{31}$ & 0.09 & 0.06 & 0.02 & 0.08 & 0.17 \\ 
+  $1 - a_{31}$ & 0.91 & 0.06 & 0.83 & 0.92 & 0.98 \\ 
+  $a_{43}$ & 1.00 & 0.00 & 1.00 & 1.00 & 1.00 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Estimated parameters of the transition matrix 
+               for TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00.} 
+\label{tab:tseg-ins-transition}
+\end{table}
 
-\begin{longtable}[]{@{}rrrrrr@{}}
-\toprule
-Parameter & Mean & Std. Deviation & \(q_{10\%}\) & \(q_{50\%}\) &
-\(q_{90\%}\)\tabularnewline
-\midrule
-\endhead
-\(U_1\) & 0.0073 & 0.0057 & 7e-04 & 0.0064 & 0.0152\tabularnewline
-\(U_2\) & 0.0196 & 0.0047 & 0.0145 & 0.0188 & 0.0263\tabularnewline
-\(U_3\) & 0.0072 & 0.0081 & 6e-04 & 0.0047 & 0.017\tabularnewline
-\(U_4\) & 0.3419 & 0.0208 & 0.314 & 0.3436 & 0.3665\tabularnewline
-\(U_5\) & 0.2231 & 0.0262 & 0.1873 & 0.2253 & 0.2561\tabularnewline
-\(U_6\) & 0.3531 & 0.0174 & 0.3305 & 0.3549 & 0.3719\tabularnewline
-\(U_7\) & 0.0264 & 0.0053 & 0.0205 & 0.0263 & 0.0333\tabularnewline
-\(U_8\) & 0.0052 & 0.0043 & 6e-04 & 0.0042 & 0.0109\tabularnewline
-\(U_9\) & 0.0161 & 0.0046 & 0.0109 & 0.0155 & 0.0226\tabularnewline
-\(D_1\) & 0.0017 & 0.0018 & 2e-04 & 0.0011 & 0.004\tabularnewline
-\(D_2\) & 0.0226 & 0.0053 & 0.0162 & 0.0223 & 0.0297\tabularnewline
-\(D_3\) & 0.0017 & 0.0017 & 1e-04 & 0.0012 & 0.0039\tabularnewline
-\(D_4\) & 0.0484 & 0.0333 & 0.0062 & 0.046 & 0.0918\tabularnewline
-\(D_5\) & 0.8008 & 0.0403 & 0.7497 & 0.8026 & 0.8528\tabularnewline
-\(D_6\) & 0.0236 & 0.0174 & 0.005 & 0.0203 & 0.0469\tabularnewline
-\(D_7\) & 0.0796 & 0.008 & 0.0698 & 0.0798 & 0.0891\tabularnewline
-\(D_8\) & 0.0011 & 0.001 & 1e-04 & 9e-04 & 0.0023\tabularnewline
-\(D_9\) & 0.0205 & 0.0045 & 0.015 & 0.0204 & 0.0262\tabularnewline
-\(U_1\) & 0.0105 & 0.0038 & 0.0062 & 0.0106 & 0.0153\tabularnewline
-\(U_2\) & 0.0023 & 0.0022 & 3e-04 & 0.0018 & 0.0051\tabularnewline
-\(U_3\) & 0.0251 & 0.0052 & 0.0187 & 0.0251 & 0.0314\tabularnewline
-\(U_4\) & 0.3554 & 0.0313 & 0.3159 & 0.3549 & 0.3936\tabularnewline
-\(U_5\) & 0.1986 & 0.0363 & 0.1525 & 0.1982 & 0.2421\tabularnewline
-\(U_6\) & 0.3884 & 0.0198 & 0.3645 & 0.3886 & 0.4154\tabularnewline
-\(U_7\) & 0.0023 & 0.0022 & 4e-04 & 0.0017 & 0.0054\tabularnewline
-\(U_8\) & 0.0155 & 0.0038 & 0.0111 & 0.015 & 0.0205\tabularnewline
-\(U_9\) & 0.0018 & 0.0019 & 2e-04 & 0.0013 & 0.0043\tabularnewline
-\(D_1\) & 0.0165 & 0.0066 & 0.007 & 0.017 & 0.0251\tabularnewline
-\(D_2\) & 9e-04 & 9e-04 & 1e-04 & 6e-04 & 0.002\tabularnewline
-\(D_3\) & 0.0558 & 0.011 & 0.0419 & 0.0574 & 0.0677\tabularnewline
-\(D_4\) & 0.0212 & 0.0158 & 0.0044 & 0.0185 & 0.0452\tabularnewline
-\(D_5\) & 0.8793 & 0.0237 & 0.8476 & 0.8803 & 0.9057\tabularnewline
-\(D_6\) & 0.0132 & 0.0122 & 0.0017 & 0.0088 & 0.0314\tabularnewline
-\(D_7\) & 0.0019 & 0.0017 & 3e-04 & 0.0014 & 0.0039\tabularnewline
-\(D_8\) & 0.0098 & 0.0052 & 0.0028 & 0.0098 & 0.0168\tabularnewline
-\(D_9\) & 0.0014 & 0.0014 & 1e-04 & 9e-04 & 0.0032\tabularnewline
-\bottomrule
-\end{longtable}
+Output distributions are summarized in Figure
+\textbackslash{}ref\{fig:tseg-ins-multinomial\}. It is important to note
+that zig-zags with no price trends \(D_4, D_5, D_6, U_4, U_5, U_6\) are
+the most preeminent features. In particular, it is worthwhile to analyse
+the behaviour of the model in the presence of local volatility
+\(D_5, U_5\), i.e.~when there is no clear trends in price and volume.
 
-\normalsize
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-11-1} \caption{Estimated parameters of the conditional multinomial distribution of the outputs given the emission state (bottom node) for TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \label{fig:tseg-ins-multinomial}}\label{fig:unnamed-chunk-11}
+\end{figure}
+
+We first study short-term price changes in the opposite direction to the
+long-term trend. The vast majority of negative zig-zags observed in
+bullish markets are due to local volatility (\(\hat{\phi}_{45}\) = 0.88)
+as do most of the positive zig-zags found in bearish markets
+(\(\hat{\phi}_{25}\) = 0.80). We note, however, that negative legs with
+no price trends but weakening or strengthening trade volume are equally
+probable in bearish markets
+(\(\hat{\phi}_{14} \approx \hat{\phi}_{16}\)). Analogously, we find in
+bullish markets that \(\hat{\phi}_{34} \approx \hat{\phi}_{36}\). These
+observations counter the a priori classification stated in Table
+\ref{tab:feature-space}.
+
+Additionally, we find that positive zig-zags originated in local
+volatility are more likely to be seen in bearish markets versus bullish
+markets by a factor of \(\phi_{25} / \phi_{35} \approx 4\). The odds for
+negative zig-zags are similar. We warn the reader that the current model
+needs more information to classify this feature. All in all, we are
+warned that zig-zag direction \(f^0\) and change in volume \(f^2\) are
+not decisive without a price trend, a hint that the current model needs
+either better feature engineering rules for the change in volume or more
+external information to deal with local volatility.
 
 \subsubsection{Convergence}\label{convergence}
 
 Figure \ref{tseg-ins-diags} illustrates the trace plot of some arbitrary
 parameters as well as some diagnostic measures. In general terms, mixing
 and convergence to the stationary distribution is acceptable. The shrink
-factor of \citep{gelman1992inference}, close to \(1\) for all hidden
+factor of (Gelman and Rubin 1992), close to \(1\) for all hidden
 quantities, indicates an adequate degree of convergence. Sampling is
 efficient as signaled by effective sample size ratios near to \(1\) and
 Monte Carlo Standar Error to posterior standard deviation ratios well
 below 10\%.
 
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
 \begin{figure}[H]
-\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-11-1} \caption{Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\label{tseg-ins-diags}}\label{fig:unnamed-chunk-11}
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-12-1} \caption{Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\label{tseg-ins-diags}}\label{fig:unnamed-chunk-12}
 \end{figure}
 
 Although re-estating the original Hierarchical Hidden Markov Model into
 a Hidden Markov Model may increase time and memory complexity, the new
 model becomes significantly easier to program and convergence. A full
 list of our results, including convergence statistics such as
-\(\hat{R}\) and the effective sample size, is included in the appendix.
+\(\hat{R}\) and the effective sample size, is included in the Appendix
+Section \ref{sec:appendix-tseg-parameters}.
 
 \subsubsection{State probability}\label{state-probability}
+
+\begin{verbatim}
+## [1] "% BEFORE AN EVENTUAL SWITCH: \n              bottom nodes 1, 2 (bear) have a mean return of -0.0090%, \n              while bottom nodes 3, 4 (bull) have a mean return of 0.0051%."
+\end{verbatim}
 
 The forward algorithm allows us to calculate the filtered belief state:
 the probability that an observation at time \(t\) was emitted by one of
@@ -737,36 +789,49 @@ the possible four states (bottom-nodes) given the evidence avaliable up
 to \(t\). We assign each observation to the emission state with largest
 filtered probability and, by the definition of the hierarchical model,
 they become naturally linked to one of the two possible top states
-(bears or bulls).
+(bears and bulls). Figure \ref{tseg-ins-features-hist} reflects the
+resulting classification.
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
 
 \begin{figure}[H]
-\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-13-1} \caption{Distribution of observed features conditional on the estimated hidden regime (top node). \label{tseg-ins-features-hist}}\label{fig:unnamed-chunk-13}
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-14-1} \caption{Distribution of features conditional on the estimated hidden regime (top node). \label{tseg-ins-features-hist}}\label{fig:unnamed-chunk-14}
 \end{figure}
 
 The following table provides some summary statistics for the returns of
 the observations classified in each state. The structure of the top
 nodes are symmetrical and they do not have an a priori order. We label
-them as runs and reversals according to the expected trade returns
-observed in-sample.
+them according to the in-sample mean trade returns.
 
-\footnotesize
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
 
-\begin{longtable}[]{@{}llllllllll@{}}
-\toprule
-Top state & Mean & Std. dev. & Skewness & Kurtosis & \(q_{25}\%\) &
-Median & \(q_{75}\%\) & Mean length & Median length\tabularnewline
-\midrule
-\endhead
-Bear & -0.0094 & 0.0648 & 7.9684 & 237.4565 & -0.036 & 0 & 0 & 10.6215 &
-6\tabularnewline
-Bull & 0.0049 & 0.0515 & 0.9683 & 9.367 & 0 & 0 & 0.0357 & 10.1696 &
-6\tabularnewline
-Unconditional & -0.0022 & 0.0589 & 5.5346 & 173.8077 & -0.0357 & 0 & 0 &
-10.3955 & 6\tabularnewline
-\bottomrule
-\end{longtable}
-
-\normalsize
+\begin{table}[ht]
+\centering
+\begingroup\footnotesize
+\begin{tabularx}{\textwidth}{rRRRRRRRRR}
+  \toprule
+ & Mean & SD & Skewness & Kurtosis & $q_{25}\%$ & $q_{50}\%$ & $q_{75}\%$ & Mean length & Median length \\ 
+  \midrule
+Bear & -0.01 & 0.06 & 7.97 & 237.46 & -0.04 & 0.00 & 0.00 & 10.62 & 6.00 \\ 
+  Bull & 0.00 & 0.05 & 0.97 & 9.37 & 0.00 & 0.00 & 0.04 & 10.17 & 6.00 \\ 
+  Unconditional & -0.00 & 0.06 & 5.53 & 173.81 & -0.04 & 0.00 & 0.00 & 10.40 & 6.00 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Summary statistics for the return of the trades 
+               assigned to each of the two possible top states for 
+               TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. Trade returns 
+               are computed as defined in Section \ref{sec:methodology}. 
+               Trade length is computed as the number of ticks involved.
+               Returns expressed in percentage. SD means Standard Deviation.} 
+\label{tab:tseg-ins-topstate}
+\end{table}
 
 Bear and bull top states have negative and positive mean respectively by
 construction. As it is also visible in Figure
@@ -777,23 +842,29 @@ dataset. However, bear markets have a marked skew towards negative
 returns, becomes more risky in term of extreme events (kurtosis) and
 trades in bear markets tend to last one tick more than bulls.
 
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
 \begin{figure}[H]
-\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-15-1} \caption{Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \label{fig:tseg-ins-ret-hist}}\label{fig:unnamed-chunk-15}
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-16-1} \caption{Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \label{fig:tseg-ins-ret-hist}}\label{fig:unnamed-chunk-16}
 \end{figure}
 
 We remark that trade returns originated in different stocks or timespans
 do not necessarily share these characteristics. Location, dispersion,
-symmetry and shape of the returns vary along stocks and day of analysis.
+symmetry and shape of the return distribution vary along stocks and day
+of analysis.
 
 \subsubsection{Fitted output}\label{fitted-output}
 
 As mentioned in Section \ref{sec:model}, the model assumes that outputs
 are emitted by one of four possible bottom nodes. By definition,
 negative legs belong to either \(z_{1}^2\) or \(z_{4}^2\) while positive
-legs belong to \(z_{2}^2\) or \(z_{3}^2\). Once the parameters were
+legs belong to \(z_{2}^2\) or \(z_{3}^2\). Once the parameters are
 estimated, states \(z_{1}^2\) and \(z_{2}^2\) are labeled as bears while
 \(z_{3}^2\) and \(z_{4}^2\) are marked as bulls according to the mean
-trade return of the observations included in each of them.
+trade return of the observations belonging to each top node.
 
 Bullish states allow for negative zig-zags and bearish states allow for
 positive zig-zags as long as the trade volume is indeterminant or weak.
@@ -802,57 +873,117 @@ The results of the classification are summarized in Table
 positive movements due to local volatility as well as downward movements
 with weak volume.
 
-Our sampler, tho, maps each of the 18 possible features into one state.
-For example, observations from feature 3 (ie U3) are all mapped into
-state 4. In a sense, this adds very little information since imputation
-is almost deterministic once the parameters are estimated. This is
-possibly a weakness in the model.
+\subsubsection{\texorpdfstring{We remark that each of the 18 possible
+features into one state. For example, observations from feature 3 (ie
+U3) are all mapped into state 4. In a sense, this adds very little
+information since imputation is almost deterministic once the parameters
+are estimated. This is possibly a weakness in the model. See the plot in
+\ref{fig:tseg-ins-seqv}.}{We remark that each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated. This is possibly a weakness in the model. See the plot in .}}\label{we-remark-that-each-of-the-18-possible-features-into-one-state.-for-example-observations-from-feature-3-ie-u3-are-all-mapped-into-state-4.-in-a-sense-this-adds-very-little-information-since-imputation-is-almost-deterministic-once-the-parameters-are-estimated.-this-is-possibly-a-weakness-in-the-model.-see-the-plot-in-.}
 
-\tiny
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
 
-\begin{longtable}[]{@{}rrrrrrrrrrrrrrrrrrrr@{}}
-\toprule
-Top state & Emission state & \(U_{1}\) & \(U_{2}\) & \(U_{3}\) &
-\(U_{4}\) & \(U_{5}\) & \(U_{6}\) & \(U_{7}\) & \(U_{8}\) & \(U_{9}\) &
-\(D_{1}\) & \(D_{2}\) & \(D_{3}\) & \(D_{4}\) & \(D_{5}\) & \(D_{6}\) &
-\(D_{7}\) & \(D_{8}\) & \(D_{9}\)\tabularnewline
-\midrule
-\endhead
-Bull & \(z^2_{1}\) & 0 & 15 & 0 & 810 & 0 & 828 & 33 & 0 & 17 & 0 & 0 &
-0 & 0 & 0 & 0 & 0 & 0 & 0\tabularnewline
-Bull & \(z^2_{2}\) & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 72 & 0 & 0
-& 2208 & 0 & 181 & 0 & 59\tabularnewline
-Bear & \(z^2_{3}\) & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 27 & 0 & 15 & 0 & 34 &
-831 & 0 & 846 & 0 & 16 & 0\tabularnewline
-Bear & \(z^2_{4}\) & 58 & 0 & 158 & 0 & 2155 & 0 & 0 & 22 & 0 & 0 & 0 &
-0 & 0 & 1 & 0 & 0 & 0 & 0\tabularnewline
-\bottomrule
-\end{longtable}
-
-\normalsize
+\begin{table}[ht]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRRRRRRRRRRRRRR}
+  \toprule
+Top & Bottom & $U_{1}$ & $U_{2}$ & $U_{3}$ & $U_{4}$ & $U_{5}$ & $U_{6}$ & $U_{7}$ & $U_{8}$ & $U_{9}$ & $D_{1}$ & $D_{2}$ & $D_{3}$ & $D_{4}$ & $D_{5}$ & $D_{6}$ & $D_{7}$ & $D_{8}$ & $D_{9}$ \\ 
+  \midrule
+Bear & 1 & 0 & 15 & 0 & 810 & 0 & 828 & 33 & 0 & 17 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 
+  Bear & 2 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 72 & 0 & 0 & 2208 & 0 & 181 & 0 & 59 \\ 
+  Bull & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 27 & 0 & 15 & 0 & 34 & 831 & 0 & 846 & 0 & 16 & 0 \\ 
+  Bull & 4 & 58 & 0 & 158 & 0 & 2155 & 0 & 0 & 22 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Features extracted are classified as emitted by one
+               of the four possible bottom-nodes according to the filtered
+               probability. TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00.} 
+\label{tab:tseg-filtered-ins}
+\end{table}
 
 Now, look how at how the features are classified: Mention plot number on
 tayal.
 
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
 \begin{figure}[H]
-\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-17-1} \caption{Tick by tick sequence of trades, classified as belonging to bear or bull states, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \label{fig:tseg-ins-seqv}}\label{fig:unnamed-chunk-17}
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-18-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \label{fig:tseg-ins-seqv}}\label{fig:unnamed-chunk-18}
 \end{figure}
 
+\subsubsection{Trading Strategy}\label{trading-strategy}
+
+Using the parameters estimated from the five days of training data, we
+run the trading strategy out of sample during one day.
+
+\paragraph{After a zig-zag leg is completed, the trading system buys one
+unit every time the top-level state switches to bullish (a run) and
+sells one unit every time it switches to bearish (a reveral). As an
+addition to Tayal (2009), where trades are executed one tick after the
+zig-zag leg is observed to ensure there is no lock-ahead bias, we
+investigate the decay of the strategy performance for longer
+lags.}\label{after-a-zig-zag-leg-is-completed-the-trading-system-buys-one-unit-every-time-the-top-level-state-switches-to-bullish-a-run-and-sells-one-unit-every-time-it-switches-to-bearish-a-reveral.-as-an-addition-to-tayal2009regime-where-trades-are-executed-one-tick-after-the-zig-zag-leg-is-observed-to-ensure-there-is-no-lock-ahead-bias-we-investigate-the-decay-of-the-strategy-performance-for-longer-lags.}
+
+\blandscape
+\newpage
+
+\begin{figure}[H]
+\includegraphics[width=1\linewidth]{main_files/figure-latex/unnamed-chunk-19-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \label{fig:tseg-ins-seqv}}\label{fig:unnamed-chunk-19}
+\end{figure}
+
+\elandscape
+
+\paragraph{Walking forward backtest}\label{walking-forward-backtest}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[ht]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.01 & 0.04 & -0.02 & -0.01 & 0.01 & 0.01 & 0.02 \\ 
+  2007-05-09 & -0.00 & 0.04 & 0.00 & 0.02 & 0.02 & 0.01 & 0.01 \\ 
+  2007-05-10 & -0.00 & 0.04 & 0.01 & -0.01 & 0.02 & 0.02 & 0.00 \\ 
+  2007-05-11 & -0.00 & 0.00 & 0.00 & 0.01 & -0.00 & -0.01 & 0.00 \\ 
+  2007-05-14 & -0.03 & 0.03 & -0.01 & 0.01 & -0.01 & -0.00 & -0.01 \\ 
+  2007-05-15 & -0.00 & 0.03 & -0.00 & 0.00 & 0.02 & 0.02 & 0.00 \\ 
+  2007-05-16 & -0.00 & 0.05 & -0.01 & -0.00 & 0.01 & 0.03 & -0.02 \\ 
+  2007-05-17 & -0.00 & -0.02 & 0.00 & 0.02 & 0.00 & -0.03 & -0.00 \\ 
+  2007-05-18 & 0.01 & -0.01 & 0.01 & 0.00 & 0.02 & 0.01 & 0.02 \\ 
+  2007-05-22 & -0.02 & -0.02 & -0.02 & 0.02 & 0.01 & 0.02 & 0.02 \\ 
+  2007-05-23 & -0.01 & 0.02 & -0.00 & -0.01 & -0.01 & 0.01 & 0.01 \\ 
+  2007-05-24 & -0.03 & 0.02 & -0.00 & -0.01 & -0.01 & -0.00 & -0.02 \\ 
+  2007-05-25 & 0.00 & -0.01 & -0.01 & 0.00 & 0.01 & -0.02 & -0.02 \\ 
+  2007-05-28 & -0.01 & -0.02 & -0.01 & 0.01 & -0.01 & -0.01 & 0.02 \\ 
+  2007-05-29 & -0.02 & -0.02 & -0.01 & -0.02 & -0.00 & 0.02 & 0.01 \\ 
+  2007-05-30 & 0.01 & -0.02 & -0.03 & -0.03 & -0.01 & -0.04 & -0.02 \\ 
+  2007-05-31 & 0.04 & 0.00 & -0.01 & -0.01 & -0.02 & -0.01 & -0.03 \\ 
+   \midrule
+Total & -0.09 & 0.17 & -0.12 & -0.01 & 0.04 & 0.02 & -0.02 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TSE:G.} 
+\label{tab:tseg-filtered-ins}
+\end{table}
+
 \ldots{}
 
-\subsubsection{In-sample summary}\label{in-sample-summary}
+\subsubsection{Trading strategy}\label{trading-strategy-1}
 
-\ldots{}
-
-\subsubsection{Forecast}\label{forecast}
-
-\ldots{}
-
-\paragraph{Walking forward forecasts}\label{walking-forward-forecasts}
-
-\ldots{}
-
-\subsubsection{Trading strategy}\label{trading-strategy}
+Show total for other stocks and mention strat vs bh.
 
 \ldots{}
 
@@ -860,144 +991,856 @@ tayal.
 
 \subsubsection{The statistical model}\label{the-statistical-model}
 
-\ldots{}
+We find that the model proposed, while statistically simple, is highly
+expressive of financial domain knowledge. The hierarchical design
+creates a multi-level stochastic process that learns autocorrelations in
+different time scales. This accommodates for multiresolution, a typical
+characterstic of financial datasets. We remark that, whereas HHMM offer
+a methodology to create a complex, highly non linear model for time
+series, estimation and inference can be achieved in reasonable
+complexity. The developments by Murphy and Paskin (2001) simplified
+cubic time into linear time inference, making inference feasible for
+high-frequency finance.
 
 \subsubsection{The financial
 application}\label{the-financial-application}
 
-\ldots{}
+We have special interest in the feature extraction procedure. They were
+cleverly designed to reproduce some of the most basic principles of
+technical analysis and, when applied to real data, they proved to be a
+powerful descriptor of price and volume movements. Nonetheless, we
+observe that the change in volume is the weakest component and provides
+with great opportunities for further enhancements. The contribution of
+the author should not be neglected: in general terms, the features are
+the most important factor in the success or the failure of a machine
+learning project(Domingos 2012).
 
 \begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
 
 \section{References}\label{references}
 
 \hypertarget{refs}{}
+\hypertarget{ref-carpenter2016stan}{}
+Carpenter, Bob, Andrew Gelman, Matt Hoffman, Daniel Lee, Ben Goodrich,
+Michael Betancourt, Michael A Brubaker, Jiqiang Guo, Peter Li, and Allen
+Riddell. 2016. ``Stan: A Probabilistic Programming Language.''
+\emph{Journal of Statistical Software} 20.
+
+\hypertarget{ref-domingos2012few}{}
+Domingos, Pedro. 2012. ``A Few Useful Things to Know About Machine
+Learning.'' \emph{Commun. ACM} 55 (10). New York, NY, USA: ACM: 78--87.
+doi:\href{https://doi.org/10.1145/2347736.2347755}{10.1145/2347736.2347755}.
+
+\hypertarget{ref-fine1998hierarchical}{}
+Fine, Shai, and Yoram Singer. 1998. ``The Hierarchical Hidden Markov
+Model: Analysis and Applications.''
+
+\hypertarget{ref-gelman1992inference}{}
+Gelman, Andrew, and Donald B Rubin. 1992. ``Inference from Iterative
+Simulation Using Multiple Sequences.'' \emph{Statistical Science}.
+JSTOR, 457--72.
+
+\hypertarget{ref-murphy2001linear}{}
+Murphy, Kevin P., and Mark A. Paskin. 2001. ``Linear Time Inference in
+Hierarchical Hmms.''
+
+\hypertarget{ref-ord2008secret}{}
+Ord, Tim. 2008. ``The Secret Science of Price and Volume.'' \emph{Master
+Traders: Strategies for Superior Returns from Today's Top Traders}.
+Wiley Online Library, 87--105.
+
+\hypertarget{ref-sandoval2015computational}{}
+Sandoval, Javier, and Germán Hernández. 2015. ``Computational Visual
+Analysis of the Order Book Dynamics for Creating High-Frequency Foreign
+Exchange Trading Strategies.'' \emph{Procedia Computer Science} 51.
+Elsevier: 1593--1602.
+
+\hypertarget{ref-tayal2009regime}{}
+Tayal, Aditya. 2009. ``Regime Switching and Technical Trading with
+Dynamic Bayesian Networks in High-Frequency Stock Markets.''
+Master's thesis, University of Waterloo.
+
+\hypertarget{ref-team2017stan}{}
+Team, Stan Development. 2017. \emph{Stan Modeling Language: User's Guide
+and Reference Manual: Version 2.15.0.}
+
+\hypertarget{ref-wisebourt2011hierarchical}{}
+Wisebourt, Shaul Sergey. 2011. ``Hierarchical Hidden Markov Model of
+High-Frequency Market Regimes Using Trade Price and Limit Order Book
+Information.'' Master's thesis, University of Waterloo.
 
 \begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
 
 \section{Appendix}\label{appendix}
 
-\small
+\subsection{Estimated parameters TSE:G
+2007-05-04/2007-05-10.}\label{estimated-parameters-tseg-2007-05-042007-05-10.}
+
+\label{sec:appendix-tseg-parameters}
 
 \begin{verbatim}
-## Warning in cbind(row.names, mat): number of rows of result is not a
-## multiple of vector length (arg 1)
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
 \end{verbatim}
 
-\begin{longtable}[]{@{}rrrrrrrrr@{}}
-\toprule
-row.names & mean & se\_mean & sd & 10\% & 50\% & 90\% & n\_eff &
-Rhat\tabularnewline
-\midrule
-\endhead
-\(\pi_{1}\) & 0.5067 & 0.0178 & 0.282 & 0.0956 & 0.5162 & 0.8931 & 250 &
-0.9973\tabularnewline
-\(1 - \pi_{1}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(a_{11}\) & 0.4933 & 0.0178 & 0.282 & 0.1069 & 0.4838 & 0.9044 & 250 &
-0.9973\tabularnewline
-\(a_{12}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 &
-NaN\tabularnewline
-\(a_{22}\) & 0.4559 & 0.0099 & 0.1089 & 0.3085 & 0.47 & 0.579 & 119.7043
-& 1.0023\tabularnewline
-\(a_{31}\) & 0.5441 & 0.0099 & 0.1089 & 0.421 & 0.53 & 0.6915 & 119.7043
-& 1.0023\tabularnewline
-\(a_{33}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(1 - a_{31} - a_{33}\) & 1 & 0 & 0 & 1 & 1 & 1 & 250 &
-NaN\tabularnewline
-\(a_{44}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(\pi_{1}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(1 - \pi_{1}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(a_{11}\) & 0.0914 & 0.0044 & 0.0623 & 0.0171 & 0.0836 & 0.1717 &
-198.8658 & 0.9998\tabularnewline
-\(a_{12}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 &
-NaN\tabularnewline
-\(a_{22}\) & 0.9086 & 0.0044 & 0.0623 & 0.8283 & 0.9164 & 0.9829 &
-198.8658 & 0.9998\tabularnewline
-\(a_{31}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(a_{33}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(1 - a_{31} - a_{33}\) & 1 & 0 & 0 & 1 & 1 & 1 & 250 &
-NaN\tabularnewline
-\(a_{44}\) & 0 & 0 & 0 & 0 & 0 & 0 & 250 & NaN\tabularnewline
-\(\pi_{1}\) & 0.0073 & 6e-04 & 0.0057 & 7e-04 & 0.0064 & 0.0152 &
-99.4159 & 1.0095\tabularnewline
-\(1 - \pi_{1}\) & 0.0196 & 3e-04 & 0.0047 & 0.0145 & 0.0188 & 0.0263 &
-250 & 0.997\tabularnewline
-\(a_{11}\) & 0.0072 & 8e-04 & 0.0081 & 6e-04 & 0.0047 & 0.017 & 102.0471
-& 1.0182\tabularnewline
-\(a_{12}\) & 0.3419 & 0.0017 & 0.0208 & 0.314 & 0.3436 & 0.3665 &
-150.0721 & 1.0051\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0.2231 & 0.002 & 0.0262 & 0.1873 & 0.2253 &
-0.2561 & 171.5795 & 1.0062\tabularnewline
-\(a_{22}\) & 0.3531 & 0.0011 & 0.0174 & 0.3305 & 0.3549 & 0.3719 & 250 &
-0.9962\tabularnewline
-\(a_{31}\) & 0.0264 & 3e-04 & 0.0053 & 0.0205 & 0.0263 & 0.0333 & 250 &
-0.9963\tabularnewline
-\(a_{33}\) & 0.0052 & 4e-04 & 0.0043 & 6e-04 & 0.0042 & 0.0109 &
-144.0005 & 0.9979\tabularnewline
-\(1 - a_{31} - a_{33}\) & 0.0161 & 3e-04 & 0.0046 & 0.0109 & 0.0155 &
-0.0226 & 250 & 0.9997\tabularnewline
-\(a_{44}\) & 0.0017 & 2e-04 & 0.0018 & 2e-04 & 0.0011 & 0.004 & 66.4428
-& 1.0057\tabularnewline
-\(\pi_{1}\) & 0.0226 & 3e-04 & 0.0053 & 0.0162 & 0.0223 & 0.0297 & 250 &
-1.0017\tabularnewline
-\(1 - \pi_{1}\) & 0.0017 & 1e-04 & 0.0017 & 1e-04 & 0.0012 & 0.0039 &
-250 & 0.9993\tabularnewline
-\(a_{11}\) & 0.0484 & 0.0033 & 0.0333 & 0.0062 & 0.046 & 0.0918 &
-102.2995 & 0.9976\tabularnewline
-\(a_{12}\) & 0.8008 & 0.0042 & 0.0403 & 0.7497 & 0.8026 & 0.8528 &
-90.8209 & 0.9961\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0.0236 & 0.0012 & 0.0174 & 0.005 & 0.0203 &
-0.0469 & 194.2454 & 0.997\tabularnewline
-\(a_{22}\) & 0.0796 & 5e-04 & 0.008 & 0.0698 & 0.0798 & 0.0891 & 250 &
-0.9962\tabularnewline
-\(a_{31}\) & 0.0011 & 1e-04 & 0.001 & 1e-04 & 9e-04 & 0.0023 & 250 &
-0.9961\tabularnewline
-\(a_{33}\) & 0.0205 & 3e-04 & 0.0045 & 0.015 & 0.0204 & 0.0262 & 250 &
-0.9965\tabularnewline
-\(1 - a_{31} - a_{33}\) & 0.0105 & 5e-04 & 0.0038 & 0.0062 & 0.0106 &
-0.0153 & 52.9642 & 0.9989\tabularnewline
-\(a_{44}\) & 0.0023 & 1e-04 & 0.0022 & 3e-04 & 0.0018 & 0.0051 & 250 &
-0.996\tabularnewline
-\(\pi_{1}\) & 0.0251 & 3e-04 & 0.0052 & 0.0187 & 0.0251 & 0.0314 & 250 &
-0.9964\tabularnewline
-\(1 - \pi_{1}\) & 0.3554 & 0.003 & 0.0313 & 0.3159 & 0.3549 & 0.3936 &
-111.4928 & 0.9961\tabularnewline
-\(a_{11}\) & 0.1986 & 0.0036 & 0.0363 & 0.1525 & 0.1982 & 0.2421 &
-99.991 & 0.9961\tabularnewline
-\(a_{12}\) & 0.3884 & 0.0013 & 0.0198 & 0.3645 & 0.3886 & 0.4154 &
-227.1397 & 0.9964\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0.0023 & 1e-04 & 0.0022 & 4e-04 & 0.0017 &
-0.0054 & 250 & 0.996\tabularnewline
-\(a_{22}\) & 0.0155 & 2e-04 & 0.0038 & 0.0111 & 0.015 & 0.0205 & 250 &
-0.996\tabularnewline
-\(a_{31}\) & 0.0018 & 1e-04 & 0.0019 & 2e-04 & 0.0013 & 0.0043 & 250 &
-0.9962\tabularnewline
-\(a_{33}\) & 0.0165 & 8e-04 & 0.0066 & 0.007 & 0.017 & 0.0251 & 75.1274
-& 1.0015\tabularnewline
-\(1 - a_{31} - a_{33}\) & 9e-04 & 1e-04 & 9e-04 & 1e-04 & 6e-04 & 0.002
-& 250 & 0.9983\tabularnewline
-\(a_{44}\) & 0.0558 & 0.001 & 0.011 & 0.0419 & 0.0574 & 0.0677 &
-124.3395 & 1.0162\tabularnewline
-\(\pi_{1}\) & 0.0212 & 0.0012 & 0.0158 & 0.0044 & 0.0185 & 0.0452 &
-178.8572 & 1.0063\tabularnewline
-\(1 - \pi_{1}\) & 0.8793 & 0.0023 & 0.0237 & 0.8476 & 0.8803 & 0.9057 &
-110.8629 & 1.0212\tabularnewline
-\(a_{11}\) & 0.0132 & 0.001 & 0.0122 & 0.0017 & 0.0088 & 0.0314 &
-151.8973 & 1.0038\tabularnewline
-\(a_{12}\) & 0.0019 & 1e-04 & 0.0017 & 3e-04 & 0.0014 & 0.0039 & 250 &
-0.9966\tabularnewline
-\(1 - a_{11} - a_{12}\) & 0.0098 & 5e-04 & 0.0052 & 0.0028 & 0.0098 &
-0.0168 & 110.7242 & 0.9962\tabularnewline
-\(a_{22}\) & 0.0014 & 1e-04 & 0.0014 & 1e-04 & 9e-04 & 0.0032 & 250 &
-0.9991\tabularnewline
-\normalsize & & & & & & & &\tabularnewline
-\bottomrule
-\end{longtable}
+\begin{table}[ht]
+\centering
+\begingroup\footnotesize
+\begin{tabularx}{\textwidth}{lRRRRRRRRRRRR}
+  \toprule
+ & Mean & MCSE & SD & $q_{2.5\%}$ & $q_{10.0\%}$ & $q_{25.0\%}$ & $q_{50.0\%}$ & $q_{75.0\%}$ & $q_{90.0\%}$ & $q_{97.5\%}$ & ESS & $\hat{R}$ \\ 
+  \midrule
+$\pi_{1}$ & 0.51 & 0.02 & 0.28 & 0.03 & 0.10 & 0.27 & 0.52 & 0.74 & 0.89 & 0.96 & 250.00 & 1.00 \\ 
+  $\pi_{2}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $\pi_{3}$ & 0.49 & 0.02 & 0.28 & 0.04 & 0.11 & 0.26 & 0.48 & 0.73 & 0.90 & 0.97 & 250.00 & 1.00 \\ 
+  $\pi_{4}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+   \midrule
+$a_{11}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{12}$ & 0.46 & 0.01 & 0.11 & 0.19 & 0.31 & 0.39 & 0.47 & 0.53 & 0.58 & 0.64 & 119.70 & 1.00 \\ 
+  $a_{13}$ & 0.54 & 0.01 & 0.11 & 0.36 & 0.42 & 0.47 & 0.53 & 0.61 & 0.69 & 0.81 & 119.70 & 1.00 \\ 
+  $a_{14}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{21}$ & 1.00 & 0.00 & 0.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 250.00 & n.a. \\ 
+  $a_{22}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{23}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{24}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{31}$ & 0.09 & 0.00 & 0.06 & 0.00 & 0.02 & 0.04 & 0.08 & 0.13 & 0.17 & 0.24 & 198.87 & 1.00 \\ 
+  $a_{32}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{33}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{34}$ & 0.91 & 0.00 & 0.06 & 0.76 & 0.83 & 0.87 & 0.92 & 0.96 & 0.98 & 1.00 & 198.87 & 1.00 \\ 
+  $a_{41}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{42}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+  $a_{43}$ & 1.00 & 0.00 & 0.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 250.00 & n.a. \\ 
+  $a_{44}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & n.a. \\ 
+   \midrule
+$\phi_{11}$ & 0.01 & 0.00 & 0.01 & 0.00 & 0.00 & 0.00 & 0.01 & 0.01 & 0.02 & 0.02 & 99.42 & 1.01 \\ 
+  $\phi_{12}$ & 0.02 & 0.00 & 0.00 & 0.01 & 0.01 & 0.02 & 0.02 & 0.02 & 0.03 & 0.03 & 250.00 & 1.00 \\ 
+  $\phi_{13}$ & 0.01 & 0.00 & 0.01 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 0.02 & 0.03 & 102.05 & 1.02 \\ 
+  $\phi_{14}$ & 0.34 & 0.00 & 0.02 & 0.29 & 0.31 & 0.33 & 0.34 & 0.36 & 0.37 & 0.38 & 150.07 & 1.01 \\ 
+  $\phi_{15}$ & 0.22 & 0.00 & 0.03 & 0.17 & 0.19 & 0.21 & 0.23 & 0.24 & 0.26 & 0.27 & 171.58 & 1.01 \\ 
+  $\phi_{16}$ & 0.35 & 0.00 & 0.02 & 0.31 & 0.33 & 0.34 & 0.35 & 0.37 & 0.37 & 0.39 & 250.00 & 1.00 \\ 
+  $\phi_{17}$ & 0.03 & 0.00 & 0.01 & 0.02 & 0.02 & 0.02 & 0.03 & 0.03 & 0.03 & 0.04 & 250.00 & 1.00 \\ 
+  $\phi_{18}$ & 0.01 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 0.01 & 0.02 & 144.00 & 1.00 \\ 
+  $\phi_{19}$ & 0.02 & 0.00 & 0.00 & 0.01 & 0.01 & 0.01 & 0.02 & 0.02 & 0.02 & 0.03 & 250.00 & 1.00 \\ 
+  $\phi_{21}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 66.44 & 1.01 \\ 
+  $\phi_{22}$ & 0.02 & 0.00 & 0.01 & 0.01 & 0.02 & 0.02 & 0.02 & 0.03 & 0.03 & 0.03 & 250.00 & 1.00 \\ 
+  $\phi_{23}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 250.00 & 1.00 \\ 
+  $\phi_{24}$ & 0.05 & 0.00 & 0.03 & 0.00 & 0.01 & 0.02 & 0.05 & 0.07 & 0.09 & 0.12 & 102.30 & 1.00 \\ 
+  $\phi_{25}$ & 0.80 & 0.00 & 0.04 & 0.72 & 0.75 & 0.78 & 0.80 & 0.83 & 0.85 & 0.87 & 90.82 & 1.00 \\ 
+  $\phi_{26}$ & 0.02 & 0.00 & 0.02 & 0.00 & 0.00 & 0.01 & 0.02 & 0.03 & 0.05 & 0.07 & 194.25 & 1.00 \\ 
+  $\phi_{27}$ & 0.08 & 0.00 & 0.01 & 0.06 & 0.07 & 0.07 & 0.08 & 0.09 & 0.09 & 0.10 & 250.00 & 1.00 \\ 
+  $\phi_{28}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & 1.00 \\ 
+  $\phi_{29}$ & 0.02 & 0.00 & 0.00 & 0.01 & 0.02 & 0.02 & 0.02 & 0.02 & 0.03 & 0.03 & 250.00 & 1.00 \\ 
+  $\phi_{31}$ & 0.01 & 0.00 & 0.00 & 0.00 & 0.01 & 0.01 & 0.01 & 0.01 & 0.02 & 0.02 & 52.96 & 1.00 \\ 
+  $\phi_{32}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 0.01 & 250.00 & 1.00 \\ 
+  $\phi_{33}$ & 0.03 & 0.00 & 0.01 & 0.02 & 0.02 & 0.02 & 0.03 & 0.03 & 0.03 & 0.04 & 250.00 & 1.00 \\ 
+  $\phi_{34}$ & 0.36 & 0.00 & 0.03 & 0.30 & 0.32 & 0.33 & 0.35 & 0.38 & 0.39 & 0.41 & 111.49 & 1.00 \\ 
+  $\phi_{35}$ & 0.20 & 0.00 & 0.04 & 0.14 & 0.15 & 0.17 & 0.20 & 0.22 & 0.24 & 0.28 & 99.99 & 1.00 \\ 
+  $\phi_{36}$ & 0.39 & 0.00 & 0.02 & 0.35 & 0.36 & 0.38 & 0.39 & 0.40 & 0.42 & 0.43 & 227.14 & 1.00 \\ 
+  $\phi_{37}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 0.01 & 250.00 & 1.00 \\ 
+  $\phi_{38}$ & 0.02 & 0.00 & 0.00 & 0.01 & 0.01 & 0.01 & 0.02 & 0.02 & 0.02 & 0.02 & 250.00 & 1.00 \\ 
+  $\phi_{39}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 250.00 & 1.00 \\ 
+  $\phi_{41}$ & 0.02 & 0.00 & 0.01 & 0.00 & 0.01 & 0.01 & 0.02 & 0.02 & 0.03 & 0.03 & 75.13 & 1.00 \\ 
+  $\phi_{42}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 250.00 & 1.00 \\ 
+  $\phi_{43}$ & 0.06 & 0.00 & 0.01 & 0.03 & 0.04 & 0.05 & 0.06 & 0.06 & 0.07 & 0.07 & 124.34 & 1.02 \\ 
+  $\phi_{44}$ & 0.02 & 0.00 & 0.02 & 0.00 & 0.00 & 0.01 & 0.02 & 0.03 & 0.05 & 0.06 & 178.86 & 1.01 \\ 
+  $\phi_{45}$ & 0.88 & 0.00 & 0.02 & 0.83 & 0.85 & 0.86 & 0.88 & 0.90 & 0.91 & 0.93 & 110.86 & 1.02 \\ 
+  $\phi_{46}$ & 0.01 & 0.00 & 0.01 & 0.00 & 0.00 & 0.00 & 0.01 & 0.02 & 0.03 & 0.04 & 151.90 & 1.00 \\ 
+  $\phi_{47}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 250.00 & 1.00 \\ 
+  $\phi_{48}$ & 0.01 & 0.00 & 0.01 & 0.00 & 0.00 & 0.01 & 0.01 & 0.01 & 0.02 & 0.02 & 110.72 & 1.00 \\ 
+  $\phi_{49}$ & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.01 & 250.00 & 1.00 \\ 
+   \bottomrule
+\multicolumn{12}{l}{}\\
+\end{tabularx}
+\endgroup
+\caption{Statistics summary for the distributions of 
+                   estimated parameters for TSE:G 2007-05-04 
+                   09:30:00/2007-05-10 16:30:00. MCSE means Monte Carlo 
+                   Standard Error, SD means (posteriori) Standard Deviation 
+                   and ESS means Effective Sample Size.} 
+\label{tab:tseg-ins-appendix-summary}
+\end{table}
 
-\renewcommand\refname{Original Computing Environment}
-\bibliography{../common/references}
+\newpage
+
+\subsection{Walking forward for all
+assets}\label{walking-forward-for-all-assets}
+
+\subsubsection{BBDb.TO}\label{bbdb.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.01 & -0.06 & -0.05 & -0.02 & -0.00 & -0.02 & -0.04 \\ 
+  2007-05-09 & -0.01 & 0.00 & -0.06 & -0.01 & -0.04 & 0.03 & 0.00 \\ 
+  2007-05-10 & -0.01 & -0.01 & -0.02 & 0.02 & 0.03 & 0.02 & 0.01 \\ 
+  2007-05-11 & 0.02 & -0.05 & -0.05 & -0.03 & 0.01 & -0.01 & -0.00 \\ 
+  2007-05-14 & -0.00 & -0.12 & -0.14 & -0.03 & -0.03 & -0.01 & -0.01 \\ 
+  2007-05-15 & 0.00 & -0.03 & -0.00 & 0.03 & -0.00 & -0.02 & 0.02 \\ 
+  2007-05-16 & 0.01 & -0.04 & -0.15 & -0.07 & 0.01 & 0.01 & 0.03 \\ 
+  2007-05-17 & 0.01 & 0.00 & -0.03 & -0.01 & 0.01 & 0.02 & 0.01 \\ 
+  2007-05-18 & -0.01 & -0.06 & -0.12 & -0.04 & 0.00 & 0.04 & 0.02 \\ 
+  2007-05-22 & -0.01 & -0.05 & -0.09 & -0.06 & -0.05 & -0.01 & 0.01 \\ 
+  2007-05-23 & -0.02 & -0.10 & -0.18 & -0.04 & 0.01 & 0.03 & 0.05 \\ 
+  2007-05-24 & 0.00 & -0.13 & -0.08 & 0.03 & -0.00 & 0.03 & -0.03 \\ 
+  2007-05-25 & 0.01 & -0.16 & -0.10 & -0.06 & -0.04 & -0.06 & 0.05 \\ 
+  2007-05-28 & 0.01 & -0.10 & -0.09 & -0.04 & -0.02 & -0.02 & 0.04 \\ 
+  2007-05-29 & 0.04 & -0.22 & -0.42 & -0.26 & -0.07 & -0.04 & 0.05 \\ 
+  2007-05-30 & 0.01 & -0.11 & -0.21 & -0.11 & -0.04 & 0.02 & 0.04 \\ 
+  2007-05-31 & -0.03 & 0.01 & 0.00 & 0.09 & 0.05 & 0.01 & 0.03 \\ 
+   \midrule
+Total & -0.01 & -0.73 & -0.87 & -0.49 & -0.17 & 0.03 & 0.34 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). BBDb.TO} 
+\label{tab:appendix-wf-BBDb.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-26-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-26}
+\end{figure}
+
+\newpage
+
+\subsubsection{BCE.TO}\label{bce.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.01 & -0.02 & 0.02 & 0.00 & -0.02 & 0.01 & 0.01 \\ 
+  2007-05-09 & -0.01 & -0.04 & -0.01 & -0.02 & 0.01 & 0.01 & 0.01 \\ 
+  2007-05-10 & 0.00 & -0.02 & -0.01 & 0.02 & 0.01 & 0.00 & 0.01 \\ 
+  2007-05-11 & -0.00 & 0.00 & -0.01 & 0.01 & -0.01 & -0.01 & -0.01 \\ 
+  2007-05-14 & -0.00 & -0.02 & -0.02 & -0.02 & -0.01 & 0.00 & -0.01 \\ 
+  2007-05-15 & 0.00 & -0.02 & -0.01 & 0.01 & -0.01 & 0.01 & 0.02 \\ 
+  2007-05-16 & 0.00 & -0.04 & -0.03 & -0.03 & -0.02 & 0.00 & 0.01 \\ 
+  2007-05-17 & -0.00 & -0.02 & -0.01 & 0.02 & -0.01 & 0.01 & 0.02 \\ 
+  2007-05-18 & 0.02 & -0.03 & -0.02 & -0.02 & -0.02 & -0.01 & -0.02 \\ 
+  2007-05-22 & 0.03 & -0.03 & 0.02 & -0.01 & -0.00 & -0.01 & 0.01 \\ 
+  2007-05-23 & 0.02 & -0.01 & -0.04 & 0.00 & -0.03 & -0.02 & -0.02 \\ 
+  2007-05-24 & 0.00 & -0.05 & -0.00 & -0.01 & 0.00 & -0.00 & 0.00 \\ 
+  2007-05-25 & 0.00 & -0.02 & 0.02 & 0.02 & 0.00 & -0.00 & -0.00 \\ 
+  2007-05-28 & 0.00 & -0.00 & -0.00 & -0.01 & -0.01 & -0.00 & -0.00 \\ 
+  2007-05-29 & -0.00 & -0.02 & -0.02 & -0.02 & -0.01 & -0.00 & -0.01 \\ 
+  2007-05-30 & 0.01 & -0.01 & 0.00 & -0.02 & -0.01 & -0.02 & -0.00 \\ 
+  2007-05-31 & -0.00 & -0.01 & 0.02 & 0.02 & 0.03 & 0.01 & 0.00 \\ 
+   \midrule
+Total & 0.08 & -0.31 & -0.12 & -0.07 & -0.09 & -0.02 & 0.02 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). BCE.TO} 
+\label{tab:appendix-wf-BCE.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-28-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-28}
+\end{figure}
+
+\newpage
+
+\subsubsection{CTCa.TO}\label{ctca.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.01 & -0.00 & -0.00 & 0.00 & -0.01 & 0.00 & -0.00 \\ 
+  2007-05-09 & -0.01 & -0.02 & -0.02 & -0.00 & 0.00 & 0.00 & -0.01 \\ 
+  2007-05-10 & 0.05 & 0.03 & 0.02 & -0.01 & 0.03 & 0.04 & 0.06 \\ 
+  2007-05-11 & 0.02 & 0.04 & 0.03 & 0.04 & 0.03 & 0.04 & 0.03 \\ 
+  2007-05-14 & -0.00 & 0.04 & 0.01 & 0.00 & 0.02 & 0.00 & -0.01 \\ 
+  2007-05-15 & 0.00 & -0.01 & -0.01 & 0.02 & 0.01 & 0.01 & -0.01 \\ 
+  2007-05-16 & 0.02 & -0.02 & 0.01 & 0.02 & 0.02 & 0.01 & 0.04 \\ 
+  2007-05-17 & 0.01 & 0.01 & 0.03 & 0.04 & 0.03 & 0.02 & 0.03 \\ 
+  2007-05-18 & -0.01 & 0.02 & 0.02 & -0.00 & 0.00 & -0.01 & 0.00 \\ 
+  2007-05-22 & 0.00 & 0.01 & -0.00 & -0.01 & 0.00 & 0.02 & 0.01 \\ 
+  2007-05-23 & 0.01 & -0.01 & -0.01 & -0.00 & 0.01 & 0.02 & 0.00 \\ 
+  2007-05-24 & -0.01 & -0.01 & -0.00 & 0.01 & 0.01 & 0.01 & 0.01 \\ 
+  2007-05-25 & 0.01 & -0.00 & 0.02 & 0.01 & 0.00 & 0.01 & -0.01 \\ 
+  2007-05-28 & 0.00 & 0.02 & -0.03 & 0.00 & 0.01 & 0.01 & 0.02 \\ 
+  2007-05-29 & -0.01 & -0.01 & -0.01 & -0.01 & -0.01 & -0.00 & 0.02 \\ 
+  2007-05-30 & 0.00 & 0.03 & 0.01 & -0.01 & -0.01 & -0.04 & -0.01 \\ 
+  2007-05-31 & -0.00 & -0.01 & -0.02 & -0.02 & -0.03 & -0.00 & 0.01 \\ 
+   \midrule
+Total & 0.06 & 0.13 & 0.03 & 0.07 & 0.13 & 0.15 & 0.21 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). CTCa.TO} 
+\label{tab:appendix-wf-CTCa.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-30-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-30}
+\end{figure}
+
+\newpage
+
+\subsubsection{ECA.TO}\label{eca.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.01 & -0.01 & -0.02 & -0.02 & -0.01 & -0.01 & 0.01 \\ 
+  2007-05-09 & -0.01 & -0.00 & -0.00 & 0.01 & 0.00 & -0.02 & 0.01 \\ 
+  2007-05-10 & 0.00 & -0.01 & -0.04 & -0.04 & -0.03 & -0.04 & -0.03 \\ 
+  2007-05-11 & 0.05 & 0.00 & -0.02 & -0.02 & 0.01 & -0.03 & -0.02 \\ 
+  2007-05-14 & -0.01 & -0.02 & -0.01 & -0.00 & 0.00 & 0.02 & -0.02 \\ 
+  2007-05-15 & 0.00 & 0.03 & -0.03 & -0.01 & -0.02 & -0.03 & -0.02 \\ 
+  2007-05-16 & 0.02 & 0.02 & 0.03 & 0.03 & 0.02 & 0.02 & 0.01 \\ 
+  2007-05-17 & 0.02 & 0.03 & 0.04 & 0.02 & 0.02 & 0.02 & 0.02 \\ 
+  2007-05-18 & 0.00 & 0.02 & 0.02 & 0.02 & 0.01 & -0.00 & 0.03 \\ 
+  2007-05-22 & -0.01 & -0.00 & 0.00 & -0.00 & -0.00 & -0.01 & -0.01 \\ 
+  2007-05-23 & -0.01 & 0.01 & 0.01 & 0.00 & 0.01 & 0.02 & 0.02 \\ 
+  2007-05-24 & -0.02 & -0.04 & -0.00 & 0.01 & 0.02 & 0.02 & 0.03 \\ 
+  2007-05-25 & 0.00 & 0.04 & 0.05 & 0.03 & 0.03 & 0.02 & 0.02 \\ 
+  2007-05-28 & -0.01 & 0.02 & 0.01 & 0.01 & 0.01 & 0.02 & -0.00 \\ 
+  2007-05-29 & -0.01 & 0.04 & 0.01 & -0.00 & -0.01 & -0.02 & -0.03 \\ 
+  2007-05-30 & 0.03 & 0.02 & 0.02 & -0.00 & 0.02 & 0.01 & 0.01 \\ 
+  2007-05-31 & -0.01 & 0.06 & 0.02 & 0.02 & 0.03 & 0.03 & 0.01 \\ 
+   \midrule
+Total & 0.06 & 0.24 & 0.09 & 0.05 & 0.12 & 0.03 & 0.04 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). ECA.TO} 
+\label{tab:appendix-wf-ECA.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-32-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-32}
+\end{figure}
+
+\newpage
+
+\subsubsection{G.TO}\label{g.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.01 & 0.04 & -0.02 & -0.01 & 0.01 & 0.01 & 0.02 \\ 
+  2007-05-09 & -0.00 & 0.04 & 0.00 & 0.02 & 0.02 & 0.01 & 0.01 \\ 
+  2007-05-10 & -0.00 & 0.04 & 0.01 & -0.01 & 0.02 & 0.02 & 0.00 \\ 
+  2007-05-11 & -0.00 & 0.00 & 0.00 & 0.01 & -0.00 & -0.01 & 0.00 \\ 
+  2007-05-14 & -0.03 & 0.03 & -0.01 & 0.01 & -0.01 & -0.00 & -0.01 \\ 
+  2007-05-15 & -0.00 & 0.03 & -0.00 & 0.00 & 0.02 & 0.02 & 0.00 \\ 
+  2007-05-16 & -0.00 & 0.05 & -0.01 & -0.00 & 0.01 & 0.03 & -0.02 \\ 
+  2007-05-17 & -0.00 & -0.02 & 0.00 & 0.02 & 0.00 & -0.03 & -0.00 \\ 
+  2007-05-18 & 0.01 & -0.01 & 0.01 & 0.00 & 0.02 & 0.01 & 0.02 \\ 
+  2007-05-22 & -0.02 & -0.02 & -0.02 & 0.02 & 0.01 & 0.02 & 0.02 \\ 
+  2007-05-23 & -0.01 & 0.02 & -0.00 & -0.01 & -0.01 & 0.01 & 0.01 \\ 
+  2007-05-24 & -0.03 & 0.02 & -0.00 & -0.01 & -0.01 & -0.00 & -0.02 \\ 
+  2007-05-25 & 0.00 & -0.01 & -0.01 & 0.00 & 0.01 & -0.02 & -0.02 \\ 
+  2007-05-28 & -0.01 & -0.02 & -0.01 & 0.01 & -0.01 & -0.01 & 0.02 \\ 
+  2007-05-29 & -0.02 & -0.02 & -0.01 & -0.02 & -0.00 & 0.02 & 0.01 \\ 
+  2007-05-30 & 0.01 & -0.02 & -0.03 & -0.03 & -0.01 & -0.04 & -0.02 \\ 
+  2007-05-31 & 0.04 & 0.00 & -0.01 & -0.01 & -0.02 & -0.01 & -0.03 \\ 
+   \midrule
+Total & -0.09 & 0.17 & -0.12 & -0.01 & 0.04 & 0.02 & -0.02 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). G.TO} 
+\label{tab:appendix-wf-G.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-34-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-34}
+\end{figure}
+
+\newpage
+
+\subsubsection{K.TO}\label{k.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.02 & -0.00 & -0.01 & 0.03 & 0.02 & 0.01 & 0.02 \\ 
+  2007-05-09 & -0.01 & -0.05 & -0.04 & 0.01 & 0.02 & 0.01 & -0.00 \\ 
+  2007-05-10 & -0.01 & 0.00 & 0.01 & 0.04 & 0.02 & 0.00 & -0.01 \\ 
+  2007-05-11 & 0.01 & -0.02 & -0.05 & -0.03 & -0.00 & -0.02 & -0.01 \\ 
+  2007-05-14 & -0.02 & 0.02 & 0.00 & 0.03 & 0.03 & 0.04 & -0.03 \\ 
+  2007-05-15 & -0.01 & 0.05 & 0.01 & 0.04 & 0.04 & 0.03 & 0.02 \\ 
+  2007-05-16 & -0.01 & 0.02 & -0.05 & -0.04 & -0.03 & -0.03 & -0.01 \\ 
+  2007-05-17 & -0.00 & 0.01 & 0.01 & 0.03 & 0.03 & 0.03 & 0.01 \\ 
+  2007-05-18 & 0.00 & -0.02 & -0.02 & -0.03 & 0.01 & 0.01 & 0.00 \\ 
+  2007-05-22 & -0.02 & 0.01 & 0.00 & 0.01 & 0.01 & 0.02 & 0.01 \\ 
+  2007-05-23 & 0.01 & -0.00 & -0.01 & -0.02 & 0.01 & 0.02 & -0.00 \\ 
+  2007-05-24 & -0.03 & -0.10 & -0.08 & -0.07 & -0.02 & 0.01 & 0.01 \\ 
+  2007-05-25 & -0.01 & -0.01 & 0.00 & -0.04 & -0.02 & -0.00 & 0.00 \\ 
+  2007-05-28 & 0.00 & -0.00 & -0.01 & -0.00 & 0.01 & -0.01 & 0.01 \\ 
+  2007-05-29 & -0.03 & -0.03 & 0.02 & 0.01 & 0.04 & 0.02 & 0.03 \\ 
+  2007-05-30 & -0.00 & -0.00 & -0.03 & -0.02 & -0.01 & -0.01 & -0.01 \\ 
+  2007-05-31 & 0.04 & 0.03 & -0.01 & -0.01 & -0.01 & -0.02 & -0.00 \\ 
+   \midrule
+Total & -0.10 & -0.11 & -0.22 & -0.07 & 0.14 & 0.12 & 0.03 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). K.TO} 
+\label{tab:appendix-wf-K.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-36-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-36}
+\end{figure}
+
+\newpage
+
+\subsubsection{MGa.TO}\label{mga.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.02 & -0.05 & 0.00 & 0.02 & 0.04 & 0.01 & -0.01 \\ 
+  2007-05-09 & 0.00 & -0.01 & -0.02 & -0.02 & 0.01 & 0.01 & 0.01 \\ 
+  2007-05-10 & 0.06 & 0.21 & 0.13 & 0.11 & 0.08 & 0.01 & 0.01 \\ 
+  2007-05-11 & 0.01 & 0.01 & 0.00 & -0.00 & -0.01 & -0.01 & 0.01 \\ 
+  2007-05-14 & -0.03 & -0.03 & 0.01 & 0.01 & 0.02 & 0.03 & 0.01 \\ 
+  2007-05-15 & -0.02 & 0.02 & -0.01 & 0.01 & 0.02 & -0.02 & -0.02 \\ 
+  2007-05-16 & 0.01 & 0.02 & 0.00 & 0.01 & 0.01 & -0.01 & 0.00 \\ 
+  2007-05-17 & -0.01 & 0.08 & 0.07 & 0.08 & 0.05 & 0.00 & 0.00 \\ 
+  2007-05-18 & 0.01 & 0.03 & 0.04 & 0.03 & 0.02 & 0.03 & 0.02 \\ 
+  2007-05-22 & 0.02 & 0.03 & 0.03 & 0.02 & 0.03 & 0.02 & 0.03 \\ 
+  2007-05-23 & 0.01 & 0.05 & 0.03 & 0.01 & -0.01 & -0.02 & -0.00 \\ 
+  2007-05-24 & 0.02 & -0.03 & 0.01 & 0.03 & 0.03 & 0.03 & 0.02 \\ 
+  2007-05-25 & -0.00 & 0.00 & 0.01 & 0.02 & 0.01 & 0.00 & -0.01 \\ 
+  2007-05-28 & 0.01 & 0.00 & 0.02 & 0.00 & -0.02 & -0.01 & -0.01 \\ 
+  2007-05-29 & -0.01 & 0.01 & 0.00 & 0.01 & 0.00 & 0.01 & -0.02 \\ 
+  2007-05-30 & 0.00 & 0.01 & 0.00 & -0.02 & -0.01 & 0.01 & -0.00 \\ 
+  2007-05-31 & 0.01 & 0.06 & 0.04 & 0.03 & 0.03 & 0.03 & 0.02 \\ 
+   \midrule
+Total & 0.07 & 0.48 & 0.45 & 0.38 & 0.32 & 0.11 & 0.07 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). MGa.TO} 
+\label{tab:appendix-wf-MGa.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-38-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-38}
+\end{figure}
+
+\newpage
+
+\subsubsection{NXY.TO}\label{nxy.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.00 & 0.05 & -0.01 & 0.02 & 0.01 & 0.00 & 0.01 \\ 
+  2007-05-09 & -0.01 & 0.04 & 0.03 & 0.03 & 0.04 & 0.04 & 0.04 \\ 
+  2007-05-10 & -0.01 & -0.07 & -0.04 & -0.01 & 0.02 & -0.01 & 0.03 \\ 
+  2007-05-11 & 0.02 & -0.00 & -0.04 & -0.02 & -0.00 & -0.00 & 0.01 \\ 
+  2007-05-14 & -0.02 & -0.04 & -0.00 & 0.01 & 0.02 & 0.02 & 0.04 \\ 
+  2007-05-15 & -0.01 & -0.01 & -0.02 & -0.01 & -0.00 & -0.00 & -0.01 \\ 
+  2007-05-16 & 0.02 & -0.01 & -0.00 & -0.03 & 0.03 & 0.06 & 0.03 \\ 
+  2007-05-17 & 0.02 & 0.03 & 0.00 & -0.00 & -0.01 & -0.02 & -0.02 \\ 
+  2007-05-18 & -0.01 & -0.04 & -0.06 & -0.06 & -0.03 & -0.00 & 0.01 \\ 
+  2007-05-22 & -0.02 & 0.01 & 0.01 & -0.01 & 0.01 & 0.01 & 0.01 \\ 
+  2007-05-23 & -0.01 & 0.02 & 0.01 & 0.01 & 0.01 & 0.04 & 0.02 \\ 
+  2007-05-24 & -0.03 & 0.03 & 0.02 & 0.00 & 0.02 & 0.03 & 0.01 \\ 
+  2007-05-25 & -0.02 & -0.01 & -0.05 & -0.03 & -0.01 & -0.01 & -0.01 \\ 
+  2007-05-28 & 0.00 & 0.01 & 0.01 & 0.02 & 0.03 & 0.02 & 0.02 \\ 
+  2007-05-29 & -0.00 & -0.00 & -0.01 & -0.01 & 0.01 & -0.01 & -0.02 \\ 
+  2007-05-30 & 0.02 & -0.01 & -0.00 & 0.02 & 0.01 & 0.01 & -0.03 \\ 
+  2007-05-31 & -0.01 & 0.02 & -0.00 & -0.00 & 0.01 & -0.00 & 0.00 \\ 
+   \midrule
+Total & -0.07 & 0.01 & -0.16 & -0.08 & 0.18 & 0.17 & 0.14 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). NXY.TO} 
+\label{tab:appendix-wf-NXY.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-40-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-40}
+\end{figure}
+
+\newpage
+
+\subsubsection{SJRb.TO}\label{sjrb.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.00 & 0.01 & 0.01 & 0.03 & 0.02 & -0.00 & 0.01 \\ 
+  2007-05-09 & -0.02 & 0.01 & 0.01 & -0.03 & -0.02 & -0.01 & 0.00 \\ 
+  2007-05-10 & 0.00 & -0.04 & -0.07 & -0.06 & -0.04 & -0.02 & -0.06 \\ 
+  2007-05-11 & 0.02 & -0.05 & -0.03 & -0.02 & -0.00 & -0.01 & 0.02 \\ 
+  2007-05-14 & -0.02 & -0.02 & -0.02 & 0.01 & -0.00 & 0.00 & -0.01 \\ 
+  2007-05-15 & -0.00 & 0.00 & -0.01 & 0.00 & -0.01 & -0.02 & -0.02 \\ 
+  2007-05-16 & 0.02 & 0.01 & 0.01 & -0.01 & -0.01 & -0.01 & -0.02 \\ 
+  2007-05-17 & 0.01 & 0.01 & -0.02 & -0.00 & 0.01 & -0.01 & 0.01 \\ 
+  2007-05-18 & 0.00 & -0.05 & 0.02 & -0.01 & -0.01 & 0.01 & -0.01 \\ 
+  2007-05-22 & -0.01 & -0.04 & -0.03 & -0.03 & -0.03 & -0.02 & -0.02 \\ 
+  2007-05-23 & 0.01 & 0.02 & 0.01 & 0.04 & 0.03 & 0.01 & 0.01 \\ 
+  2007-05-24 & -0.02 & -0.04 & -0.02 & -0.00 & -0.01 & -0.02 & -0.01 \\ 
+  2007-05-25 & -0.00 & 0.01 & 0.03 & 0.02 & -0.01 & 0.00 & -0.00 \\ 
+  2007-05-28 & -0.00 & 0.02 & 0.03 & 0.02 & 0.01 & 0.04 & 0.02 \\ 
+  2007-05-29 & 0.01 & -0.02 & -0.01 & -0.05 & 0.00 & -0.00 & -0.01 \\ 
+  2007-05-30 & 0.01 & 0.01 & 0.02 & 0.01 & 0.00 & 0.02 & 0.01 \\ 
+  2007-05-31 & -0.01 & -0.03 & -0.02 & 0.01 & -0.01 & -0.01 & -0.03 \\ 
+   \midrule
+Total & 0.01 & -0.18 & -0.06 & -0.06 & -0.06 & -0.05 & -0.11 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). SJRb.TO} 
+\label{tab:appendix-wf-SJRb.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-42-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-42}
+\end{figure}
+
+\newpage
+
+\subsubsection{SU.TO}\label{su.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.01 & 0.00 & 0.02 & 0.00 & 0.01 & 0.00 & 0.01 \\ 
+  2007-05-09 & 0.01 & 0.04 & -0.02 & -0.01 & 0.01 & 0.01 & -0.01 \\ 
+  2007-05-10 & -0.01 & 0.01 & 0.01 & 0.02 & 0.02 & -0.01 & -0.02 \\ 
+  2007-05-11 & 0.02 & 0.02 & 0.02 & 0.02 & -0.00 & -0.01 & -0.01 \\ 
+  2007-05-14 & -0.00 & 0.01 & -0.01 & -0.01 & -0.01 & -0.01 & 0.01 \\ 
+  2007-05-15 & -0.02 & 0.02 & 0.01 & -0.02 & -0.01 & -0.02 & -0.02 \\ 
+  2007-05-16 & 0.02 & 0.01 & 0.02 & 0.01 & -0.01 & 0.01 & 0.01 \\ 
+  2007-05-17 & 0.03 & 0.04 & 0.04 & 0.03 & 0.02 & 0.02 & 0.03 \\ 
+  2007-05-18 & 0.01 & 0.02 & -0.01 & -0.01 & -0.00 & -0.01 & -0.01 \\ 
+  2007-05-22 & -0.00 & 0.05 & 0.01 & 0.01 & 0.02 & 0.02 & 0.02 \\ 
+  2007-05-23 & 0.01 & -0.00 & 0.00 & 0.01 & 0.00 & 0.02 & 0.03 \\ 
+  2007-05-24 & -0.03 & 0.04 & 0.04 & 0.03 & 0.02 & 0.04 & -0.01 \\ 
+  2007-05-25 & 0.01 & 0.02 & 0.00 & 0.00 & -0.01 & 0.01 & 0.01 \\ 
+  2007-05-28 & 0.00 & 0.01 & 0.01 & -0.01 & -0.01 & -0.00 & -0.01 \\ 
+  2007-05-29 & -0.02 & 0.01 & -0.03 & -0.02 & -0.00 & -0.01 & -0.01 \\ 
+  2007-05-30 & 0.01 & 0.04 & 0.02 & 0.01 & -0.02 & 0.00 & 0.01 \\ 
+  2007-05-31 & 0.00 & 0.04 & 0.03 & 0.03 & 0.02 & 0.02 & 0.02 \\ 
+   \midrule
+Total & 0.03 & 0.45 & 0.18 & 0.08 & 0.04 & 0.09 & 0.05 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). SU.TO} 
+\label{tab:appendix-wf-SU.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-44-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-44}
+\end{figure}
+
+\newpage
+
+\subsubsection{TCKb.TO}\label{tckb.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & -0.01 & -0.00 & -0.01 & -0.00 & -0.00 & 0.01 & 0.02 \\ 
+  2007-05-09 & 0.02 & -0.00 & -0.02 & 0.01 & 0.04 & 0.04 & -0.00 \\ 
+  2007-05-10 & 0.01 & 0.01 & 0.02 & 0.06 & 0.05 & 0.04 & 0.03 \\ 
+  2007-05-11 & 0.03 & -0.02 & -0.00 & -0.01 & 0.01 & 0.01 & -0.02 \\ 
+  2007-05-14 & -0.05 & 0.00 & -0.03 & -0.05 & -0.02 & -0.01 & -0.03 \\ 
+  2007-05-15 & -0.00 & 0.05 & -0.01 & 0.01 & 0.03 & 0.03 & 0.03 \\ 
+  2007-05-16 & -0.01 & -0.03 & -0.03 & -0.01 & -0.04 & -0.02 & 0.01 \\ 
+  2007-05-17 & 0.00 & 0.08 & -0.03 & -0.04 & -0.03 & -0.03 & 0.00 \\ 
+  2007-05-18 & 0.01 & 0.02 & 0.01 & 0.01 & 0.01 & 0.03 & -0.00 \\ 
+  2007-05-22 & -0.04 & 0.01 & 0.00 & 0.02 & 0.02 & 0.02 & 0.02 \\ 
+  2007-05-23 & -0.01 & -0.02 & -0.01 & -0.01 & -0.01 & 0.01 & -0.01 \\ 
+  2007-05-24 & -0.04 & 0.06 & 0.04 & 0.04 & 0.02 & 0.02 & 0.04 \\ 
+  2007-05-25 & 0.01 & 0.02 & -0.02 & -0.02 & -0.03 & -0.01 & -0.01 \\ 
+  2007-05-28 & 0.01 & -0.01 & -0.01 & 0.01 & 0.01 & -0.00 & 0.00 \\ 
+  2007-05-29 & -0.02 & -0.00 & -0.02 & -0.01 & -0.00 & -0.00 & 0.00 \\ 
+  2007-05-30 & 0.04 & 0.09 & 0.05 & 0.07 & 0.06 & 0.08 & 0.05 \\ 
+  2007-05-31 & 0.00 & 0.02 & 0.01 & 0.03 & -0.01 & 0.00 & -0.01 \\ 
+   \midrule
+Total & -0.06 & 0.29 & -0.06 & 0.11 & 0.10 & 0.23 & 0.12 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TCKb.TO} 
+\label{tab:appendix-wf-TCKb.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-46-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-46}
+\end{figure}
+
+\newpage
+
+\subsubsection{TLM.TO}\label{tlm.to}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{table}[h!]
+\centering
+\begingroup\scriptsize
+\begin{tabularx}{\textwidth}{rRRRRRRR}
+  \toprule
+ & Buy-Hold & HHMM (0 lag) & HHMM (1 lag) & HHMM (2 lag) & HHMM (3 lag) & HHMM (4 lag) & HHMM (5 lag) \\ 
+  \midrule
+2007-05-08 & 0.01 & 0.03 & -0.00 & -0.02 & -0.01 & -0.01 & -0.01 \\ 
+  2007-05-09 & -0.03 & 0.01 & -0.00 & -0.01 & 0.00 & 0.03 & 0.01 \\ 
+  2007-05-10 & -0.02 & 0.00 & -0.01 & -0.02 & 0.00 & -0.00 & 0.01 \\ 
+  2007-05-11 & 0.03 & -0.02 & -0.03 & -0.01 & -0.01 & -0.00 & -0.00 \\ 
+  2007-05-14 & -0.00 & -0.00 & 0.01 & -0.01 & 0.01 & 0.00 & -0.02 \\ 
+  2007-05-15 & -0.01 & -0.01 & -0.01 & -0.03 & -0.01 & -0.01 & -0.01 \\ 
+  2007-05-16 & 0.01 & 0.01 & 0.02 & 0.01 & 0.02 & 0.02 & 0.00 \\ 
+  2007-05-17 & 0.02 & -0.01 & 0.01 & -0.01 & -0.01 & -0.01 & -0.00 \\ 
+  2007-05-18 & -0.00 & -0.05 & -0.01 & -0.01 & -0.01 & -0.01 & 0.01 \\ 
+  2007-05-22 & -0.01 & -0.01 & -0.02 & -0.02 & -0.02 & -0.02 & -0.01 \\ 
+  2007-05-23 & 0.01 & 0.01 & -0.02 & -0.02 & -0.00 & 0.02 & 0.01 \\ 
+  2007-05-24 & -0.02 & -0.00 & 0.02 & 0.02 & 0.01 & 0.02 & 0.04 \\ 
+  2007-05-25 & 0.00 & -0.02 & -0.00 & 0.02 & 0.01 & 0.01 & 0.01 \\ 
+  2007-05-28 & 0.01 & -0.02 & -0.01 & 0.00 & -0.01 & 0.00 & -0.01 \\ 
+  2007-05-29 & -0.02 & 0.01 & 0.01 & 0.02 & -0.02 & 0.00 & 0.01 \\ 
+  2007-05-30 & 0.04 & -0.01 & 0.01 & 0.03 & 0.01 & -0.01 & 0.01 \\ 
+  2007-05-31 & -0.02 & -0.02 & 0.01 & -0.03 & -0.02 & 0.00 & 0.00 \\ 
+   \midrule
+Total & -0.02 & -0.09 & -0.03 & -0.10 & -0.05 & 0.04 & 0.07 \\ 
+   \bottomrule
+\end{tabularx}
+\endgroup
+\caption{Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TLM.TO} 
+\label{tab:appendix-wf-TLM.TO}
+\end{table}
+
+\begin{verbatim}
+## Warning in par(cex.names = 0.7, cex.axis = 0.7, cex.lab = 0.7, cex.main =
+## 0.7): "cex.names" is not a graphical parameter
+\end{verbatim}
+
+\begin{figure}[H]
+\includegraphics[width=\textwidth]{main_files/figure-latex/unnamed-chunk-48-1} \caption{Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`.}\label{fig:unnamed-chunk-48}
+\end{figure}
+
+\newpage
+
+\subsection{Original Computing
+Environment}\label{original-computing-environment}
+
+\begin{verbatim}
+## 
+## CXXFLAGS=-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function
+\end{verbatim}
+
+\begin{verbatim}
+## Session info -------------------------------------------------------------
+\end{verbatim}
+
+\begin{verbatim}
+##  setting  value                       
+##  version  R version 3.3.3 (2017-03-06)
+##  system   x86_64, mingw32             
+##  ui       RTerm                       
+##  language (EN)                        
+##  collate  Spanish_Argentina.1252      
+##  tz       America/Buenos_Aires        
+##  date     2017-08-27
+\end{verbatim}
+
+\begin{verbatim}
+## Packages -----------------------------------------------------------------
+\end{verbatim}
+
+\begin{verbatim}
+##  package      * version   date       source        
+##  BH             1.62.0-1  2016-11-19 CRAN (R 3.3.2)
+##  colorspace     1.3-2     2016-12-14 CRAN (R 3.3.3)
+##  dichromat      2.0-0     2013-01-24 CRAN (R 3.3.2)
+##  digest       * 0.6.12    2017-01-27 CRAN (R 3.3.3)
+##  ggplot2      * 2.2.1     2016-12-30 CRAN (R 3.3.3)
+##  graphics     * 3.3.3     2017-03-06 local         
+##  grDevices    * 3.3.3     2017-03-06 local         
+##  grid           3.3.3     2017-03-06 local         
+##  gridExtra      2.2.1     2016-02-29 CRAN (R 3.3.3)
+##  gtable         0.2.0     2016-02-26 CRAN (R 3.3.3)
+##  inline         0.3.14    2015-04-13 CRAN (R 3.3.3)
+##  labeling       0.3       2014-08-23 CRAN (R 3.3.2)
+##  lattice        0.20-34   2016-09-06 CRAN (R 3.3.3)
+##  lazyeval       0.2.0     2016-06-12 CRAN (R 3.3.3)
+##  magrittr       1.5       2014-11-22 CRAN (R 3.3.3)
+##  MASS           7.3-45    2016-04-21 CRAN (R 3.3.3)
+##  Matrix         1.2-8     2017-01-20 CRAN (R 3.3.3)
+##  methods      * 3.3.3     2017-03-06 local         
+##  munsell        0.4.3     2016-02-13 CRAN (R 3.3.3)
+##  plyr           1.8.4     2016-06-08 CRAN (R 3.3.3)
+##  RColorBrewer   1.1-2     2014-12-07 CRAN (R 3.3.2)
+##  Rcpp           0.12.10   2017-03-19 CRAN (R 3.3.3)
+##  RcppEigen      0.3.2.9.1 2017-03-15 CRAN (R 3.3.3)
+##  reshape2       1.4.2     2016-10-22 CRAN (R 3.3.3)
+##  rstan        * 2.14.2    2017-03-19 CRAN (R 3.3.3)
+##  scales         0.4.1     2016-11-09 CRAN (R 3.3.3)
+##  StanHeaders  * 2.14.0-1  2017-01-09 CRAN (R 3.3.3)
+##  stats        * 3.3.3     2017-03-06 local         
+##  stats4         3.3.3     2017-03-06 local         
+##  stringi        1.1.3     2017-03-21 CRAN (R 3.3.3)
+##  stringr        1.2.0     2017-02-18 CRAN (R 3.3.3)
+##  tibble         1.3.0     2017-04-01 CRAN (R 3.3.3)
+##  tools          3.3.3     2017-03-06 local         
+##  utils        * 3.3.3     2017-03-06 local
+\end{verbatim}
 
 
 \end{document}

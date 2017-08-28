@@ -232,10 +232,7 @@ trades.oos <- topstate_trading(tdata.oos, 1)
 # no-lag strategy, strategy, b&h
 # equity line prod(1+trade$ret)
 
-
-
-
-plot_topstate_trading(tdata.oos, trades.oos)
+plot_topstate_trading(tdata.oos, zig.oos, trades.oos)
 
 
 mean(trades$perchg) < mean(trades$ret)

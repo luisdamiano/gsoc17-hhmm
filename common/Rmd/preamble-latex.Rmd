@@ -3,7 +3,9 @@
 \usepackage{float} % Image position
 \usepackage{tabularx} % Tables
 \usepackage{tikz} % Graphs
-\usetikzlibrary{positioning}
+\usepackage[utf8]{inputenc} % UTF-8
+\usepackage{lscape} % Landscape mode
+\usepackage{booktabs}
 
 % Math operators
 \DeclareMathOperator*{\argmax}{\operatorname*{arg\,max}}
@@ -21,9 +23,17 @@
 \newcommand{\LL}{\mathcal{L}}
 \newcommand{\RR}{\mathbb{R}}
 
-% Tables
-\newcolumntype{R}{>{\raggedright\arraybackslash}X}
+% Graphs
+\usetikzlibrary{positioning}
 
-\usepackage{lscape}
+% Tables
+% \newcolumntype{R}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% Captions
+\setlength{\abovecaptionskip}{2pt plus 0pt minus 0pt}
+\setlength{\belowcaptionskip }{2pt plus 0pt minus 0pt}
+
+% Landscape
 \newcommand{\blandscape}{\begin{landscape}}
 \newcommand{\elandscape}{\end{landscape}}

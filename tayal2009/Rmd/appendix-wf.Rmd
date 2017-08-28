@@ -1,0 +1,27 @@
+### `r sym`
+
+```{r, include = TRUE, results = 'asis'}
+setglobals()
+
+tab  <- xtable(round(mat, 4),
+               caption = paste("Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias).", sym),
+               label = paste0("tab:appendix-wf-", sym),
+               align = c('r', rep('R', 7)))
+
+print(tab, digits = 4, hline.after = c(-1, 0, nrow(mat) - 1, nrow(mat)),
+      table.placement = "h!", width = "\\textwidth", size = "\\scriptsize")
+
+```
+
+```{r include = TRUE, out.width = '\\textwidth', fig.cap = "Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`."}
+
+
+source('../R/state-plots.R')
+
+setglobals()
+ss <- trades[[1]]$oos
+plot_topstate_seqv(trades[[1]]$tdata[ss, ], trades[[1]]$zig[ss, ],
+                   main.lab = sprintf("%s In-sample [%s]", sym, ss))
+```
+
+\newpage

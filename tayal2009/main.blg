@@ -1,9 +1,0 @@
-[0] Config.pm:354> INFO - This is Biber 2.7
-[0] Config.pm:357> INFO - Logfile is 'main.blg'
-[33] biber-MSWIN32:303> INFO - === 
-[55] Biber.pm:359> INFO - Reading 'main.bcf'
-[146] Biber.pm:835> INFO - Found 6 citekeys in bib section 0
-[159] Biber.pm:3670> INFO - Processing section 0
-[176] Biber.pm:3840> INFO - Looking for bibtex format file '../common/references' for section 0
-[407] Utils.pm:180> ERROR - Cannot find '../common/references'!
-[407] Biber.pm:113> INFO - ERRORS: 1
