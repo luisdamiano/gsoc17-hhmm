@@ -1,27 +1,37 @@
 ### `r sym`
 
-```{r, include = TRUE, results = 'asis'}
+```{r, include = TRUE, results = 'asis', warning = FALSE}
 setglobals()
 
-tab  <- xtable(round(mat, 4),
-               caption = paste("Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias).", sym),
+mat.ext <- apply(mat, 2, function(m) {
+  c(total = prod(1 + m) - 1,
+    min   = min(m),
+    mean  = mean(m),
+    med   = median(m),
+    max   = max(m),
+    sd    = sd(m))})
+
+rownames(mat.ext) <- c("Total", "Min", "Mean", "Median", "Max", "SD")
+
+tab  <- xtable(round(rbind(mat, mat.ext), 4),
+               caption = paste("Compound daily return originated in the HHMM trading strategy for different levels of lags. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias).", sym),
                label = paste0("tab:appendix-wf-", sym),
                align = c('r', rep('R', 7)))
 
-print(tab, digits = 4, hline.after = c(-1, 0, nrow(mat) - 1, nrow(mat)),
-      table.placement = "h!", width = "\\textwidth", size = "\\scriptsize")
+print(tab, digits = 4, hline.after = c(-1, 0, nrow(mat), nrow(mat) + nrow(mat.ext)),
+      table.placement = "H", width = "\\textwidth", size = "\\tiny")
 
+ptrade <- trades[[as.numeric(which.max(mat[, 3]))]]
+cap <- sprintf("Out of sample equity line for %s [%s]", attr(ptrade$tdata, 'symbol'), ptrade$oos)
 ```
 
-```{r include = TRUE, out.width = '\\textwidth', fig.cap = "Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from `r sym`."}
-
-
+```{r include = TRUE, out.width = '\\textwidth', fig.cap = cap, warning = FALSE}
 source('../R/state-plots.R')
-
 setglobals()
-ss <- trades[[1]]$oos
-plot_topstate_seqv(trades[[1]]$tdata[ss, ], trades[[1]]$zig[ss, ],
-                   main.lab = sprintf("%s In-sample [%s]", sym, ss))
+
+plot_topstate_trading(ptrade$tdata[ptrade$oos], 
+                      ptrade$zig[ptrade$oos], 
+                      ptrade$trades[2:7])
 ```
 
 \newpage

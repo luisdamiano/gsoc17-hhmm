@@ -359,7 +359,7 @@ plot_topstate_features <- function(features, top, L, topstate.label = c("Bear", 
   my.ylim <- c(0, 500 * ((max(table(features)) %/% 500) + 1))
 
   opar <- par(TRUE)
-  par(mar = c(3.5, 4.1, 1.0, 2.1))
+  par(mar = c(2.5, 4.1, 1.0, 2.1))
   par(mfrow = c(1, 2))
   for (i in 1:n) {
     zx <- features[top == topstate[i]]
@@ -390,6 +390,7 @@ plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
   # 2. Data extraction
   price <- tdata$PRICE
   size  <- tdata$SIZE
+
   if (!is.list(trades)) { trades <- list(trades) }
 
   opar <- par(no.readonly = TRUE)
@@ -416,7 +417,6 @@ plot_topstate_trading <- function(tdata, zigzag, trades, main.lab = NULL) {
   axis(3, at = xy.coords(price.x, price.y)$x[x.at],
        labels = names(x.at), las = 2) # cex.axis = 0.75,
 
-  # for (t in trades) {
   for (i in 1:length(trades)) {
     t <- trades[[i]]
     t.lty <- rep(1:6, ceiling(length(trades) / 6))[i]

@@ -718,6 +718,10 @@ n.seed = 9000
 * Parsed data.
 * First inspection says data will be of much help.
 
+## Final notes
+
+Log keeping became more and more difficult when the deadline become closer. Sorry for not being able to keeping this up. You do know the ending tho (spoiler alert!): finally got the project done! Thanks for reading!
+
 ---
 
 # Notes
@@ -751,16 +755,3 @@ n.seed = 9000
 | Output density| $\psi_t(j)$   | f_{\mat{x}}(\mat{x}_t, \mat{eta}_t)$  |
 | or evidence   |               |                    |
 +---------------+---------------+--------------------+
-
-## Questions - Stuff to discuss with Brian and Michael
-
-* Statistical vs ML jargon: should be pick one and stick to it, or simply use the interchangeably? for example, learning vs estimation.
-* Citing policy: should be cite papers we don't read, but are cited in the work we did read, in order to leave a reference is the reader is interested? Consider this practical example:
-    * We read Bengio & Frasconi (1995) on IOHMM. I'm stating other related or equivalent models, and he mentions "This model can also be seen as a recurrent version of the Mixture of Experts architecture (Jacobs et al., 1991)". Should we only mention the equivalence to Mixture of Expects or should be also cite Jacobs in case somebody is interested in this model, even if we've not read the paper?
-* Referring to $t$: the subindex can represent time, space, or even any other sequencial index. Is there any generic word that would comprise both time and space? I'd used *point* (and sometimes step) so far. Alternatively, I could state at the beginning of the work that we'll use time but this works with space too?
-
-## TODO
-
-* When using equations inside a table, find a better way to escape the pipes.
-
-

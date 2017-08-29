@@ -1,10 +1,11 @@
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 \usepackage{bm} % True bold symbols
-\usepackage{float} % Image position
+\usepackage{float} % Image and table position
 \usepackage{tabularx} % Tables
 \usepackage{tikz} % Graphs
 \usepackage[utf8]{inputenc} % UTF-8
 \usepackage{lscape} % Landscape mode
+\usepackage{hyperref} % links
 \usepackage{booktabs}
 
 % Math operators
@@ -37,3 +38,12 @@
 % Landscape
 \newcommand{\blandscape}{\begin{landscape}}
 \newcommand{\elandscape}{\end{landscape}}
+
+% Links and colours
+\hypersetup{hidelinks} % no box around links
+\hypersetup{ % links with pretty colours
+  colorlinks   = true, % Colours links instead of ugly boxes
+  urlcolor     = blue, % Colour for external hyperlinks
+  linkcolor    = blue, % Colour of internal links
+  citecolor   = red % Colour of citations
+}

@@ -1,0 +1,54 @@
+---
+title: A brief technical introduction to Hidden Markov Models.
+author: "Luis Damiano, Brian Peterson, Michael Weylandt"
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 7
+    highlight: default
+    includes:
+      in_header: ../common/Rmd/preamble-latex.Rmd
+    keep_tex: no
+    latex_engine: pdflatex
+    number_sections: yes
+    toc: no
+  html_document:
+    includes:
+      in_header: ../common/Rmd/preamble-html.Rmd
+    keep_md: no
+    number_sections: yes
+    toc: no
+bibliography: ../common/references.bib
+# abstract: This is the abstract. Lorem ipsum dolor sit amet, consectetur adipiscing
+#   elit. Cras facilisis mi eu diam pellentesque, ac consequat enim ultricies. Duis
+#   convallis massa neque, sit amet molestie odio sagittis et. Duis aliquet dolor elementum,
+#   tempor justo in, aliquam libero. Ut non ligula gravida, sodales mauris sed, gravida
+#   enim. Vestibulum magna dui, congue et elementum vel, vestibulum et quam. Suspendisse
+#   sit amet felis sapien. Etiam scelerisque nisl ac gravida elementum. Curabitur laoreet
+#   erat ac lorem tempus ultrices. Integer ut placerat magna, eu fermentum nibh. Donec
+#   a dignissim dui, at elementum mauris.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r child = 'Rmd/intro.Rmd'}
+```
+
+```{r child = 'Rmd/mc.Rmd'}
+```
+
+```{r child = 'Rmd/hmm.Rmd'}
+```
+
+```{r child = 'Rmd/iohmm.Rmd'}
+```
+
+```{r child = 'Rmd/hhmm.Rmd'}
+```
+
+```{r child = 'Rmd/references.Rmd'}
+```

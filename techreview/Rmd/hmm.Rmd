@@ -1,0 +1,302 @@
+# Hidden Markov Models
+
+Real-world processes produce observable outputs characterized as signals. These can be discrete or continuous in nature, be pure or contaminated with noise, come from a stationary or non stationary source, among many other variations. These signals are modelled to allow for both theoretical descriptions and practical applications. The model itself can be deterministic or stochastic, in which case the signal is well characterized as a parametric random process whose parameters can be estimated in a well-defined manner.
+
+Autocorrelation, a key feature in most signals, can be modelled in countless forms. While certainly pertinent to this purpose, high order Markov chains can prove inconvenient when the range of the correlation amongst the observations is long. A more parsimonious approach assumes that the observed sequence is a noisy observation of an underlying hidden process represented as a first-order Markov chain. In other terms, long-range dependencies between observations are mediated via latent variables. It is important to note that the Markov property is only assumed for the hidden states and not for the observations themselves.
+
+## Model specification
+HMM involves two interconnected models. The state model consists of a discrete-time, discrete-state, first order hidden Markov chain $z_t \in \{1, \dots, K\}$ that transitions according to $p(z_t | z_{t-1})$. Additionally, the observation model is governed by $p(\mat{x}_t | z_t)$, where $\mat{x}_t$ are the observations, emissions or output. The corresponding joint distribution is
+
+\[
+p(\mat{z}_{1:T}, \mat{x}_{1:T})
+  = p(\mat{z}_{1:T}) p(\mat{x}_{1:T} | \mat{z}_{1:T})
+  = \left[ p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})} \right] \left[ \prod_{t=1}^{T}{p(\mat{x}_t | z_{t})} \right].
+\]
+
+It is a specific instance of the state space model family in which the latent variables are discrete. Each single time slice corresponds to a mixture distribution with component densities given by $p(\mat{x}_t | z_t)$, thus HMM may be interpreted as an extension of a mixture model in which the choice of component for each observation is not selected independently but depends on the choice of component for the previous observation. In the case of a simple mixture model for an independent and identically distributed sample, the parameters of the transition matrix inside the $i$-th column are the same, so that the conditional distribution $p(z_t | z_{t-1})$ is independent of $z_{t-1}$.
+
+When the output is discrete, the observation model commonly takes the form of an observation matrix
+
+\[
+p(\mat{x} = l | z_t = k, \mat{\theta}) = B(k, l).
+\]
+
+Alternatively, if the output is continuous, the observation model is frequently a conditional Gaussian
+\[
+p(\mat{x}_t | z_t = k, \mat{\theta}) = \mathcal{N}(\mat{x}_t | \mat{\mu}_k, \mat{\Sigma}_k).
+\]
+
+The latter is equivalent to a Gaussian mixture model with cluster membership ruled by Markovian dynamics, also known as Markov Switching Models (MSM). In this context, multiple sequential observations tend to share the same location until they suddenly jump into a new cluster.
+
+## Characteristics
+By specification of the latent model, the density function of the duration $\tau$ in state $i$ is given by
+
+\[
+p_i(\tau) = (A_{ii})^{\tau} (1 - A_{ii}) \propto \exp (-\tau \ln A_{ii}),
+\]
+
+which represents the probabily that a sequence spends precisely $\tau$ steps in state $i$. The expected duration conditional on starting in that state is
+
+\[
+\bar{\tau}_i = \sum_{\tau = 1}^{\infty}{\tau p_i(\tau)} = \frac{1}{1 - A_{ii}}.
+\]
+
+The density is an exponentially decaying function of $\tau$, thus longer durations are more probable than shorter ones. In applications where this proves unrealistic, the diagonal coefficients of the transition matrix $A_{ii} \ \forall \ i$ may be set to zero and each state $i$ is explicitely associated with a probability distribution of possible duration times $p(\tau | i)$ [@rabiner1990tutorial].
+
+One of the most powerful properties of HMM is the ability to exhibit some degree of invariance to local warping of the time axis. Allowing for compression or stretching of the time, the model accommodates for variations in speed.
+
+## Inference
+There are several quantities of interest to be inferred from different algorithms. These are summarized in the following table. In this section, the discussion assumes that model parameters $\mat{\theta}$ are known.
+
+Name            | Quantity                                | Availability at     | Algorithm | Complexity
+----------------|-----------------------------------------|---------------------|-----------|------------
+Filtering       | $p(z_t `|` \mat{x}_{1:t})$              | $t$ (online)        | Forward         | ?
+Smoothing       | $p(z_t `|` \mat{x}_{1:T})$              | $T$ (offline)       | Forwards-backwards         | $O(K^2T)$ \ $O(KT)$ if left-to-right
+Fixed lag smoothing | $p(z_{t-\ell} `|` \mat{x}_{1:t})$, $\ell>0$| $t+\ell$ (lagged)    | ?         | ?
+State prediction| $p(z_{t+h} `|` \mat{x}_{1:t})$, $h>0$   | $t$                 | ?         | ?
+Observation prediction | $p(x_{t+h} `|` \mat{x}_{1:t})$, $h>0$     | $t$                 | ?         | ?
+MAP Estimation  | $ 1+2 $                                 | $T$                 | Viterbi encoding | $O(K^2T)$ \ $O(KT)$ if sparse
+Probability of the evidence | $p(\mat{x}_{1:T})$          | $T$                 | ?         | ?
+Table: Summary of the quantities that can be inferred and their corresponding algorithms.
+
+### Filtering
+A filter infers the belief state at a given step based on all the information available up to that point $p(z_t | \mat{x}_{1:t})$. It achieves better noise reduction than simply estimating the hidden state based on the current estimate $p(z_t | \mat{x}_{t})$. The filtering process can be run online, or recursively, as new data streams in.
+
+Filtered maginals can be computed recursively by means of the forward algorithm [@baum1967inequality]. Let $\psi_t(j) = p(\mat{x}_t | z_t = j)$ be the local evidence at step $t$ and $\Psi(i, j) = p(z_t = j | z_{t-1} = i)$ be the transition probability. First, the one-step-ahead predictive density is computed
+
+\[
+p(z_t = j | \mat{x}_{1:t-1}) = \sum_{i}{\Psi(i, j) p(z_{t-1} = i | \mat{x}_{1:t-1})}.
+\]
+
+Acting as prior information, this quantity is updated with observed data at the step $t$ using Bayes rule,
+
+(@filteredbeliefstate)
+\begin{align*}
+\label{eq:filtered-beliefstate}
+\alpha_t(j) 
+  & \triangleq  p(z_t = j | \mat{x}_{1:t}) \\
+  &= p(z_t = j | \mat{x}_{t}, \mat{x}_{1:t-1}) \\
+  &= Z_t^{-1} \psi_t(j) p(z_t = j | \mat{x}_{1:t-1}) \\
+\end{align*}
+  <!-- &= Z_t^{-1} \psi_t(j) \alpha_{t-1}(j), -->
+  <!-- &= \psi_t(j) \sum_{l}{\Psi(i, l) \alpha_{t-1}(l)} -->
+  
+where the normalization constant is given by
+
+\[
+Z_t
+  \triangleq  p(\mat{x}_t | \mat{x}_{1:t-1})
+  = \sum_{l=1}^{K}{p(\mat{x}_{t} | z_t = l) p(z_t = l | \mat{x}_{1:t-1})}
+  = \sum_{l=1}^{K}{\psi_t(l) p(z_t = l | \mat{x}_{1:t-1})}.
+\]
+
+This predict-update cycle results in the filtered belief states at step $t$. As this algorithm only requires the evaluation of the quantities $\psi_t(j)$ for each value of $z_t$ for every $t$ and fixed $\mat{x}_t$, the posterior distribution of the latent states is independent of the form of the observation density or indeed of whether the observed variables are continuous or discrete [@jordan2003introduction].
+
+Let $\mat{\alpha}_t$ be a $K$-sized vector with the filtered belief states at step $t$, $\mat{\psi}_t(j)$ be the $K$-sized vector of local evidence at step $t$, $\mat{\Psi}$ be the transition matrix and $\mat{u} \odot \mat{v}$ is the Hadamard product, representing elementwise vector multiplication. Then, the bayesian updating procedure can be expressed in matrix notitation as
+
+\[
+\mat{\alpha}_t \propto \mat{\psi}_t \odot (\mat{\Psi}^T \mat{\alpha}_{t-1}).
+\]
+
+In addition to computing the hidden states, the algorithm yields the log probability of the evidence
+
+\[
+\log p(\mat{x}_{1:T} | \mat{\theta}) = \sum_{t=1}^{T}{\log p(\mat{x}_{t} | \mat{x}_{1:t-1})} = \sum_{t=1}^{T}{\log Z_t}.
+\]
+
+Log domain should be preferred to avoid numerical underflow.
+
+\begin{algorithm}[H]
+  \DontPrintSemicolon
+  \SetKwInOut{Input}{input}
+  \SetKwInOut{Output}{output}
+  \SetKwProg{Fn}{def}{\string:}{}
+  
+  \Input{Transition matrix $\mat{\Psi}$, local evidence vector $\mat{\psi}_t$ and initial state distribution $\mat{\pi}$.}
+  \Output{Belief state vector $\mat{\alpha}_{1:T}$ and log probability of the evidence $\log p(\mat{x}_{1:T} = \sum_{t} \log Z_t$).}
+  \BlankLine
+
+  \SetKwFunction{FUNCnormalize}{normalize}
+  \Fn(){
+    \FUNCnormalize{$\mat{u}$}
+  }{
+      $Z = \sum_j = u_j$\;
+      $v_j = u_j / Z$\;
+      \KwRet{$\mat{v}$, Z}
+  }
+
+  \BlankLine
+
+  $\alpha_1, Z_1 = \FuncSty{normalize}(\mat{\psi}_1 \odot \mat{\pi})$ \;
+  \For{t = 2 \KwTo T}{
+    $\alpha_t, Z_t = \FuncSty{normalize}(\mat{\psi}_t \odot (\mat{\Psi}^T \mat{\alpha}_{t-1}))$ \;
+  }
+  \KwRet{$\mat{\alpha}$, $\sum_{t} \log Z_t$}
+  \caption{Forward Algorithm}
+\end{algorithm}
+
+### Smoothing
+A smoother infers the belief state at a given state based on all the observations or evidence $p(z_t | \mat{x}_{1:T})$. Although noise and uncertainty are significantly reduced as a result of conditioning on past and future data, the smoothing process can only be run offline.
+
+Inference can be done by means of the forwards-backwards algorithm, also know as the Baum-Welch algorithm [@baum1967inequality, @baum1970maximization]. Let $\gamma_t(j)$ be the desired smoothed posterior marginal,
+
+\[
+\gamma_t(j)
+  \triangleq p(z_t = j | \mat{x}_{1:T}),
+\]
+
+$\alpha_t(j)$ be the filtered belief state at the step $t$ as defined by Equation (@filteredbeliefstate) and $\beta_t(j)$ be the conditional likelihood of future evidence given that the hidden state at step $t$ is $j$,
+
+\[
+\beta_t(j) 
+  \triangleq p(\mat{x}_{t+1:T} | z_t = j).
+\]
+
+Then, the chain of smoothed marginals can be segregated into the past and the future components by conditioning on the belief state $z_t$,
+
+\[
+\gamma_t(j)
+  = p(z_t = j | \mat{x}_{1:T})
+  \propto p(z_t = j,  \mat{x}_{t+1:T} | \mat{x}_{1:t})
+  \propto p(z_t = j | \mat{x}_{1:t}) p(\mat{x}_{t+1:T} | z_t = j)
+  \propto \alpha_t(j) \beta_t(j).
+\]
+
+The future component can be computed recusively from right to left:
+
+\begin{align*}
+\beta_{t-1}(i)
+  &= p(\mat{x}_{t:T} | z_{t-1} = i) \\
+  &= \sum_{j=1}^{K}{p(z_t =j, \mat{x}_{t}, \mat{x}_{t+1:T} | z_{t-1} = i)} \\
+  &= \sum_{j=1}^{K}{p(\mat{x}_{t+1:T} | z_t = j)p(z_t = j, \mat{x}_{t} | z_{t-1} = i)} \\
+  &= \sum_{j=1}^{K}{p(\mat{x}_{t+1:T} | z_t = j)p(\mat{x}_t | z_t = j)p(z_t = j | z_{t-1} = i)} \\
+  &= \sum_{j=1}^{K}{\beta_t(j) \psi_t(j) \Psi(i, j)}
+\end{align*}
+
+Let $\mat{\beta}_t$ be a $K$-sized vector with the conditional likelihood of future evidence given the hidden state at step $t$. Then, the backwards procedure can be expressed in matrix notitation as
+
+\[
+\mat{\beta}_{t-1} \propto \mat{\Psi} (\mat{\psi}_t \odot \mat{\beta}_{t}).
+\]
+
+At the last step, the base case is given by
+\[
+\beta_{T}(i)
+  = p(\mat{x}_{T+1:T} | z_{T} = i) = p(\varnothing | z_T = i) = 1.
+\]
+
+Intuitively, the forwards-backwards algorithm passes information from left to right and then from right to left, combining them at each node. A straightforward implementation of the algorithm runs in $O(K^2 T)$ time because of the $K \times K$ matrix multiplication at each step. There is a significant reduction if the transition matrix is sparse, for example a left-to-right transition matrix runs in $O(TK)$ time. Additional assumptions about the form of the transition matrix may ease the complexity further, for example reducing the time to $O(TK\log K)$ if $\psi(i, j) \propto \exp(-\sigma^2 |\mat{z}_i - \mat{z}_j|)$.
+
+### Fixed lag smoothing
+A compromise between filtering and smoothing, the fixed lag smoothing infers the belief state at a given step $t$ based on the information available up to that point plus a fixed lag $\ell$, that is $p(z_{t} | \mat{x}_{1:t+\ell})$. This approach yields better performance than filtering at the price of a delay, whose size can be tuned to trade off accuracy versus delay.
+
+### Backwards sampling
+The smoothed posterior distribution of the hidden states is given by $\mat{z}^s_{1:T} \sim p(\mat{z}_{1:T} | \mat{x}_{1:T})$. While smoothing computes the sequence of the marginal distributions, additional information can be gathered by sampling from the posterior.
+
+A naive sampling approach starts with the execution of the forwards-backwards algorithm to compute the two-slice smoothed marginal probabilities $p(z_{t-1, t} | \mat{x}_{1:T})$, continues with the computation of the conditionals $p(z_t | z_{t-1}, \mat{x}_{1:T})$ by normalizing, samples from the initial pair of states $z^*_{1, 2} \sim p(z_{1, 2} | \mat{x}_{1:T})$ and finally recusively samples the quantity of interest $z^*_t \sim p(z_t | z^*_{t-1}, \mat{x}_{1:T})$. This solutions requires a forwards-backwards pass as well as a forwards sampling pass.
+
+Alternatively, it is possible to run a forward pass and perform sampling in the backwards pass. The joint posterior distribution can be written from right to left,
+
+\[
+p(\mat{z}_{1:T} | \mat{x}_{1:T}) = p(z_T | \mat{x}_{1:T}) \prod_{t=T-1}^{1}{p(z_t | z_{t+1}, \mat{x}_{1:T})}.
+\]
+
+The state at a given step $z_t$ can be sampled given future states,
+
+\[
+z^s_t \sim p(z_t | z_{t+1:T}, \mat{x}_{1:T}) = p(z_t | z_{t+1}, \mat{x}_{1:t}) = p(z_t | z^s_{t+1}, \mat{x}_{1:t}),
+\]
+
+where the sampling distribution is given by
+
+\[
+p(z_t = i | z_{t+1} = j, \mat{x}_{1:t}) = p(z_t | z_{t+1}, \mat{x}_{1:t}) = \dots
+\]
+
+At the last step, the base case is given by
+\[
+  z^s_T \sim p(z_T = i | \mat{x}_{1:T}) = \alpha_T(i).
+\]
+
+The forwards filtering, backwards sampling algorithm forms the basis of blocked-Gibbs sampling methods for parameter inference.
+
+### Maximum a posteriori estimation
+It is also of interest to compute the most probable state sequence or path,
+
+\[
+\mat{z}^* = \argmax_{\mat{z}_{1:T}} p(\mat{z}_{1:T} | \mat{x}_{1:T}).
+\]
+
+The jointly most probable sequence of states can be inferred by means of maximum a posterior (MAP) estimation. It is not necessarily the same as the sequence of marginally most probable states given by the maximizer of the posterior marginals (MPM),
+
+\[
+\mat{\hat{z}} = (\argmax_{z_1} p(z_1 | \mat{x}_{1:T}), \dots, \argmax_{z_T} p(z_T | \mat{x}_{1:T})),
+\]
+
+which maximizes the expected number of correct individual states.
+
+The MAP estimate is always globally consistent: while locally a state may be most probable at a given step, the Viterbi or max-sum algorithm decodes the most likely single plausible path [@viterbi1967error]. Furthermore, the MPM sequence may have zero joint probability if it includes two successive states that, while being individually the most probable, are connected in the transition matrix by a zero. On the other hand, MPM can be considered more robust since the state at each step is estimated by averaging over its neighbours rather than conditioning on a specific value of them.
+
+The Viterbi algorithm is an adaptation of the forwards-backwards algorithm where the forward pass becomes a max-product and the backwards pass relies on a traceback procedure to recover the most probable path. In simple terms, once the most probable state $z_t$ is estimated, the procedure conditions the previous states on it. Let $\delta_t(j)$ be the probability of arriving to the state $j$ at step $t$ given the most probable path was taken,
+
+\[
+\delta_t(j)
+  \triangleq \max_{z_1, \dots, z_{t-1}} p(\mat{z}_{1:t-1}, z_t = j | \mat{x}_{1:t}).
+\]
+
+The most probable path to state $j$ at step $t$ consists of the most probable path to some other state $i$ at point $t-1$, followed by a transition from $i$ to $j$,
+
+\[
+\delta_t(j)
+  = \max_{i} \delta_{t-1}(i) \psi(i, j) \psi_t(j).
+\]
+
+Additionally, the most likely previous state on the most probable path to $j$ at step $t$ is given by
+\[
+a_t(j)
+  = \argmax_{i} \delta_{t-1}(i) \psi(i, j) \psi_t(j).
+\]
+
+By initializing with $\delta_1 = \pi_j \phi_1(j)$ and terminating with the most probable final state $z_T^* = \argmax_{i} \delta_T(i)$, the most probable sequence of states is estimated using the traceback,
+
+\[
+z_t^* = a_{t+1}(z_{t+1}^*).
+\]
+
+It is advisable to work in the log domain to avoid numerical underflow,
+
+\[
+\delta_t(j)
+  \triangleq \max_{\mat{z}_{1:t-1}} \log p(\mat{z}_{1:t-1}, z_t = j | \mat{x}_{1:t})
+  = \max_{i} \log \delta_{t-1}(i) + \log \psi(i, j) + \log \psi_t(j).
+\]
+
+As with the backwards-forwards algorithm, the time complexity of Viterbi is $O(K^2T)$ and the space complexity is $O(KT)$. If the transition matrix has the form $\psi(i, j) \propto \exp(-\sigma^2 ||\mat{z}_i - \mat{z}_j||^2)$, implementation runs in $O(TK)$ time.
+
+### Prediction
+Inference about the future belief states given the past observations requires computing $p(z_{t+h} | \mat{x}_{1:t})$ for the prediction horizon $h > 0$. The process is straightforward, the transition matrix is raised to the power of the prediction horizon and applied to the current belief state.
+\[
+p(z_{t+h} | \mat{x}_{1:t}) = \mat{\alpha}_t \mat{A}^h.
+\]
+
+Prediction about future observations involves the posterior predictive density,
+\[
+p(\mat{x}_{t+h} | \mat{x}_{1:t}) = \sum_{z_{t+h}}{p(\mat{x}_{t+h} | z_{t+h}) p(z_{t+h} | \mat{x}_{1:t})}.
+\]
+
+Since the influence of all available observations $\mat{x}_{1:t}$ is summarised in the $K$-sized vector $\mat{\alpha}_t$, prediction can be carried forward indefinitely with only a fixed amount of storage.
+
+## Parameter estimation
+The parameters of the models are $\mat{\theta} = (\mat{\pi}_1, \mat{A}, \mat{B})$, where $\mat{\pi}_1$ is the initial state distribution, $\mat{A}$ is the transition matrix and $\mat{B}$ are the parameters of the state-conditional density function $p(\mat{x}_t | z_t = j)$. The form of $\mat{B}$ depends on the specification of the observation model. Discrete observations may be characterized with an $L$-sized multinoulli distribution with parameters $B_{jl} = p(x_t = l, z_t = j)$ where $l \in \{1, \dots, L\}$, while continuous emissions may be modelled with a Gaussian distribution with parameters $\mat{\mu}_k$ and $\mat{\Sigma}_k$ where $k \in \{1, \dots, K\}$.
+
+Estimation can be run under both the maximum likelihood and bayesian frameworks. The former may be easily extended to regularized maximum likelihood with the introduction of the corresponding priors over the parameters. Although it is a straightforward procedure when the data is fully observed, in practice the latent states $\mat{z}_{1:T}$ are hidden. In principle, this is just another optimization problem that can be solved via standard numerical optimization methods. Analogous to fitting a mixture model, the most common approach is the application of the Expectation-Maximization (EM) Algorithm [@dempster1977maximum] to find either the maximum likelihood or the maximum a posteriori estimates. In the context of HMM, this is also known as the Baum-Welch algorithm [@baum1970maximization].
+
+The algorithm considers the unobserved internal state trajectory as missing data and decouples the learning problem into two parts: (1) a temporal assignment subproblem, and (2) a statistical learning subproblem that consists of fitting parameters to the next-state and the output mapping, both defined by the estimated trajectory. We refer to the original source [@dempster1977maximum] for a detailed study of the EM algorithm, as well as current papers [@rabiner1990tutorial] or standard textbook [@bishop2006pattern, @murphy2012machine] for the its application to HHM.
+
+Additionally, estimation can be done in a fully bayesian fashion. In terms of variational Bayes EM, @mackay1997ensemble proposes a method based on the optimization of an ensemble that approximates the entire posterior probability distribution. In turns, @beal2003variational presents a unified variational Bayesian framework which approximates the computations using a lower bound on the marginal likelihood. As for Markov Chain Monte Carlo methods, block Gibbs sampling can be applied as shown in @fruehwirth-schnatter2006finite. Briefly, samples are drawn from the density $p(\mat{z}_{1:T} | \mat{x}_{1:T}, \mat{\theta})$ by means of forwards-filtering, backwards-sampling, and then the parameters are sampled from their posteriors conditional on the sampled latent paths.
+
+### Implementation in Stan
+> While we're implementing the code during the following months, we'll probably have to work out a few implementation details like marginalization, vectorization, initialization, priors, speed-up tricks, convergence tricks, limitations by stan data structures (maybe), among other. These adaptations for the inference and/or estimation steps should be noted and explained in here. This would be a great contribution, Stan docs has plenty of tips and tricks but they're mostly scattered along the many models described in the manual.
+
+### Variations
+There are numerous variants of the HMM. Some of them impose constraints on the form of the transition matrix. In the left-to-right or Barkis model, where $A_{ij} = 0 \ \forall \ j < i$, the underlying state sequence stays the same or increases as time increases.

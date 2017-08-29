@@ -14,14 +14,13 @@ bibliography: ../common/references.bib
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE, fig.pos = 'H')
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, include = FALSE, fig.pos = 'H', warning = FALSE)
 
 knitr::opts_knit$set(global.par = TRUE)
 ```
 
 ```{r}
 library(xtable)
-
 setglobals <- function() { # What a beautiful hack! 
                            # global.par = TRUE won't do it
   options(xtable.sanitize.text.function = identity,
@@ -99,7 +98,7 @@ cache.path = 'fore_cache'
 # cat("<style>img{border: 0px !important;} tbody{font-size:9px;}</style>")
 ```
 
-This work aims at replicating the Hierarichal Hidden Markov Model (HHMM) originally proposed by @tayal2009regime to learn price and volume patterns using rules from technical analysis, infer the hidden state of the system and identify runs and reversals out-of-sample in a statistically significant way. The main goal is to reproduce the results of the original research as well as to provide additional insight and criticism. Also, we produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities. A brief introduction about Hidden Markov Models (HMM) can be found in our [literature review](https://github.com/luisdamiano/gsoc17-hhmm/blob/master/litreview/main.pdf).
+This work aims at replicating the Hierarchical Hidden Markov Model (HHMM) originally proposed by @tayal2009regime to learn price and volume patterns using rules from technical analysis, infer the hidden state of the system and identify runs and reversals out-of-sample in a statistically significant way. The main goal is to reproduce the results of the original research as well as to provide additional insight and criticism. Also, we produce public programming code in [Stan](http://mc-stan.org/) [@carpenter2016stan] for a fully Bayesian estimation of the model parameters and inference on hidden quantities. A brief introduction about Hidden Markov Models (HMM) can be found in our [literature review](https://github.com/luisdamiano/gsoc17-hhmm/blob/master/litreview/main.pdf).
 
 The authors acknowledge Google for financial support via the Google Summer of Code 2017 program.
 
@@ -107,9 +106,11 @@ The authors acknowledge Google for financial support via the Google Summer of Co
 
 # Motivation
 
+The use of Markov-switching models to represent bull and bear markets is not novel. @chauvet2000coincident define bulls and bears according to the general increasing or decreasing trend in prices and uses an unobservable two-state Markov variable to represent investors' real-time belief about the state of financial conditions. @maheu2000identifying succeed in combining return mean and variance to identify all major market downturns in over 160 years of monthly price data. @lunde2004duration, who define market states based on sequences of stopping times tracing local peaks and troughs in prices, find duration dependence in stock prices. The longer a bull market has lasted, the lower is the probability that it will come to a termination. In contrast, the longer a bear market has lasted, the higher is its termination probability. Interest rates affect cumulated changes in stock prices as well. The existence of market states is not only supported by statistical models. @gordon2000preference establishes a link between time-varying prices of risk under the Capital Asset Pricing Model framework and state-dependent preferences.
+
 # Hierarchical Hidden Markov Models
 
-The Hierarchical Hidden Markov Model (HHMM) is a recursive hierarchical generalization of the HMM that provides a systematic unsupervised approach for complex multi-scale structure. The model is motivated by the multiplicity of length scales and the different stochastic levels (recursive nature) present in some sequences. Additionally, it infers correlated observations over long periods via higher levels of hierarchy.
+The HHMM is a recursive hierarchical generalization of the HMM that provides a systematic unsupervised approach for complex multi-scale structure. The model is motivated by the multiplicity of length scales and the different stochastic levels (recursive nature) present in some sequences. Additionally, it infers correlated observations over long periods via higher levels of hierarchy.
 
 The model structure is fairly general and allows an arbitrary number of activations of its submodels. The multi-resolution structure is handled by temporal experts^[In Machine Learning terminology, a problem is divided into homogeneous regions addressed by an expert submodel. A gating network or function decides which expert to use for each input region.] of different time scales.
 
@@ -118,11 +119,11 @@ HHMM are structured multi-level stochastic processes that generalize HHM by maki
 
 Hidden dynamics are lead by transitions. Vertical transitions involve the activation of a substate by an internal state, they may include further vertical transitions to lower level states. Once completed, they return the control to the state that originated the recursive activation chain. Then, a horizontal transition is performed. Its state transition within the same level.
 
-A HHMM can be represented as a standard single level HMM whose states are the production states of the corresponding HHMM with a fully connected structure, i.e. there is a non-zero probability of tranisition from any state to any other state. This equivalent new model lacks the multi-level structure.
+A HHMM can be represented as a standard single level HMM whose states are the production states of the corresponding HHMM with a fully connected structure, i.e. there is a non-zero probability of transition from any state to any other state. This equivalent new model lacks the multi-level structure.
 
 Let $z_{t}^{d} = i$ be the state of an HHMM at the step $t$, where $i \in \{1, \dots, |z^{d}|\}$ is the state index, $|z^{d}|$ is the number of possible steps within the $d$-th level and $d \in \{1, \dots, D\}$ is the hierarchy index taking values $d = 1$ for the root state, $d = \{2, \dots, ..., D-1\}$ for the remaining internal states and $d = D$ for the production states.
 
-In addition to its structure, the model is characterized by the state transition probability between the internal states and the output distribution of the production states. For each internal state $z_t^d$ for $d \in \{1, \dots, D - 1\}$, there is a state transition probability matrix $\mat{A}^d$ with elements $A_{ij}^{d} = p(z_{t}^{d+1} = j | z_{t}^{d+1} = j)$ is the probability of a horizontal transition from the $i$-th state to the $j$-th state within the level $d$. Similarly, there is the initial distribution vector over the substates $\mat{\pi}^d$ with elements $\pi_j^d = p(z_t^{d+1} = j | z_t^d)$ for $d \in \{1, \dots, D - 1\}$. Finally, each production state $z_t^D$ is parametrized by the output parameter vector $\mat{\theta}_o^i$ whose form depends on the specification of the observation model $p(\mat{x}_t | z_t^D = j, \mat{\theta}_o^j)$ corresponding to the $j$-th production state.
+In addition to its structure, the model is characterized by the state transition probability between the internal states and the output distribution of the production states. For each internal state $z_t^d$ for $d \in \{1, \dots, D - 1\}$, there is a state transition probability matrix $\mat{A}^d$ with elements $a_{ij}^{d} = p(z_{t}^{d+1} = j | z_{t}^{d+1} = j)$ being the probability of a horizontal transition from the $i$-th state to the $j$-th state within the level $d$. Similarly, there is the initial distribution vector over the substates $\mat{\pi}^d$ with elements $\pi_j^d = p(z_t^{d+1} = j | z_t^d)$ for $d \in \{1, \dots, D - 1\}$. Finally, each production state $z_t^D$ is parametrized by the output parameter vector $\mat{\theta}_o^i$ whose form depends on the specification of the observation model $p(\mat{x}_t | z_t^D = j, \mat{\theta}_o^j)$ corresponding to the $j$-th production state.
 
 ## Generative model
 
@@ -132,7 +133,7 @@ Save for the top, each level $d \in \{2, \dots, D\}$ has a final state that term
 
 ## Parameter estimation
 
-The parameters of the models are $\mat{\theta} = \left\{ \left\{ \mat{A}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\pi}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\theta}_o \right\} \right\}$. The form of $\mat{\theta}_o$ depends on the specification of the production states. We refer the read to @fine1998hierarchical for a detailed treatment of estimation and inference procedures.
+The parameters of the models are $\mat{\theta} = \left\{ \left\{ \mat{A}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\pi}^d \right\}_{d \in \{1, \dots, D - 1\}}, \left\{ \mat{\theta}_o \right\} \right\}$. The form of $\mat{\theta}_o$ depends on the specification of the production states. We refer the reader to @fine1998hierarchical for a detailed treatment of estimation and inference procedures.
 
 ---
 
@@ -140,13 +141,15 @@ The parameters of the models are $\mat{\theta} = \left\{ \left\{ \mat{A}^d \righ
 
 ## Preamble
 
-...
+Many published works argue for the existence of systematic patterns in price action. @brock1992simple test technical trading rules and strategies. @karpoff1987relation, later followed by @gallant1992stock, make four contributions supporting that volume is a significant source of information for price changes. @lo2000foundations argue that several technical indicators provide incremental information and may have some practical value. Statistical significance does not imply profitability, however, and part of the research towards technical analysis is subject to various problems in their testing procedure [@park2007what].
+
+@tayal2009regime is first to propose a graphical model for technical analysis. The author creates data features based on technical analysis rules and designs a HHMM to learn intraday price and volume patterns. Probabilistic inference allows the identification of two distinct states in high-frequency data that are mainly marked by buying and selling pressure.
 
 ## Feature extraction
 
 ### Input series
 
-Tick series are a sequence of triples $\{y_k\}$ with $y_k = (t_k, p_k, v_k)$, where $t_k \le t_{k+1}$ is the time stamp in seconds, $p_k$ is the trade price and $v_k$ is the trade volume. The sequence is ordered by the occurence of trades. There can be more than one trade within a second.
+Tick series are a sequence of triples $\{y_k\}$ with $y_k = (t_k, p_k, v_k)$, where $t_k \le t_{k+1}$ is the time stamp in seconds, $p_k$ is the trade price and $v_k$ is the trade volume. The sequence is ordered by the occurrence of trades. There can be more than one trade within a second.
 
 Following @tayal2009regime, who in turns drew inspiration from the technical analysis techniques proposed by @ord2008secret, we derive a zig-zag sequence that captures the bid-ask bounce $\{z_k\}$ with $z_k = (i_n, j_n, e_n, \phi_n)$, where $i_n \le i_j$ are indices to the tick series representing the starting and ending point of the extrema, $e_n = p_k \ \forall \ k : i_n \le k \le j_n$ is the price at the local extrema, and $\phi_m$ measures the average volume per second during the zig-zag leg ending at $e_n$:
 
@@ -184,7 +187,7 @@ f_n^1 =
 For the third indicator function, we compute the average volume ratios,
 
 \[
-\nu_n^1 = \frac{\phi_n}{\phi_{n-1}}, \quad \nu_n^2 = \frac{\phi_n}{\phi_{n-2}}, \quad \nu_n^1 = \frac{\phi_{n-1}}{\phi_{n-2}},
+\nu_n^1 = \frac{\phi_n}{\phi_{n-1}}, \quad \nu_n^2 = \frac{\phi_n}{\phi_{n-2}}, \quad \nu_n^3 = \frac{\phi_{n-1}}{\phi_{n-2}},
 \]
 
 we transform the ratios into a discrete variable using an arbitrary threshold $\alpha$,
@@ -198,7 +201,7 @@ we transform the ratios into a discrete variable using an arbitrary threshold $\
 \end{cases}
 \]
 
-and we finallly define
+and we finally define
 
 \[
 f_n^2 =
@@ -250,14 +253,14 @@ print(tabs,
       width = "0.8 \\textwidth", size = "\\footnotesize")
 ```
 
-Defining appropiate rules that capture trade volume dynamics and identify trends in volume despite high-frequency noise is the most challenging aspect of this design. @wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spread between the Volume Weighted Average Prices of the bid and the ask, he designs a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure trade volume concentration in both sides of the book.
+Defining appropriate rules that capture trade volume dynamics and identify trends in volume despite high-frequency noise is the most challenging aspect of this design. @wisebourt2011hierarchical proposes a modification for the feature extraction procedure. By computing the spread between the Volume Weighted Average Prices of the bid and the ask, he devices a book imbalance metric that describes the state of the order book at any given moment in time. In turns, @sandoval2015computational applies wavelets over two simple-smoothed exponential distance-weighted average volume series to measure trade volume concentration in both sides of the book.
 
 ## Model
 \label{sec:model}
 
-We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM to learn the sequence of discrete features extracted from a high-frequency time series of stock prices and traded volume. The figure below summarises the model structure in the form of a Dynamic Bayesian Network.
+We adhere to the methodology proposed in the original work as much as possible. We set up a HHMM to learn the sequence of discrete features extracted from a high-frequency time series of stock prices and traded volume. The figure below summarizes the model structure in the form of a Dynamic Bayesian Network.
 
-The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints to determine beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Althought the original author does not mention this possibility, prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
+The graph starts with a root node $z^0$ that has two top-level children $z_1^1$ and $z_2^1$ representing bullish markets (or runs) and bearish markets (or reversals). The specifications do not pose any constraints that determines beforehand which node takes each of the possible two meanings. In consequence, latent states need to be labeled after the learning stage based on sample characteristics such as mean returns. Although the original author does not mention this possibility, prior information, like parameter ordering, could be embedded to break symmetry and mitigate eventual identification issues.
 
 \definecolor{myred}{RGB}{228, 31, 38}
 \begin{figure}[!h]
@@ -295,14 +298,14 @@ droundnode/.style={circle, double, draw=myred, very thick, minimum size=7mm},
 \draw[->]         (bot1) edge [bend right = 60] (bot51);
 \draw[->]         (bot3) edge [bend right = 60] (bot52);
 \end{tikzpicture}
-\caption{Hierarchical Hidden Markov Model for price and volumen proposed by @tayal2009regime.}
+\caption{Hierarchical Hidden Markov Model for price and volume.}
 \end{figure}
 
 <!-- Top level states transition vertically to a HMM that represent observations from bull or bear market states. Bottom level nodes in gray are emission states that produce one negative or positive zig-zag before transioning horizontally to another node inside the HHM. Bottom level double circled nodes are terminations that return control back to the top level, which is forced to transition horizontally to the alternate top state. -->
 
-Each top node activates a probabilistic HMM with two latent states for negative and positive zig-zag legs. The sub-model activated by the node $z_1^1$ always starts with the node $z_1^2$ producing an observation from the distribution of negative zig-zag $\mat{D} = \{D_1, \dots, D_9 \}$. Next, it transitions to (a) the node $z_2^2$ producing a positive zig-zag leg $\mat{U} = \{U_1, \dots, U_9 \}$, (b) the end node which may, in turn, transition back to $z_1^1$ emitting a new negative zig-zag leg, or (c) the end node and switches to the second sub-model, landing on node $z_3^2$ and producing a positive zig-zag leg. Restricting transitions to this limited set of movements force alternation between positive and negative zig-zag legs, thus guaranteeing that all possible observation sequences are well behaved. The sub-model belonging to $z_2^1$ has similar but symmetrical behaviour. These two inner models are conditionally independent, an advantage we will take for computational time.
+Each top node activates a probabilistic HMM with two latent states for negative and positive zig-zag legs. The sub-model activated by the node $z_1^1$ always starts with node $z_1^2$ producing an observation from the distribution of negative zig-zag $\mat{D} = \{D_1, \dots, D_9 \}$. Next, it transitions to (a) node $z_2^2$ producing a positive zig-zag leg $\mat{U} = \{U_1, \dots, U_9 \}$, or (b) the end node and switches to the second sub-model, landing on node $z_3^2$ and producing a positive zig-zag leg. Restricting transitions to this limited set of movements force alternation between positive and negative zig-zag legs, thus guaranteeing that all possible observation sequences are well behaved. The sub-model belonging to $z_2^1$ has similar but symmetrical behaviour. These two inner models are conditionally independent, an advantage we will take for computational time.
 
-The persistence of price trends vary according to the resolution of the dataset. In low frequency contexts, financial analysts will frequently define short and long term trends based on timespans involving weeks and months of observations. In high frequency trading, however, trends may last from seconds to hours. The main idea behind the conception of the hierarchical model is that top levels may group a sequence of price movements forming a general trend, whereas the bottom nodes allow zig-zags to represent micro trends that may deviate shortly from the main drift. That is, the model accommodates for possibly unequally probable negative price movements in an upwards market as well as positive short trends in a price reversal.
+The persistence of price trends vary according to the resolution of the dataset. In low frequency contexts, financial analysts will frequently define short and long term trends based on timespans involving weeks and months of observations. In high frequency trading, however, trends may last from seconds to hours. The main idea behind the conception of the hierarchical model is that top levels may group a sequence of price movements forming a general trend, whereas the bottom nodes allow zig-zags to represent micro trends that may deviate shortly from the main drift. That is, the model accommodates for possibly unequally probable negative price movements in an upwards market as well as positive short trends during a price reversal.
 
 Theoretically, all HHMM can be expressed as an equivalent HMM with possibly sparse initial probability vector and transition matrix. Although learning from this representation may prove less efficient in terms of computational complexity, the relatively simple structure and many restrictions of the model under study make estimation and inference feasible. The equivalent "expanded" HMM has $K = 4$ states, the following $K$-sized initial probability vector
 
@@ -318,14 +321,14 @@ and the $K \times K$ transition matrix
 \[
 \mat{A} =
   \begin{bmatrix}
-    0      & a_{12} & 1 - a_{11} & 0          \\
+    0      & a_{12} & 1 - a_{12} & 0          \\
     1      & 0      & 0          & 0          \\
     a_{31} & 0      & 0          & 1 - a_{31} \\
     0      & 0      & 1          & 0          \\
   \end{bmatrix},
 \]
 
-where each element $a_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to $1$, hidden dynamics are governed by only three free parameters.
+where each element $a_{ij}$ represents the probability of transitioning from the hidden state $i$ (row) to $j$ (column) in one step. The matrix is sparse with zeros representing nodes with no direct connections. Since the initial probability vector and the rows of the transition matrix must sum to one, hidden dynamics are governed by only three free parameters.
 
 Production nodes emit one observation from the finite sets of possible outputs $\mat{O}_D$ (for $z_1^2$ and $z_4^2$) and $\mat{O}_U$ (for $z_2^2$ and $z_3^2$). Conditional probability distributions are given by output probability vectors of length $L = 9$ subject to sum-to-one constraints:
 
@@ -352,7 +355,7 @@ with $l \in \{1, \dots, L-1\}$.
 
 The original work presents results for both simulated and real data. The latter is based on historical high-frequency time series for the 60 stocks listed in the S&P/TSE60 index. The dataset consists of all 22 business days of May 2007. The author excludes three days due to significant errors without disclosing the exact dates. We confirm that our results are consistent with the original work by focusing on GoldCorp Inc (TSE:G), the only series described exhaustively in the original work.
 
-Note that we do not model prices directly. Instead, non-linear transforms are applied on the price and traded volume high-frequency series to produce the sequence of observations fed to the proposed model.
+Note that we do not model prices directly. Instead, non-linear transformations are applied to the trade price and volume series to produce the sequence of features that feeds the proposed model.
 
 ## Methodology
 \label{sec:methodology}
@@ -361,7 +364,7 @@ Model parameters are estimated on a rolling window with five days each. Since to
 
 <!-- The conditional distribution of the features are studied to confirm that they differ from the unconditional distribution, ie the price process can be split into two regimes. Additionally, the differences are examinated to confirm that they differ in the expected way, ie the bullish state is more likely to have observations with price increases supported by volume increases and price drecreases are not supported by volumen decreases. -->
 
-After learning and labelling, two out of sample inference procedures are run on the sixth day. First, offline smoothing infers the hidden state at time $t$ based on the full evidence of the sixth day. Although this quantity is not useful for trading because of its look-ahead bias, it provides an upper bound benchmark for the model. Second, online filtering is used as a trading rule.
+After learning and labeling, the author runs two out of sample inference procedures on the sixth day. First, offline smoothing infers the hidden state at time $t$ based on the full evidence of the sixth day. Although this quantity is not useful for trading because of its look-ahead bias, it provides an upper bound benchmark for the model. Second, online filtering is used as a trading rule. Although smoothing is a valid benchmark, we focus exclusively on the latter.
 
 Most of the diagnostics are based on trade returns. For the $l$-th top-level state switch, the percentage return is defined as
 
@@ -371,9 +374,9 @@ R_l = \frac{p^e_l - p^s_l}{p^s_l},
 
 where $p^s_l$ and $p^e_l$ are the price at the start and end of the switch. 
 
-The information content of learning the top-level state is assessed by comparing the unconditional empirical distribution of trade returns versus their empirical distribution conditioned on the top-level state. Additionaly, regime return characteristics are validated: mean trade returns are expected to be higher for bullish regimes compared to bearish regimes, and they are expected to be positive and negative for runs and reversals respectively. In the original work, most of these analysis are run both in-sample and out-of-sample. We focus on out-of-sample results only.
+The information content of learning the top-level state is assessed by comparing the unconditional empirical distribution of trade returns versus their empirical conditional distribution given the top state. Additionally, regime return characteristics are validated: mean trade returns are expected to be higher for bullish regimes compared to bearish regimes, and they are expected to be positive and negative for runs and reversals respectively. In the original work, most of these analysis are run both in-sample and out-of-sample. We focus on out-of-sample results only.
 
-Finally, a trading strategy is tested. After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). As an addition to @tayal2009regime, where trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias, we investigate the decay of the strategy performance for longer lags.
+Finally, a trading strategy is tested. After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish and sells one unit every time it switches to bearish. As an addition to the original research, where trades are executed one tick after the leg is observed to ensure that there is no lock-ahead bias, we investigate the decay of the strategy performance for longer lags.
 
 ## GoldCorp Inc (TSE:G)
 
@@ -393,7 +396,7 @@ tdata <- na.omit(series[, 1:2])
 colnames(tdata) <- c("PRICE", "SIZE")
 ```
 
-We present an in-depth study of one stock to assess the strengths and weaknesses of the model. Using the tick-by-tick series of GoldCorp Inc (TSE:G), we split our dataset in training (2007-05-04 to 2007-05-10 - five trading days and `r # pint(nrow(tdata[ins, ]))` ticks) and test (2007-05-11 - `r # pint(nrow(tdata[oos, ]))` ticks) sets. Next, we run our procedure in a walking forward fashion for this stock as well as others and present some summary statistics for the performance of the strategy.
+We present an in-depth study of one stock to assess the strengths and weaknesses of the model. Using the tick-by-tick series of GoldCorp Inc (TSE:G), we split our dataset in training (2007-05-04 to 2007-05-10 - five trading days) and test (2007-05-11) sets. Next, we run our procedure in a walking forward fashion for this stock as well as others and present some summary statistics for the performance of the strategy.
 
 ### Data exploration
 
@@ -404,7 +407,7 @@ zig.ins <- zig[ins]
 zig.oos <- zig[oos]
 ```
 
-We center our attention on the sequence of trades, disregarding possibly valuable information from the bid and ask series. Future research may employ such information to improve model predictability. We start by extracting the features using the procedure detailed above. We set the threshold for the change in volume indicator variable in $\alpha = 0.25$ as suggested by the author of the original work. In-sample dataset reduced from `r # pint(nrow(tdata[ins, ]))` trade records to `r sprintf("%0.0f", nrow(zig.ins))` zig-zags.
+We center our attention on the sequence of trades, disregarding possibly valuable information from the bid and ask series. Future research may employ such information to improve model predictability. We start by extracting the features using the procedure detailed above. We set the threshold for the change in volume indicator variable in $\alpha = 0.25$ as suggested by the author of the original work. In-sample dataset reduced to `r sprintf("%0.0f", nrow(zig.ins))` zig-zags.
 
 Apart from the zig-zags themselves, local extrema are interesting on their own. Although we could not gain insight by visually inspecting other intermediate indicators such as the trend $f_1$, further research may find value in them.
 
@@ -424,7 +427,6 @@ plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
 ### Estimation
 
 ```{r}
-
 T.ins <- nrow(zig.ins)
 x.ins <- as.vector(zig.ins$feature)
 T.oos <- nrow(zig.oos)
@@ -473,9 +475,9 @@ rm(cache.objects, cache.digest, cache.filename)
 n.samples = (n.iter - n.warmup) * n.chains
 ```
 
-Model parameters can be segregated into two groups: parameters for the hidden model, including the initial distribution vector as well as the transition matrix, and parameters for the conditional multinomial distributions for the output. Table \ref{tab:tseg-ins-transition} summarises the former. The estimates for the initial distribution probabilities $\pi_1$ and $1 - \pi_1$ are uncertain to a large extent, which is unsurprising as the sample provides with only one starting observation and the model imposes almost no prior information for the parameters. @team2017stan, a technical manual for a programming language that also contains many brief discussion of statistical notions, describes some alternative specifications. If the sample were conceived as a subsequence of a long-running data generating process, the initial probabilities may be set to equal the stationary state probabilities of the transition Markov chain. Contrarily, if the sample was considered a finite-length sequence, the model may have a different starting distribution.
+Model parameters can be segregated into two groups: parameters for the hidden model, including the initial distribution vector as well as the transition matrix, and parameters for the conditional multinomial distributions for the output. Table \ref{tab:tseg-ins-transition} summarizes the former. The estimates for the initial distribution probabilities $\pi_1$ and $1 - \pi_1$ are uncertain to a large extent, which is unsurprising as the sample provides with only one starting observation and the model imposes almost no prior information for the parameters. @team2017stan, a technical manual for a programming language that also contains many brief discussion of statistical notions, describes some alternative specifications. If the sample were conceived as a subsequence of a long-running data generating process, the initial probabilities may be set to equal the stationary state probabilities of the transition Markov chain. Contrarily, if the sample was considered a finite-length sequence, the model may have a different starting distribution.
 
-On the other hand, estimation of the transition parameters profit from a larger number of trades: more information reduce uncertainty. We note that the bull top state seems persistent as positive zig-zags $z^2_3$ are more likely to transition to bull negative zig-zags $z^2_4$ versus bear negative zig-zags $z^2_1$ by a factor of $a_{34} / a_{31}  \approx 10$. After studying several stocks and timespans, we decide that these empirical observations are specific to the sample and are highly influenced by the general price trend present in the five day-long training dataset.
+On the other hand, estimation of the transition parameters profit from a larger number of trades: more information reduce uncertainty. We note that the bull top state seems persistent as positive zig-zags $z^2_3$ are more likely to transition to bull negative zig-zags $z^2_4$ versus bear negative zig-zags $z^2_1$ by a factor of $a_{34} / a_{31}  \approx 10$. After studying several stocks and timespans, we decide that these empirical observations are specific to the sample and are highly influenced by the general price trend present in the five-day training dataset.
 
 ```{r, include = TRUE, results="asis"}
 mat <- summary(stan.fit, pars = c('p_1k', 'A_ij'),
@@ -501,7 +503,7 @@ print(tab, digits = 4,
       width = "0.65 \\textwidth", size = "\\footnotesize")
 ```
 
-Output distributions are summarized in Figure \\ref{fig:tseg-ins-multinomial}. It is important to note that zig-zags with no price trends $D_4, D_5, D_6, U_4, U_5, U_6$ are the most preeminent features. In particular, it is worthwhile to analyse the behaviour of the model in the presence of local volatility $D_5, U_5$, i.e. when there is no clear trends in price and volume. 
+Output distributions are summarized in Figure \ref{fig:tseg-ins-multinomial}. It is important to note that zig-zags with no price trends $D_4, D_5, D_6, U_4, U_5, U_6$ are the most preeminent features. In particular, it is worthwhile to analyse the behaviour of the model in the presence of local volatility $D_5, U_5$, i.e. when there is no clear trends in price and volume. 
 
 ```{r, include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Estimated parameters of the conditional multinomial distribution of the outputs given the emission state (bottom node) for TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-multinomial}"}
 parplot <- function(mat, y.axislab = NULL, xlim = NULL, ...) {
@@ -559,11 +561,11 @@ for (k in 1:K) {
 
 We first study short-term price changes in the opposite direction to the long-term trend. The vast majority of negative zig-zags observed in bullish markets are due to local volatility ($\hat{\phi}_{45}$ = 0.88) as do most of the positive zig-zags found in bearish markets ($\hat{\phi}_{25}$ = 0.80). We note, however, that negative legs with no price trends but weakening or strengthening trade volume are equally probable in bearish markets ($\hat{\phi}_{14} \approx \hat{\phi}_{16}$). Analogously, we find in bullish markets that $\hat{\phi}_{34} \approx \hat{\phi}_{36}$. These observations counter the a priori classification stated in Table \ref{tab:feature-space}. 
 
-Additionally, we find that positive zig-zags originated in local volatility are more likely to be seen in bearish markets versus bullish markets by a factor of $\phi_{25} / \phi_{35} \approx 4$. The odds for negative zig-zags are similar. We warn the reader that the current model needs more information to classify this feature. All in all, we are warned that zig-zag direction $f^0$ and change in volume $f^2$ are not decisive without a price trend, a hint that the current model needs either better feature engineering rules for the change in volume or more external information to deal with local volatility.
+Moreover, we find that positive zig-zags originated in local volatility are more likely to be seen in bearish markets versus bullish markets by a factor of $\phi_{25} / \phi_{35} \approx 4$. The odds for negative zig-zags are similar. We warn the reader that the current model needs more information to classify this feature. All in all, we are warned that zig-zag direction $f^0$ and change in volume $f^2$ are not decisive without a price trend, a hint that the current model needs either better feature engineering rules for the change in volume or more external information to deal with local volatility.
 
 ### Convergence
 
-Figure \ref{tseg-ins-diags} illustrates the trace plot of some arbitrary parameters as well as some diagnostic measures. In general terms, mixing and convergence to the stationary distribution is acceptable. The shrink factor of [@gelman1992inference], close to $1$ for all hidden quantities, indicates an adequate degree of convergence. Sampling is efficient as signaled by effective sample size ratios near to $1$ and Monte Carlo Standar Error to posterior standard deviation ratios well below 10%.
+Figure \ref{tseg-ins-diags} illustrates the trace plot of some arbitrary parameters as well as some diagnostic measures. In general terms, mixing and convergence to the stationary distribution is acceptable. The shrink factor of @gelman1992inference, close to $1$ for all hidden quantities, suggest an adequate degree of convergence. Sampling is efficient as signaled by effective sample size ratios near to $1$ and Monte Carlo Standard Error to posterior standard deviation ratios well below 10%.
 
 ```{r include = TRUE, out.width = '\\textwidth', fig.height = 4, fig.cap = "Traceplot of some arbitrarily selected parameters and histograms of diagnostic measures. Mixing, convergence to the stationary distribution and sampling efficiency are acceptable.\\label{tseg-ins-diags}"}
 
@@ -587,11 +589,11 @@ quickhist(summary(stan.fit)[[1]][, 'se_mean'] / summary(stan.fit)[[1]][, 'sd'], 
 
 ```
 
-Although re-estating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the Appendix Section \ref{sec:appendix-tseg-parameters}.
+Although reestating the original Hierarchical Hidden Markov Model into a Hidden Markov Model may increase time and memory complexity, the new model becomes significantly easier to program and convergence. A full list of our results, including convergence statistics such as $\hat{R}$ and the effective sample size, is included in the Appendix Section \ref{sec:appendix-tseg-parameters}.
 
 ### State probability
 
-```{r, include = TRUE}
+```{r, include = FALSE}
 # Extraction
 alpha_tk.ins  <- extract(stan.fit, pars = 'alpha_tk')[[1]]
 alpha_tk.oos  <- extract(stan.fit, pars = 'alpha_tk_oos')[[1]]
@@ -647,7 +649,7 @@ top.ins   <- top[ins]
 top.oos   <- top[oos]
 ```
 
-The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence avaliable up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears and bulls). Figure \ref{tseg-ins-features-hist} reflects the resulting classification.
+The forward algorithm allows us to calculate the filtered belief state: the probability that an observation at time $t$ was emitted by one of the possible four states (bottom-nodes) given the evidence available up to $t$. We assign each observation to the emission state with largest filtered probability and, by the definition of the hierarchical model, they become naturally linked to one of the two possible top states (bears and bulls). Figure \ref{tseg-ins-features-hist} reflects the resulting classification.
 
 ```{r include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Distribution of features conditional on the estimated hidden regime (top node). \\label{tseg-ins-features-hist}"}
 setglobals()
@@ -681,7 +683,7 @@ print(tab, digits = 4,
       width = "\\textwidth", size = "\\footnotesize")
 ```
 
-Bear and bull top states have negative and positive mean respectively by construction. As it is also visible in Figure \ref{fig:tseg-ins-ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five day long in-sample dataset. However, bear markets have a marked skew towards negative returns, becomes more risky in term of extreme events (kurtosis) and trades in bear markets tend to last one tick more than bulls.
+Bull top states have a greater mean return than bear top state by construction. As it is also visible in Figure \ref{fig:tseg-ins-ret-hist}, a positive skewness coefficient for all states indicates that negative returns tend to overweight positive returns for this specific stock during the five-day in-sample dataset. However, bear markets have a marked skew towards negative returns and become more risky in term of extreme events (higher kurtosis).
 
 ```{r include = TRUE, out.width = '\\textwidth', fig.height = 2.5, fig.cap = "Conditional distribution of trade returns given the estimated top state in TSE:G 2007-05-04 09:30:00/2007-05-10 16:30:00. \\label{fig:tseg-ins-ret-hist}"}
 setglobals()
@@ -699,7 +701,7 @@ As mentioned in Section \ref{sec:model}, the model assumes that outputs are emit
 
 Bullish states allow for negative zig-zags and bearish states allow for positive zig-zags as long as the trade volume is indeterminant or weak. The results of the classification are summarized in Table \ref{tab:tseg-filtered-ins}. As expected, the bullish top-node capture positive movements due to local volatility as well as downward movements with weak volume.
 
-### We remark that each of the 18 possible features into one state. For example, observations from feature 3 (ie U3) are all mapped into state 4. In a sense, this adds very little information since imputation is almost deterministic once the parameters are estimated. This is possibly a weakness in the model. See the plot in \ref{fig:tseg-ins-seqv}.
+We remark that all observations belonging to each of the 18 possible features are imputed to one state. For example, observations $U_3$ are all mapped into state $z^2_4$. In a sense, hard classification suffers from information loss. This requires further research as may be seen as a weakness of the inference procedure. Nonetheless, in-sample classification results do not look alarming in Figure \ref{fig:tseg-ins-seqv}.
 
 ```{r, include = TRUE, results = "asis"}
 mat <- t(rbind(
@@ -736,14 +738,12 @@ plot_topstate_seqv(tdata.ins[ss, ], zig.ins[ss, ],
 ```
 
 ### Trading Strategy
-Using the parameters estimated from the five days of training data, we run the trading strategy out of sample during one day. 
-
-#### After a zig-zag leg is completed, the trading system buys one unit every time the top-level state switches to bullish (a run) and sells one unit every time it switches to bearish (a reveral). As an addition to @tayal2009regime, where trades are executed one tick after the zig-zag leg is observed to ensure there is no lock-ahead bias, we investigate the decay of the strategy performance for longer lags.
+Using the parameters estimated from the five days of training data, we run the trading strategy out of sample during one day. Figure \ref{fig:tseg-ins-seqv} depicts the equity line for 2007-05-10 while Table \ref{tab:appendix-wf-tseg} summarises the returns for a trading month. The HHMM strategy can produce a positive result in a day with a downward price trend. Positive returns can be achieved in the presence of execution lag, even though trading results are highly sensitive. In many cases, the strategy does not only contribute to the generation of profits but also to risk reduction.
 
 \blandscape
 \newpage
 
-```{r include = TRUE, warning = FALSE, out.width='1\\linewidth', fig.width=14, fig.height=8, fig.cap = "Tick by tick sequence of trades, classified as belonging to the bear or the bull top state, from TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
+```{r include = TRUE, warning = FALSE, out.width='1\\linewidth', fig.width=14, fig.height=8, fig.cap = "Out of sample equity line for TSE:G 2007-05-10 09:30:00/2007-05-10 10:30:00. \\label{fig:tseg-ins-seqv}"}
 
 setglobals()
 trades.oos <- topstate_trading(tdata.oos, 1)
@@ -753,8 +753,6 @@ plot_topstate_trading(tdata.oos, zig.oos, ltrades.oos)
 ```
 
 \elandscape
-
-#### Walking forward backtest
 
 ```{r}
 trades.all <- readRDS('fore_cache/tr_all.RDS')
@@ -776,38 +774,86 @@ mat <- t(sapply(trades, function(trade) {
       }))
 }))
 
-mat <- rbind(mat,
-             apply(mat, 2, function(m) {prod(1 + m) - 1}))
-
 colnames(mat) <- c("Buy-Hold", sprintf("HHMM (%s lag)", 0:5))
-rownames(mat) <- c(sapply(trades, function(trade) { substr(trade$oos, 1, 10) }), "Total")
+rownames(mat) <- sapply(trades, function(trade) { substr(trade$oos, 1, 10) })
 
 setglobals()
-tab  <- xtable(round(mat, 4),
-               caption = "Compound daily return originated in the HHMM trading strategy for different levels of lags. Returns from the buy and hold strategy are included as a reference. Returns expressed in percentage. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TSE:G.",
-               label = "tab:tseg-filtered-ins",
+mat.ext <- apply(mat, 2, function(m) {
+  c(total = prod(1 + m) - 1,
+    min   = min(m),
+    mean  = mean(m),
+    med   = median(m),
+    max   = max(m),
+    sd    = sd(m))})
+
+rownames(mat.ext) <- c("Total", "Min", "Mean", "Median", "Max", "SD")
+
+tab  <- xtable(round(100 * rbind(mat, mat.ext), 4),
+               caption = "Compound daily return originated in the HHMM trading strategy for different levels of lags. Lag measured in ticks between the end of the zig-zag and the execution of the trade (zero lag suffers from look-ahead bias). TSE:G.",
+               label = "tab:appendix-wf-tseg",
                align = c('r', rep('R', 7)))
 
-print(tab, digits = 4, hline.after = c(-1, 0, nrow(mat) - 1, nrow(mat)),
-      width = "\\textwidth", size = "\\scriptsize")
+print(tab, digits = 6, hline.after = c(-1, 0, nrow(mat), nrow(mat) + nrow(mat.ext)),
+      table.placement = "H", width = "\\textwidth", size = "\\tiny")
 ```
 
-...
+### Application to other stocks
 
-### Trading strategy
+We run the walk forward backtesting procedure for twelve other stocks: `r paste(unique(sapply(trades.all, function(t) { t$symbol })), sep = ", ")`. Using 17 days of data, we train the model on a five-day rolling window and then apply it to trade out of sample during a day. We collect the returns from seven configurations, including the buy & hold and the HHMM strategies with none to five ticks of lags (we remind the reader that no lag implies look-ahead bias). In total, we compute $12 \times 17 \times 7 = 1,428$ daily returns. As the correlation matrix in Table \ref{tab:all-oos-summary} shows, the HHMM strategy is virtually uncorrelated with buy and hold. Section \ref{sec:appendix-all-wf} in the appendix details the trade returns and equity line for the backtested stocks. 
 
-Show total for other stocks and mention strat vs bh.
+```{r}
+mat <- t(sapply(trades.all, function(trade) {
+    c(buyandhold = prod(1 + trade$trades$buyandhold) - 1,
+      sapply(trade$trades[-1], function(strat) {
+        prod(1 + strat$ret) - 1
+      }))
+}))
 
-...
+colnames(mat) <- c("Buy-Hold", sprintf("HHMM (%s lag)", 0:5))
+```
+
+```{r, include = TRUE, results = "asis"}
+mat.ext <- apply(mat, 2, function(m) {
+  c(min   = min(m),
+    mean  = mean(m),
+    med   = median(m),
+    max   = max(m),
+    sd    = sd(m),
+    iqr   = IQR(m))})
+
+rownames(mat.ext) <- c("Min", "Mean", "Median", "Max", "SD", "IQR")
+
+setglobals()
+tab  <- xtable(round(100 * mat.ext, 6),
+               caption = "Summary statistics of daily return originated in the HHMM trading strategy for different levels of lags. Returns expressed as percentages.",
+               label = "tab:all-oos-summary",
+               align = c('r', rep('R', 7)))
+
+print(tab, digits = 6,
+      table.placement = "H", width = "\\textwidth", size = "\\small")
+```
+
+```{r, include = TRUE, results = "asis"}
+setglobals()
+tabs <- xtable(cor(mat),
+              caption = "Correlation matrix of daily return originated in the HHMM trading strategy for different levels of lags.",
+              label = "tab:all-oos-cor",
+              align = c('l', rep('R', 7)))
+
+print(tabs, colnames.format = "single",
+      digits = 4, NA.string = 'n.a.',
+      table.placement = "H",
+      width = "\\textwidth", size = "\\small")
+```
 
 ## Discussion {#further-research}
 
 ### The statistical model
-We find that the model proposed, while statistically simple, is highly expressive of financial domain knowledge. The hierarchical design creates a multi-level stochastic process that learns autocorrelations in different time scales. This accommodates for multiresolution, a typical characterstic of financial datasets. We remark that, whereas HHMM offer a methodology to create a complex, highly non linear model for time series, estimation and inference can be achieved in reasonable complexity. The developments by @murphy2001linear simplified cubic time into linear time inference, making inference feasible for high-frequency finance.
+We find that the model proposed, while statistically simple, is highly expressive of financial domain knowledge. The hierarchical design creates a multi-level stochastic process that learns autocorrelations in different time scales. This accommodates for multi-resolution, a typical characteristic of financial datasets. We remark that, whereas HHMM offer a methodology to create a complex, highly non linear model for time series, estimation and inference can be achieved in reasonable complexity. The developments by @murphy2001linear simplified cubic time into linear time inference, making inference feasible for high-frequency finance.
 
 ### The financial application
 
-We have special interest in the feature extraction procedure. They were cleverly designed to reproduce some of the most basic principles of technical analysis and, when applied to real data, they proved to be a powerful descriptor of price and volume movements. Nonetheless, we observe that the change in volume is the weakest component and provides with great opportunities for further enhancements. The contribution of the author should not be neglected: in general terms, the features are the most important factor in the success or the failure of a machine learning project[@domingos2012few].
+We have special interest in the feature extraction procedure. They were cleverly designed to reproduce some of the most basic principles of technical analysis and, when applied to real data, they proved to be a powerful descriptor of price and volume movements. Nonetheless, we observe that the change in volume is the weakest component and provides with great opportunities for further enhancements. The contribution of the author should not be neglected: in general terms, the features are the most important factor in the success or the failure of a machine learning project [@domingos2012few].
 
 ---
 
@@ -859,16 +905,17 @@ tabs <- xtableList(lmat,
 
 print(tabs, colnames.format = "single",
       digits = 4, NA.string = 'n.a.',
+      table.placement = "H",
       width = "\\textwidth", size = "\\footnotesize")
 ```
 
 \newpage
 
-## Walking forward for all assets
+## Out of sample trading performance for some selected assets
+\label{sec:appendix-all-wf}
 
 ```{r, include = FALSE}
 syms <- unique(sapply(trades.all, function(t) { t$symbol }))
-
 
 out <- NULL
 for (sym in syms) {
@@ -885,18 +932,15 @@ for (sym in syms) {
         }))
   }))
   
-  mat <- rbind(mat,
-               apply(mat, 2, function(m) {prod(1 + m) - 1}))
-  
   colnames(mat) <- c("Buy-Hold", sprintf("HHMM (%s lag)", 0:5))
-  rownames(mat) <- c(sapply(trades, function(trade) { substr(trade$oos, 1, 10) }), "Total")
+  rownames(mat) <- sapply(trades, function(trade) { substr(trade$oos, 1, 10) })
+  
   
   out <- c(out, knitr::knit_child('Rmd/appendix-wf.Rmd'))
 }
-
 ```
 
-`r paste(out,   collapse='\n')`
+`r paste(out, collapse='\n')`
 
 ## Original Computing Environment
 

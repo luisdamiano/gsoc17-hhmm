@@ -1,0 +1,55 @@
+# Markov chains
+<!-- ^[Some brief intro. Since this is a preamble for HMM, this writing focus on finite-state Markov chain. It comes in many other flavours tho.] -->
+
+## Definitions
+Let $z_{1:T} = \{z_1, \dots, z_T \}$ be a sequence of regularly spaced observations of arbitrary length $T$. The index $t = 1, \dots, T$ reflects discrete time or space steps. The sequence of random variables has the Markovian property if the probability of moving to the next state depends only on the present state and not on the previous ones.
+
+## Transition function (joint distribution)
+Let $p(z_t | z_{t-m: t-1})$ be the transition function, where $m$ is finite. Assuming the conditional probabilities are well defined, the joint distribution of a Markov chain of order $m$, or a Markov chain with memory $m$, given the parameters $\mat{\theta}$ can be derived with the chain rule of probability
+
+\[
+p(z_{1:T}) = p(z_{1:m}) \prod_{t=m+1}^{T}{p(z_t | z_{t-m : t-1})},
+\]
+
+where conditioning on the fixed parameters $\mat{\theta}$ was removed to increase readability.
+
+For first-order Markov chains, by the chain rule of probability, the expression simplifies to
+\[
+p(z_{1:T}) = p(z_1) p(z_2 | z_1) p(z_3 | z_2) \dots p(z_T | z_{T-1}) = p(z_1) \prod_{t=2}^{T}{p(z_t | z_{t-1})}.
+\]
+
+When the transition function is independent of the step index, the chain is called homogeneous, stationary, or time-invariant and the parameters are shared by multiple variables.
+
+If the observed variable only takes one of $K$ possible values, so that $z_t \in S = \{1, \dots, K \}$, the model is called a discrete-state or finite-state Markov chain. The possible values of $z_t$ form a countable set $S$ called the state space of the chain.
+
+## Transition matrix for a finite-state Markov chain (conditional distribution)
+In the context of a finite-state Markov chain, the one-step transition matrix $\mat{A}$ is a $K \times K$ stochastic matrix with elements $A_{ij} = p(z_t = j | z_{t-1} = i)$ with $i, \ j \in S$ that satisfies $\sum_{j}{A_{ij}} = 1$ for all rows $i$ and $0 \le A_{ij} \le 1$ for all entries $i, \ j$. Each element specifies the probability of transition from $i$ to $j$ in one step. Given the constraints, the matrix has $K(K-1)$ independent parameters.
+
+The $n$-step transition matrix $\mat{A}(n)$ has elements $A_{ij}(n) = p(z_{t+n} = j | z_{t} = i)$ representing the probability of getting from $i$ to $j$ in exactly $n$ steps. By definition, $\mat{A}(1) = \mat{A}$. By the Chapman-Kolmogorov equations,
+
+\[
+A_{ij}(n + s) = \sum_{l=1}^{K}{A_{il}(n)A_{jl}(s)},
+\]
+
+the probability of transitioning from $i$ to $j$ in exactly $n + s$ steps is the probability of getting from $i$ to $l$ in $n$ steps and then from $l$ to $j$ in $s$ steps, summed up over all $l$. Since this is equivalent to matrix multiplication,
+
+\[
+\mat{A}(n + s) = \mat{A}(n) \mat{A}(s),
+\]
+
+multiple steps can be naturally computed by exponentiation
+
+\[
+\mat{A}(n) = \mat{A}(1)\mat{A}(n-1) = \mat{A}(1)\mat{A}(1)\mat{A}(n-2) = \dots = \mat{A}^n.
+\]
+
+## State probabilities (marginal distribution)
+Let $\pi_t(j) = p(z_t = j)$ be the probability that the random variable is in state $j$ at the step $t$ and $\mat{\pi}$ be a row vector called the state probability vector. Given the initial state distribution $\mat{\pi}_0$, the state probabilities for the next step can be computed by $\mat{\pi}_1 = \mat{\pi}_0 \mat{A}$.
+
+A chain is said to have reached its stationary, invariant or equilibrium distribution when the following condition becomes true after many iterations
+
+\[
+\mat{\pi} = \mat{\pi} \mat{A}.
+\]
+
+This distribution does not always exist, but if does, the process cannot leave after entering this stage. There are different ways to prove if a chain is stationary, the most popular set of necessary conditions include irreducibility, recurrency and a limiting distribution that does not depend on the initial values, which in turns requires aperiodicity. The equilibrium is characterized by the the global balance equations. We refer to @doob1953stochastic for a detailed study on the existence of a stationarity distribution and its computation.

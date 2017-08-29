@@ -1,0 +1,3 @@
+<!-- # Introduction -->
+
+<!-- ^[This is the introduction. Neither the theory of hidden Markov models nor its applications to financial processes is new.] -->
