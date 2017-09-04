@@ -4,9 +4,9 @@
 
 Read online our resulting write-ups:
 
-* [A brief technical introduction to Hidden Markov Models](luisdamiano.github.io/gsoc17/hmm_techreview.pdf).
-* [Input-Output Hidden Markov Model applied to financial time series](luisdamiano.github.io/gsoc17/iohmm_financial_time_series.html), a replication of Hassan (2005).
-* [Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets](luisdamiano.github.io/gsoc17/rs_technical_trading.pdf), a replication of Tayal (2009).
+* [A brief technical introduction to Hidden Markov Models](https://luisdamiano.github.io/gsoc17/hmm_techreview.pdf).
+* [Input-Output Hidden Markov Model applied to financial time series](https://luisdamiano.github.io/gsoc17/iohmm_financial_time_series.html), a replication of Hassan (2005).
+* [Regime Switching and Technical Trading with Dynamic Bayesian Networks in High-Frequency Stock Markets](https://luisdamiano.github.io/gsoc17/rs_technical_trading.pdf), a replication of Tayal (2009).
 
 Read below to know more about our project!
 
@@ -33,13 +33,13 @@ We encourage the reader to try the code by themselves, possibly using data of th
 All the work is organized in a few folders at root level:
 
 * [common](common) contains general purpose files.
-* [techreview](techreview) is a technical review of the HMM family. Read our [brief technical introduction to HHM](luisdamiano.github.io/gsoc17/hmm_techreview.pdf).
+* [techreview](techreview) is a technical review of the HMM family. Read our [brief technical introduction to HHM](https://luisdamiano.github.io/gsoc17/hmm_techreview.pdf).
 * [hmm](hmm) includes working code that generates simulated data from a HMM, as well as MCMC samplers for HMM with Multinomial or Gaussian observations. We also provide a sampler for a very specific case of semi-supervised learning. See the [main.R](hmm/main.R), [main-multinorm.R](hmm/main-multinorm.R) and [main-multinorm-semisup.R](hmm/main-multinorm-semisup.R) for step-by-step code.
 * [iohmm-reg](iohmm-reg) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully Bayesian estimation and inference. In this implementation, the observation model is a linear regression that maps the inputs to the outputs according to a set of parameters that change according to the hidden states, which in turn follow a multinomial (softmax) regression. See [main.R](iohmm-reg/main.R) for step-by-step code.
 * [iohmm-mix](iohmm-mix) includes working code that generates simulated data from a IOHMM and a MCMC sampler for fully Bayesian estimation and inference. In this implementation, the observation model is a mixture of Gaussians with different components per hidden state, which in turn follows a multinomial (softmax) regression. Read [our paper](iohmm-mix/main.html) and see [main.R](iohmm-mix/main.R) for step-by-step code.
 * [hhmm](hhmm) includes a small set of S3 objects with recursive generic methods very useful to set up a HHMM structure and draw samples from the model. Several examples based on actual papers are provided in the root folder: [sim-fine1998.R](hhmm/sim-fine1998.R) and [sim-jangmin2004.R](hhmm/sim-jangmin2004.R). See [main.R](hhmm/main.R) for step-by-step code.
-* [hassan2005](hassan2005/) contains the code and the write-up for the replication of Hassan (2005). See [main.R](hassan2005/main.R) for step-by-step code and [the write-up](luisdamiano.github.io/gsoc17/iohmm_financial_time_series.html).
-* [tayal2009](tayal2009/) contains the code and the write-up for the replication of Tayal (2009). See [main.R](hhmm/main.R) for step-by-step code and [the write-up](luisdamiano.github.io/gsoc17/rs_technical_trading.pdf).
+* [hassan2005](hassan2005/) contains the code and the write-up for the replication of Hassan (2005). See [main.R](hassan2005/main.R) for step-by-step code and [the write-up](https://luisdamiano.github.io/gsoc17/iohmm_financial_time_series.html).
+* [tayal2009](tayal2009/) contains the code and the write-up for the replication of Tayal (2009). See [main.R](hhmm/main.R) for step-by-step code and [the write-up](https://luisdamiano.github.io/gsoc17/rs_technical_trading.pdf).
 
 Each folder may have inner folders for R, Stan and RMarkdown code.
 
@@ -95,7 +95,7 @@ No doubt, Tayal (2009) looked challenging from the very beginning. The [feature 
 
 Although implementing the generalized algorithms would be a very worthwhile enterprise on its own, [our approximation](tayal2009/stan/hhmm-tayal2009.stan) was acceptable given the amount of data and the highly constrained HHMM we were working with. Furthermore, we created [a faster sampler](tayal2009/stan/hhmm-tayal2009-lite.stan) for walk-forward backtesting that would implement only the bare minimum computations needed, leaving many other useful and interpretable quantities present in our full sampler. Implementing in Stan a fully Bayesian version of all the algorithms involved in a HHMM, mostly based on the original work of Fine (1988), would be an involved enough project to be considered a part of the contributions required by a PhD program.
 
-Brian offered to acquire the data as the high frequency dataset used in the original article was not publicly available. Data processing was trivial thanks to [a parser in the FinancialInstrument](https://github.com/cran/FinancialInstrument/blob/d054f8b2d334b59c5fab4623fb15c6ecbc06b7ce/inst/parser/TRTH_BackFill.R) R package. I only had to address a few issues as I was not using a Unix platform (won't let this happen again, sorry!).
+Brian offered to acquire the data as the high frequency dataset used in the original article was not publicly available. Data processing was trivial thanks to [a parser in the FinancialInstrument](https://github.com/cran/FinancialInstrument/blob/d054f8b2d334b59c5fab4623fb15c6ecbc06b7ce/inst/parser/TRTH_BackFill.R) R package (Carl, Peterson and See 2014). I only had to address a few issues as I was not using a Unix platform (won't let this happen again, sorry!).
 
 ## Interaction with mentors
 We agreed on a rich interaction methodology:
@@ -116,6 +116,8 @@ I would recommend any student interested in software development and programming
 If I had to give future students one piece of advice it would be this: make sure you choose a topic you really like. This way, you will enjoy your GSoC journey as much as I did.
 
 # References
+
+Carl, P., Peterson, B. G., & See, G (2014). FinancialInstrument: Financial Instrument Model Infrastructure for R. R package version 1.2.0. URL https://CRAN.R-project.org/package=FinancialInstrument.
 
 Cook, S. R., Gelman, A., & Rubin, D. B. (2006). Validation of software for Bayesian models using posterior quantiles. Journal of Computational and Graphical Statistics, 15(3), 675-692.
 
