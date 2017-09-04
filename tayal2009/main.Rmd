@@ -417,8 +417,6 @@ setglobals()
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'extrema')
 ```
 
-The Features
-
 ```{r, include = TRUE, out.width = '\\textwidth', fig.cap = "Features extracted from TSE:G 2007-05-11 10:30:00/2007-05-11 11:30:00. \\label{tseg-ins-features}"}
 setglobals()
 plot_features(tdata[ss, ], zig[ss, ], which.features = 'all')
