@@ -27,7 +27,7 @@ n.seed = 9000
 # data.path: folder where data is stored
 # Expected filename: stock_name/Y.M.D.stock_name.RData
 # Example: G.TO/2007.05.01.G.TO.RData
-data.path  <- '../data/'
+data.path  <- 'tayal2009/data/'
 cache.path = 'tayal2009/fore_cache'
 
 # Data loading ------------------------------------------------------------
@@ -42,7 +42,7 @@ filename_to_timestamp <- function(from, to,
 }
 
 # builds the list of files and timestamps
-task.list <- do.call(c, lapply(dir(data.path), function(d) { # d = one stock
+task.list <- do.call(c, lapply(dir(data.path, pattern = "(\\.TO$)"), function(d) { # d = one stock
               stock.files <- dir(file.path(data.path, d))
 
               lapply(1:(length(stock.files) - window.all + 1), function(i) {

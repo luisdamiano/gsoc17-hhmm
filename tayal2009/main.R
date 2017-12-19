@@ -12,12 +12,12 @@ source('tayal2009/R/state-plots.R')
 
 # Set up! -----------------------------------------------------------------
 # Data kept in a private folder as we do no have redistribution rights
-data.files <- c('../data/G.TO/2007.05.01.G.TO.RData',
-                '../data/G.TO/2007.05.02.G.TO.RData',
-                '../data/G.TO/2007.05.03.G.TO.RData',
-                '../data/G.TO/2007.05.04.G.TO.RData',
-                '../data/G.TO/2007.05.07.G.TO.RData',
-                '../data/G.TO/2007.05.08.G.TO.RData')
+data.files <- c('tayal2009/data/G.TO/2007.05.01.G.TO.RData',
+                'tayal2009/data/G.TO/2007.05.02.G.TO.RData',
+                'tayal2009/data/G.TO/2007.05.03.G.TO.RData',
+                'tayal2009/data/G.TO/2007.05.04.G.TO.RData',
+                'tayal2009/data/G.TO/2007.05.07.G.TO.RData',
+                'tayal2009/data/G.TO/2007.05.08.G.TO.RData')
 
 # Timespans to separate training and test sets
 ins <- '2007-05-01 09:30:00/2007-05-07 16:30:00'

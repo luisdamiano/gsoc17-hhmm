@@ -12,7 +12,7 @@ Read below to know more about our project!
 
 ## Primary goals
 
-This project is part of [the R Project in Google Summer of Code 2017](https://github.com/rstats-gsoc/gsoc2017). The goal is to replicate research in Hierarchical Hidden Markov Models (HHMM) applied to financial data. This model is a generalization of Hidden Markov Models (HMM), which in turn are part of the Dynamic Bayesian Networks (DBN) family. We identified four academic works with interesting ideas and applications that do not provide data nor code. Two of these four candidates works were replicated as part of this project. Replication will allow future readers to assess the credibility of the results and will work as a shortcut for those wanting to integrate this model into current research code (for example, for backtesting). We also produce a brief summary of the mathematical treatment of HMM.
+This project is part of [the R Project for Statistical Computing in Google Summer of Code 2017](https://github.com/rstats-gsoc/gsoc2017). The goal is to replicate research in Hierarchical Hidden Markov Models (HHMM) applied to financial data. This model is a generalization of Hidden Markov Models (HMM), which in turn are part of the Dynamic Bayesian Networks (DBN) family. We identified four academic works with interesting ideas and applications that do not provide data nor code. Two of these four candidates works were replicated as part of this project. Replication will allow future readers to assess the credibility of the results and will work as a shortcut for those wanting to integrate this model into current research code (for example, for backtesting). We also produce a brief summary of the mathematical treatment of HMM.
 
 ## Secondary goals
 
@@ -62,7 +62,11 @@ Reach us at [#r-finance](http://webchat.freenode.net/?channels=r-finance) (freen
 * **Michael Weylandt** - *Co-Mentor* - [michaelweylandt](https://github.com/michaelweylandt)
 
 ## License
-_Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under CC-BY-SA 4.0. See the [LICENSE](LICENSE.md) file for details.
+Unless otherwise noted, _Bayesian Hierarchical Hidden Markov Models applied to financial time series_ is licensed under CC-BY-SA 4.0. See the [LICENSE](LICENSE.md) file for details.
+
+The data included for replication of the Tayal (2009) was retrieved from Thomson Reuters Datastream Tick History. Thomson Reuters has generously agreed to allow us to make the data available under the CC-BY-NC license. Permission was granted in Thomson Reuters Datastream support Case: 06017553 "Process [for] Obtaining Permission to Distribute Data for Research Purposes" (case not publicly accessible, for historical/source reference only). See the [LICENSE](tayal2009/data/LICENSE.md) file in the /tayal2009/data folder for details. By accessing and using this data, you agree to be bound by the terms of this license, or to obtain a different license from Thomson Reuters. Any copying or distribution of this data must preserve the license.
+
+The authors extend their thanks to the Thomson Reuters legal team for supporting reproducible science by allowing the distribution of this data under a permissive Creative Commons license.
 
 ## Acknowledgments
 * The Google Summer Of Code (GSOC) program for funding.
