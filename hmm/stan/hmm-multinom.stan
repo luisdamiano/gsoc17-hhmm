@@ -28,7 +28,7 @@ transformed parameters {
     real accumulator[K];
 
     for (j in 1:K) {
-      unalpha_tk[1] = log(p_1k) + log(phi_k[j, x[1]]);
+      unalpha_tk[1][j] = log(p_1k[j]) + log(phi_k[j, x[1]]);
     }
 
     for (t in 2:T) {
